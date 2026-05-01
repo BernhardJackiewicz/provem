@@ -87,6 +87,10 @@ failure modes can be exercised before integrating heavy services.
   preserve candidate/client/role/project/user scope and explicit reflection
   types. This allows safe simulated approval for scoped memories in the
   evaluation copy only. Durable apply mode is still not implemented.
+- MVP 3.3 human review queue: SleepCycle decisions can now be turned into
+  auditable review items with risk classification and simulated reviewer
+  decisions. Simulation is local and evaluation-only; it is not a production
+  human-review or apply workflow.
 
 ## What Is Implemented
 
@@ -121,6 +125,9 @@ failure modes can be exercised before integrating heavy services.
 - Scope-aware reflection metadata and retrieval filtering so candidate
   preferences, client requirements, role requirements and project patterns do
   not collapse into global reflections during simulated consolidation.
+- ReviewQueue models and CLI for inspecting consolidation decisions, risk
+  levels, simulated approval/rejection counts and review reasons without
+  applying memory changes.
 - Benchmark harness with baselines:
   - No memory
   - Long context style latest-match
@@ -177,6 +184,7 @@ PYTHONPATH=src python3 scripts/check_graphiti_env.py
 PYTHONPATH=src python3 scripts/smoke_graphiti.py
 PYTHONPATH=src python3 -m cognitive_memory sleep-cycle --demo
 PYTHONPATH=src python3 -m cognitive_memory consolidation-eval
+PYTHONPATH=src python3 -m cognitive_memory review-queue --demo
 PYTHONPATH=src python3 -m cognitive_memory quality-gate
 ```
 
@@ -195,6 +203,7 @@ cml mem0-env-check
 cml graphiti-env-check
 cml sleep-cycle --demo
 cml consolidation-eval
+cml review-queue --demo
 cml quality-gate
 ```
 
@@ -454,6 +463,11 @@ Consolidation Evaluation:
   evaluation-only simulated approval copy. It never enables real apply mode.
   MVP 3.2 adds scope-aware reflection metadata for candidate/client/role/project
   consolidation inside that evaluation copy.
+
+Review Queue:
+  local MVP 3.3 review gate; converts SleepCycle decisions into review items,
+  risk labels and simulated reviewer decisions. It still does not apply durable
+  memory.
 ```
 
 Run the local SleepCycle demo:
@@ -465,6 +479,16 @@ PYTHONPATH=src python3 -m cognitive_memory sleep-cycle --demo
 This prints candidate/decision/review counts from fake data only. It does not
 apply consolidation decisions. `--apply` is reserved for a future audited
 implementation and currently fails clearly.
+
+Run the local review queue demo:
+
+```bash
+PYTHONPATH=src python3 -m cognitive_memory review-queue --demo
+PYTHONPATH=src python3 -m cognitive_memory review-queue --demo --policy approve_low_risk_only
+```
+
+The review queue prints counts, risks, statuses and reasons. It does not print
+raw sensitive values and does not write durable reflections.
 
 ## MVP 2 Adapter Preparation
 
@@ -621,6 +645,8 @@ work. `scripts/smoke_graphiti.py` is guarded: it exits clearly while
   scoped leakage in the fake consolidation harness, but they do not validate
   real transcripts, human review, Graphiti persistence or production apply
   behavior.
+- MVP 3.3 ReviewQueue is a local audit and simulation layer. It is not a human
+  review UI, not a workflow system and not a durable apply path.
 
 ## Integration Path
 
@@ -644,3 +670,5 @@ work. `scripts/smoke_graphiti.py` is guarded: it exits clearly while
   current harness can approve only inside an isolated evaluation copy.
 - Preserve fine-grained reflection scope fields before any future apply path;
   otherwise consolidation can reintroduce candidate/client/role leakage.
+- Keep ReviewQueue simulation separate from production approvals. High-risk
+  items must never be auto-approved.

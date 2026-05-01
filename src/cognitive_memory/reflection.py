@@ -146,6 +146,22 @@ class SleepCycle:
             self.store.add_consolidation_run(run)
         return run
 
+    def review_queue(
+        self,
+        user_id: Optional[str] = None,
+        project_id: Optional[str] = None,
+        *,
+        mode: str = "review_required",
+        record: bool = False,
+    ):
+        from .review import build_review_queue
+
+        run = self.consolidate(user_id=user_id, project_id=project_id, record=record)
+        queue = build_review_queue(run, mode=mode)
+        if record:
+            self.store.add_review_queue(queue)
+        return queue
+
     def _safe_active_facts(
         self,
         user_id: Optional[str],

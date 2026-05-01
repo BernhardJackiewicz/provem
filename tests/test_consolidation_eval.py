@@ -38,6 +38,13 @@ class ConsolidationEvalTests(unittest.TestCase):
             "consolidation_precision",
             "consolidation_recall",
             "unsafe_consolidation_rate",
+            "review_queue_precision",
+            "review_queue_recall",
+            "approval_precision",
+            "unsafe_approval_rate",
+            "high_risk_autoapproval_rate",
+            "review_coverage",
+            "review_to_downstream_delta",
             "scoped_consolidation_precision",
             "scoped_consolidation_recall",
             "cross_scope_reflection_leakage",
@@ -113,6 +120,12 @@ class ConsolidationEvalTests(unittest.TestCase):
 
         self.assertEqual(summary["provenance_coverage"], 1.0)
         self.assertEqual(summary["unsafe_consolidation_rate"], 0.0)
+        self.assertEqual(summary["review_queue_precision"], 1.0)
+        self.assertEqual(summary["review_queue_recall"], 1.0)
+        self.assertEqual(summary["approval_precision"], 1.0)
+        self.assertEqual(summary["unsafe_approval_rate"], 0.0)
+        self.assertEqual(summary["high_risk_autoapproval_rate"], 0.0)
+        self.assertEqual(summary["review_coverage"], 1.0)
         self.assertEqual(summary["scoped_consolidation_precision"], 1.0)
         self.assertEqual(summary["scoped_consolidation_recall"], 1.0)
         self.assertEqual(summary["policy_violation_rate"], 0.0)

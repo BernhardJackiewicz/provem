@@ -20,6 +20,10 @@ from .models import (
     MemoryCandidate,
     MemoryEvent,
     Reflection,
+    ReviewDecision,
+    ReviewItem,
+    ReviewQueue,
+    ReviewStatus,
     RetrievalRequest,
     RetrievalResult,
     TemporalFact,
@@ -27,6 +31,7 @@ from .models import (
 from .policy import PolicyStore
 from .persistence import MemorySnapshot, load_snapshot, retrieval_trace_record, save_snapshot
 from .reflection import SleepCycle
+from .review import build_review_queue, simulate_review
 from .retrieval import RetrievalPlanner
 from .store import InMemoryStore
 from .transcript_eval import Transcript, TranscriptLabels, evaluate_transcripts, load_transcripts
@@ -49,6 +54,10 @@ __all__ = [
     "MemorySnapshot",
     "PolicyStore",
     "Reflection",
+    "ReviewDecision",
+    "ReviewItem",
+    "ReviewQueue",
+    "ReviewStatus",
     "RetrievalPlanner",
     "RetrievalRequest",
     "RetrievalResult",
@@ -59,9 +68,11 @@ __all__ = [
     "ValidationManifest",
     "evaluate_external_manifest",
     "evaluate_transcripts",
+    "build_review_queue",
     "load_validation_manifest",
     "load_snapshot",
     "load_transcripts",
     "retrieval_trace_record",
     "save_snapshot",
+    "simulate_review",
 ]

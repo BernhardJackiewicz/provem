@@ -3,7 +3,8 @@
 MVP 3.0 is acceptable only as a local dry-run consolidation prototype. MVP 3.1
 adds an evaluation harness for proposal usefulness and safety. MVP 3.2 adds
 scope-aware reflection metadata for candidate/client/role/project/user
-consolidation. Durable apply behavior is still not implemented.
+consolidation. MVP 3.3 adds a local human-review queue and simulated reviewer
+policies. Durable apply behavior is still not implemented.
 
 ## Pass Criteria
 
@@ -33,6 +34,17 @@ consolidation. Durable apply behavior is still not implemented.
 - Consolidation evaluation reports zero unsafe consolidation, policy leakage,
   stale resurrection and scope leakage on the local fake suite before any future
   apply workflow is considered.
+- ReviewQueue can be built from SleepCycle decisions without writing durable
+  memory.
+- ReviewQueue preserves consolidation run links, decision links, evidence ids,
+  counter-evidence ids, scope, risk level and proposed action.
+- High-risk review items are never auto-approved by local simulation.
+- `review-queue --demo` prints status/risk/reason counts without raw sensitive
+  values.
+- Consolidation evaluation reports clean review metrics:
+  `review_queue_precision`, `review_queue_recall`, `approval_precision`,
+  `unsafe_approval_rate`, `high_risk_autoapproval_rate`, `review_coverage` and
+  `review_to_downstream_delta`.
 
 ## Fail Criteria
 
@@ -44,6 +56,8 @@ consolidation. Durable apply behavior is still not implemented.
 - Client requirements become candidate preferences, or candidate preferences
   become client requirements.
 - Simulated approval writes into the live controller/store.
+- ReviewQueue simulation writes durable facts, events or reflections.
+- High-risk items are approved by `approve_safe` or `approve_low_risk_only`.
 - `consolidation-eval` treats missing provenance or unavailable safety fields
   as successful evidence.
 - Docs imply biological fidelity, production readiness or live integration
@@ -57,6 +71,7 @@ PYTHONPATH=src python3 -m cognitive_memory benchmark --suite all
 PYTHONPATH=src python3 -m cognitive_memory transcript-eval --input tests/fixtures/transcripts
 PYTHONPATH=src python3 -m cognitive_memory sleep-cycle --demo
 PYTHONPATH=src python3 -m cognitive_memory consolidation-eval
+PYTHONPATH=src python3 -m cognitive_memory review-queue --demo
 PYTHONPATH=src python3 -m cognitive_memory quality-gate
 PYTHONPATH=src python3 -m compileall -q src tests
 ```

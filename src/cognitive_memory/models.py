@@ -269,6 +269,24 @@ REFLECTION_TYPES = {
     "unresolved_hypothesis",
 }
 
+REVIEW_STATUSES = {
+    "pending",
+    "approved",
+    "rejected",
+    "needs_more_evidence",
+    "deferred",
+    "expired",
+}
+
+
+class ReviewStatus:
+    PENDING = "pending"
+    APPROVED = "approved"
+    REJECTED = "rejected"
+    NEEDS_MORE_EVIDENCE = "needs_more_evidence"
+    DEFERRED = "deferred"
+    EXPIRED = "expired"
+
 
 @dataclass
 class EventParticipant:
@@ -558,6 +576,105 @@ class ConsolidationRun:
             "status": self.status,
             "candidates": [item.to_dict() for item in self.candidates],
             "decisions": [item.to_dict() for item in self.decisions],
+            "summary": _json_ready_dict(self.summary),
+            "audit_log": list(self.audit_log),
+            "id": self.id,
+            "created_at": iso(self.created_at),
+        }
+
+
+@dataclass
+class ReviewItem:
+    consolidation_run_id: str
+    consolidation_decision_id: str
+    candidate_id: str
+    proposed_action: str
+    reason: str
+    risk_level: str
+    evidence_ids: List[str] = field(default_factory=list)
+    counter_evidence_ids: List[str] = field(default_factory=list)
+    scope: Dict[str, Any] = field(default_factory=dict)
+    memory_type: str = "reflection"
+    proposed_memory_id: str = ""
+    proposed_memory_summary: str = ""
+    review_required: bool = False
+    status: str = ReviewStatus.PENDING
+    id: str = field(default_factory=lambda: make_id("ri"))
+    created_at: datetime = field(default_factory=now_utc)
+    updated_at: datetime = field(default_factory=now_utc)
+
+    def __post_init__(self) -> None:
+        if self.status not in REVIEW_STATUSES:
+            self.status = ReviewStatus.PENDING
+        if self.risk_level not in ("low", "medium", "high"):
+            self.risk_level = "medium"
+        self.created_at = ensure_datetime(self.created_at)
+        self.updated_at = ensure_datetime(self.updated_at)
+
+    def to_dict(self) -> Dict[str, Any]:
+        data = asdict(self)
+        data["created_at"] = iso(self.created_at)
+        data["updated_at"] = iso(self.updated_at)
+        return data
+
+
+@dataclass
+class ReviewDecision:
+    review_item_id: str
+    status: str
+    reason: str
+    reviewer_id: str = ""
+    decision_confidence: float = 0.0
+    evidence_ids: List[str] = field(default_factory=list)
+    counter_evidence_ids: List[str] = field(default_factory=list)
+    scope: Dict[str, Any] = field(default_factory=dict)
+    risk_level: str = "medium"
+    proposed_action: str = ""
+    decision_timestamp: datetime = field(default_factory=now_utc)
+    id: str = field(default_factory=lambda: make_id("rd"))
+
+    def __post_init__(self) -> None:
+        if self.status not in REVIEW_STATUSES:
+            self.status = ReviewStatus.PENDING
+        if self.risk_level not in ("low", "medium", "high"):
+            self.risk_level = "medium"
+        self.decision_confidence = clamp(self.decision_confidence)
+        self.decision_timestamp = ensure_datetime(self.decision_timestamp)
+
+    def to_dict(self) -> Dict[str, Any]:
+        data = asdict(self)
+        data["decision_timestamp"] = iso(self.decision_timestamp)
+        return data
+
+
+@dataclass
+class ReviewQueue:
+    consolidation_run_id: str
+    user_id: str = DEFAULT_USER_ID
+    project_id: str = DEFAULT_PROJECT_ID
+    mode: str = "review_required"
+    items: List[ReviewItem] = field(default_factory=list)
+    decisions: List[ReviewDecision] = field(default_factory=list)
+    status: str = ReviewStatus.PENDING
+    summary: Dict[str, Any] = field(default_factory=dict)
+    audit_log: List[str] = field(default_factory=list)
+    id: str = field(default_factory=lambda: make_id("rq"))
+    created_at: datetime = field(default_factory=now_utc)
+
+    def __post_init__(self) -> None:
+        if self.status not in REVIEW_STATUSES:
+            self.status = ReviewStatus.PENDING
+        self.created_at = ensure_datetime(self.created_at)
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "consolidation_run_id": self.consolidation_run_id,
+            "user_id": self.user_id,
+            "project_id": self.project_id,
+            "mode": self.mode,
+            "items": [item.to_dict() for item in self.items],
+            "decisions": [decision.to_dict() for decision in self.decisions],
+            "status": self.status,
             "summary": _json_ready_dict(self.summary),
             "audit_log": list(self.audit_log),
             "id": self.id,

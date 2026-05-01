@@ -13,6 +13,8 @@
   evidence into stable memory without review.
 - Cross-scope reflection leakage: a consolidated candidate/client/role/project
   hypothesis is used outside the scope that produced it.
+- Review rubber-stamping: risky consolidation proposals are approved without
+  enough evidence, scope confidence or policy review.
 - Memory poisoning: malicious or low-quality content becomes durable memory.
 - Prompt injection through memory: retrieved content changes tool or system
   behavior.
@@ -89,6 +91,11 @@
 - Reflection retrieval excludes known wrong-scope reflections before ranking.
 - Consolidation evaluation reports scoped precision/recall and cross-scope,
   role-scope and candidate/client reflection leakage metrics.
+- ReviewQueue converts consolidation decisions into review items with status,
+  risk level, scope, evidence ids, counter-evidence ids and proposed action.
+- Review simulation rejects or defers high-risk, unsupported, insufficient,
+  stale, deleted, do-not-use, sensitive and prompt-injection-like items.
+- High-risk review items are never auto-approved by local simulation.
 - Retrieval traces include selected and excluded memories.
 - Benchmark includes explicit leakage and reflection-trap scenarios.
 - Noisy benchmark suite adds indirect phrasing, distractors, natural
@@ -181,6 +188,8 @@
 - Real review workflow for SleepCycle decisions before any durable apply path.
 - Human review and explicit apply semantics for scope-aware reflections. The
   current scoped approval path is evaluation-only.
+- Production review workflow, reviewer identity, authorization, audit UI and
+  apply semantics. Current ReviewQueue is local simulation only.
 - External-data validation for scoped reflections; current coverage is fake and
   deterministic.
 - Tests for any future retrieval-ranking effect from decay metadata.

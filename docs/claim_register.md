@@ -90,6 +90,11 @@ deck or product narrative.
 | Scope-aware reflections prevent real-world candidate/client/role leakage. | None | Unsupported | No | High | Rejected; current support is synthetic/local only |
 | Scoped consolidation has been validated on real transcripts or live graph storage. | None | Unsupported | No | High | Rejected |
 | Scope-aware simulated approval is a real human-review apply workflow. | None | Unsupported | No | High | Rejected; it still writes only to an evaluation copy |
+| MVP 3.3 has a local ReviewQueue for SleepCycle decisions. | Local review models, CLI and tests | Code/tests, fake data only | Yes, local only | Medium | Supported as audit/simulation layer, not production workflow |
+| ReviewQueue simulation is a production human-review workflow. | None | Unsupported | No | High | Rejected |
+| ReviewQueue implements durable apply mode. | None | Unsupported | No | High | Rejected |
+| High-risk consolidation items are auto-approved. | None | Unsupported | No | High | Rejected; local simulation forbids high-risk autoapproval |
+| Review-aware consolidation metrics are clean on the local fake suite. | Local `consolidation-eval` command | Internal deterministic experiment | Yes, synthetic only | Medium | Internally supported, not product evidence |
 | Reflection can improve long-range personalization. | Generative-agents-style hypothesis | Needs ablation and hallucination metric | No | High | Hypothesis |
 | The current implementation is MVP 1 complete in a production sense. | None | Unsupported | No | High | Rejected |
 

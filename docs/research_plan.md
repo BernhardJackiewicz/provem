@@ -54,7 +54,8 @@ biology.
 10. MVP 3.1: Consolidation evaluation with simulated approval in an isolated
     evaluation copy.
 11. MVP 3.2: Scope-aware reflections and consolidated memories.
-12. MVP 4: Audit UI and domain pilot.
+12. MVP 3.3: Human review queue for consolidation proposals.
+13. MVP 4: Audit UI and domain pilot.
 
 ## Current Prototype Scope
 
@@ -156,6 +157,13 @@ approval without merging client requirements into candidate preferences or role
 requirements across roles. It is still local and synthetic. It does not enable
 real apply mode, human review, Graphiti storage or production consolidation.
 
+The current MVP 3.3 pass adds a local review queue for consolidation decisions.
+Review items preserve the consolidation run link, decision link, evidence,
+counter-evidence, scope, proposed action, reason and risk level. Local reviewer
+simulation can approve safe items or reject/defer risky ones, but it changes
+only review status and evaluation copies. It is not a real human-review UI and
+does not implement durable apply.
+
 An optional schema-constrained LLM extractor interface exists for future
 comparison. It validates proposed `MemoryCandidate` output locally and keeps the
 controller as the only durable write authority. It does not make live LLM calls
@@ -253,6 +261,7 @@ SleepCycle / Reflection Stub
        +-- records counter-evidence from invalidated facts
        +-- consolidation-eval compares no/dry-run/simulated approval modes
        +-- scoped reflections preserve candidate/client/role/project metadata
+       +-- ReviewQueue gates proposals with risk classification and simulated review
        +-- not a full autonomous MVP 3 implementation
 ```
 

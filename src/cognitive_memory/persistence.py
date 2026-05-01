@@ -18,6 +18,9 @@ from .models import (
     MemoryCandidate,
     MemoryEvent,
     Reflection,
+    ReviewDecision,
+    ReviewItem,
+    ReviewQueue,
     RetrievalResult,
     SelectedMemory,
     TemporalFact,
@@ -65,6 +68,7 @@ def save_snapshot(
     records.extend(_record("event", item.to_dict()) for item in store.list_events())
     records.extend(_record("reflection", item.to_dict()) for item in store.list_reflections())
     records.extend(_record("consolidation_run", item.to_dict()) for item in store.list_consolidation_runs())
+    records.extend(_record("review_queue", item.to_dict()) for item in store.list_review_queues())
     records.extend(_record("store_audit", dict(item)) for item in store.audit_log)
     records.extend(_record("retrieval_trace", _trace_to_dict(item)) for item in traces)
 
@@ -119,6 +123,9 @@ def load_snapshot(path: str) -> MemorySnapshot:
             elif record_type == "consolidation_run":
                 item = _consolidation_run_from_dict(data)
                 store.consolidation_runs[item.id] = item
+            elif record_type == "review_queue":
+                item = _review_queue_from_dict(data)
+                store.review_queues[item.id] = item
             elif record_type == "store_audit":
                 audit_log.append({"event": str(data.get("event", "")), "target_id": str(data.get("target_id", ""))})
             elif record_type == "retrieval_trace":
@@ -218,3 +225,21 @@ def _consolidation_run_from_dict(data: Dict[str, Any]) -> ConsolidationRun:
         for item in run_data.get("decisions", [])
     ]
     return _construct(ConsolidationRun, run_data)
+
+
+def _review_item_from_dict(data: Dict[str, Any]) -> ReviewItem:
+    return _construct(ReviewItem, data)
+
+
+def _review_decision_from_dict(data: Dict[str, Any]) -> ReviewDecision:
+    return _construct(ReviewDecision, data)
+
+
+def _review_queue_from_dict(data: Dict[str, Any]) -> ReviewQueue:
+    queue_data = dict(data)
+    queue_data["items"] = [_review_item_from_dict(item) for item in queue_data.get("items", [])]
+    queue_data["decisions"] = [
+        _review_decision_from_dict(item)
+        for item in queue_data.get("decisions", [])
+    ]
+    return _construct(ReviewQueue, queue_data)

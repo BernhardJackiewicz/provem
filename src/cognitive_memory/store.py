@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Dict, Iterable, List, Optional
 
-from .models import ConsolidationRun, Episode, MemoryCandidate, MemoryEvent, Reflection, TemporalFact
+from .models import ConsolidationRun, Episode, MemoryCandidate, MemoryEvent, Reflection, ReviewQueue, TemporalFact
 
 
 class InMemoryStore:
@@ -20,6 +20,7 @@ class InMemoryStore:
         self.events: Dict[str, MemoryEvent] = {}
         self.reflections: Dict[str, Reflection] = {}
         self.consolidation_runs: Dict[str, ConsolidationRun] = {}
+        self.review_queues: Dict[str, ReviewQueue] = {}
         self.audit_log: List[Dict[str, str]] = []
         self.retrieval_traces: List[Dict[str, object]] = []
 
@@ -68,6 +69,16 @@ class InMemoryStore:
         self.audit("consolidation_run_added", run.id)
         return run
 
+    def add_review_queue(self, queue: ReviewQueue) -> ReviewQueue:
+        self.review_queues[queue.id] = queue
+        self.audit("review_queue_added", queue.id)
+        return queue
+
+    def update_review_queue(self, queue: ReviewQueue) -> ReviewQueue:
+        self.review_queues[queue.id] = queue
+        self.audit("review_queue_updated", queue.id)
+        return queue
+
     def get_episode(self, episode_id: str) -> Optional[Episode]:
         return self.episodes.get(episode_id)
 
@@ -82,6 +93,9 @@ class InMemoryStore:
 
     def get_consolidation_run(self, run_id: str) -> Optional[ConsolidationRun]:
         return self.consolidation_runs.get(run_id)
+
+    def get_review_queue(self, queue_id: str) -> Optional[ReviewQueue]:
+        return self.review_queues.get(queue_id)
 
     def list_episodes(self, user_id: Optional[str] = None, project_id: Optional[str] = None) -> List[Episode]:
         episodes = list(self.episodes.values())
@@ -140,6 +154,18 @@ class InMemoryStore:
         if project_id is not None:
             runs = [run for run in runs if run.project_id == project_id]
         return sorted(runs, key=lambda run: run.created_at)
+
+    def list_review_queues(
+        self,
+        user_id: Optional[str] = None,
+        project_id: Optional[str] = None,
+    ) -> List[ReviewQueue]:
+        queues = list(self.review_queues.values())
+        if user_id is not None:
+            queues = [queue for queue in queues if queue.user_id == user_id]
+        if project_id is not None:
+            queues = [queue for queue in queues if queue.project_id == project_id]
+        return sorted(queues, key=lambda queue: queue.created_at)
 
     def matching_active_facts(
         self,

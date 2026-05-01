@@ -102,11 +102,55 @@ scope, actor type and relation family. Retrieval excludes wrong-scope
 reflections before ranking, using the same conservative stance as temporal
 facts.
 
+MVP 3.3 adds a local `ReviewQueue` layer. A review queue converts
+`ConsolidationDecision` objects into reviewable items with status, risk level,
+scope, evidence ids, counter-evidence ids, proposed action and review reason.
+It can queue only `review_required` decisions or all decisions in conservative
+mode. It never applies decisions directly.
+
+Review item statuses are:
+
+- `pending`
+- `approved`
+- `rejected`
+- `needs_more_evidence`
+- `deferred`
+- `expired`
+
+Risk classification is deliberately conservative:
+
+- Low: repeated safe preference/pattern with enough evidence, no counter
+  evidence and no policy flags.
+- Medium: scoped or procedural reflection proposals that may affect retrieval,
+  plus decay/archive-style actions.
+- High: sensitive, conflict, policy, deletion, do-not-use,
+  prompt-injection-like, source-conflict, counter-evidence or cross-scope risk.
+
+High-risk review items are never auto-approved by local simulation.
+
 This harness reports downstream task delta, consolidation precision/recall,
-unsafe consolidation, overgeneralization, stale fact resurrection,
-review-required accuracy, provenance coverage, policy violation and scope
-leakage. It is not a production apply workflow and does not mutate durable
-memory outside the evaluation copy.
+unsafe consolidation, review queue precision/recall, approval precision,
+unsafe approval, high-risk autoapproval, review coverage, overgeneralization,
+stale fact resurrection, review-required accuracy, provenance coverage, policy
+violation and scope leakage. It is not a production apply workflow and does not
+mutate durable memory outside the evaluation copy.
+
+## Review Queue CLI
+
+```bash
+PYTHONPATH=src python3 -m cognitive_memory review-queue --demo
+PYTHONPATH=src python3 -m cognitive_memory review-queue --demo --policy approve_low_risk_only
+```
+
+Supported simulation policies:
+
+- `approve_safe`
+- `reject_all`
+- `approve_low_risk_only`
+- `none`
+
+Simulation changes review item statuses only. It does not create durable
+reflections, update facts or change retrieval ranking.
 
 ## Persistence
 
@@ -120,6 +164,8 @@ records them. These records are audit/proposal artifacts, not applied memory.
 - No human review UI exists.
 - Decay is metadata/report-only and does not change retrieval ranking.
 - Scoped reflection approval exists only inside the evaluation copy.
+- ReviewQueue simulation is local and does not represent a production human
+  approval.
 - The proposal rules are deterministic and can miss natural paraphrases or true
   long-range patterns.
 - MVP 3.2 tests usefulness only on fake local scenarios. It does not prove that

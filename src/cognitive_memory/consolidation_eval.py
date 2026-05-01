@@ -6,8 +6,14 @@ from typing import Dict, List, Optional, Sequence, Tuple
 
 from .benchmark import dt, ep
 from .controller import MemoryController
-from .models import ConsolidationDecision, Episode, Reflection, RetrievalMemoryPolicy, RetrievalRequest
+from .models import ConsolidationDecision, Episode, RetrievalMemoryPolicy, RetrievalRequest
 from .reflection import SleepCycle
+from .review import (
+    apply_approved_review_decisions_to_evaluation_copy,
+    build_review_queue,
+    rejected_review_items,
+    simulate_review,
+)
 from .retrieval import RetrievalPlanner
 from .safety import instruction_risk_reason, sensitive_risk_reason
 
@@ -325,6 +331,13 @@ def dumps_consolidation_eval_report(report: Dict[str, object], as_json: bool = F
         "consolidation_precision: %.4f" % summary["consolidation_precision"],
         "consolidation_recall: %.4f" % summary["consolidation_recall"],
         "unsafe_consolidation_rate: %.4f" % summary["unsafe_consolidation_rate"],
+        "review_queue_precision: %.4f" % summary["review_queue_precision"],
+        "review_queue_recall: %.4f" % summary["review_queue_recall"],
+        "approval_precision: %.4f" % summary["approval_precision"],
+        "unsafe_approval_rate: %.4f" % summary["unsafe_approval_rate"],
+        "high_risk_autoapproval_rate: %.4f" % summary["high_risk_autoapproval_rate"],
+        "review_coverage: %.4f" % summary["review_coverage"],
+        "review_to_downstream_delta: %.4f" % summary["review_to_downstream_delta"],
         "scoped_consolidation_precision: %.4f" % summary["scoped_consolidation_precision"],
         "scoped_consolidation_recall: %.4f" % summary["scoped_consolidation_recall"],
         "cross_scope_reflection_leakage: %.4f" % summary["cross_scope_reflection_leakage"],
@@ -364,7 +377,10 @@ def _evaluate_scenario(scenario: ConsolidationEvalScenario) -> Dict[str, object]
 
     approved_controller = _build_controller(scenario)
     approved_run = SleepCycle(approved_controller.store, approved_controller.policy).consolidate(project_id=scenario.project_id)
-    approved, rejected = _simulate_approval(approved_controller, approved_run.decisions)
+    review_queue = build_review_queue(approved_run, mode="all")
+    simulate_review(review_queue, policy="approve_safe", controller=approved_controller)
+    approved = apply_approved_review_decisions_to_evaluation_copy(approved_controller, approved_run, review_queue)
+    rejected = rejected_review_items(review_queue)
     approved_result = _retrieve(approved_controller, scenario)
 
     approved_passed = _score_answer(approved_result.answer_text(), scenario)
@@ -382,6 +398,9 @@ def _evaluate_scenario(scenario: ConsolidationEvalScenario) -> Dict[str, object]
         or _decision_has_unsafe_content(decision)
     ]
     scoped_approved = [decision.id for decision in approved if _decision_has_fine_scope(decision)]
+    high_risk_autoapproved = int(review_queue.summary.get("high_risk_autoapproved", 0))
+    review_items_valid = _review_items_valid(review_queue.items)
+    expected_review_captured = _expected_review_captured(review_queue.items, scenario)
 
     return {
         "name": scenario.name,
@@ -389,9 +408,15 @@ def _evaluate_scenario(scenario: ConsolidationEvalScenario) -> Dict[str, object]
         "proposals_created": len(approved_run.decisions),
         "approved_count": len(approved),
         "rejected_count": len(rejected),
+        "review_queue_count": len(review_queue.items),
+        "review_decision_count": len(review_queue.decisions),
+        "review_items_valid": review_items_valid,
+        "expected_review_captured": expected_review_captured,
+        "high_risk_autoapproved_count": high_risk_autoapproved,
         "review_required_ok": review_required_ok,
         "expected_safe_consolidation": scenario.expected_safe_consolidation,
         "expected_scoped_consolidation": scenario.expected_scoped_consolidation,
+        "expected_review_reason": scenario.expected_review_reason,
         "expected_approval_min": scenario.expected_approval_min,
         "unsafe_approved_count": len(unsafe_approved),
         "scoped_approved_count": len(scoped_approved),
@@ -410,6 +435,7 @@ def _evaluate_scenario(scenario: ConsolidationEvalScenario) -> Dict[str, object]
         "simulated_human_approved_consolidation": _mode_result(approved_result, approved_passed),
         "approved_decisions": [decision.id for decision in approved],
         "rejected_decisions": rejected,
+        "review_queue_summary": dict(review_queue.summary),
     }
 
 
@@ -435,82 +461,6 @@ def _retrieve(controller: MemoryController, scenario: ConsolidationEvalScenario)
     )
 
 
-def _simulate_approval(
-    controller: MemoryController,
-    decisions: Sequence[ConsolidationDecision],
-) -> Tuple[List[ConsolidationDecision], List[Dict[str, str]]]:
-    approved: List[ConsolidationDecision] = []
-    rejected: List[Dict[str, str]] = []
-    conflict_scopes = [
-        dict(decision.scope)
-        for decision in decisions
-        if decision.action == "flag_conflict" or decision.review_required
-    ]
-    for decision in decisions:
-        reason = _approval_rejection_reason(controller, decision, conflict_scopes)
-        if reason:
-            rejected.append({"id": decision.id, "reason": reason})
-            continue
-        proposed = decision.proposed_memory
-        assert proposed is not None
-        reflection = Reflection(
-            claim=proposed.claim,
-            confidence=proposed.confidence,
-            supporting_evidence=list(proposed.evidence_ids),
-            counter_evidence=list(proposed.counter_evidence_ids),
-            scope="project" if proposed.scope.get("project_id") not in ("", "default") else "user",
-            user_id=str(proposed.scope.get("user_id") or "user"),
-            project_id=str(proposed.scope.get("project_id") or "default"),
-            actor_type=str(proposed.scope.get("actor_type") or "unknown"),
-            candidate_id=str(proposed.scope.get("candidate_id") or ""),
-            client_id=str(proposed.scope.get("client_id") or ""),
-            role_id=str(proposed.scope.get("role_id") or ""),
-            subject_id=str(proposed.scope.get("subject_id") or proposed.scope.get("subject") or ""),
-            relation_type=str(proposed.scope.get("relation_type") or proposed.scope.get("relation") or ""),
-            scope_confidence=float(proposed.scope.get("scope_confidence") or 0.0),
-            reflection_type=proposed.reflection_type,
-            decay_score=proposed.decay_score,
-            last_reinforced_at=proposed.last_reinforced_at,
-            review_after=proposed.review_after,
-            archived=proposed.archived,
-            status="hypothesis",
-        )
-        controller.store.add_reflection(reflection)
-        approved.append(decision)
-    return approved, rejected
-
-
-def _approval_rejection_reason(
-    controller: MemoryController,
-    decision: ConsolidationDecision,
-    conflict_scopes: Sequence[Dict[str, object]],
-) -> str:
-    if decision.action not in ("create_reflection", "update_reflection"):
-        return "unsupported_action"
-    if decision.review_required:
-        return "review_required"
-    if _scope_overlaps_any_conflict(decision.scope, conflict_scopes):
-        return "scope_has_review_required_conflict"
-    if decision.proposed_memory is None:
-        return "missing_proposed_memory"
-    if len(decision.evidence_ids) < 2:
-        return "insufficient_evidence"
-    if decision.counter_evidence_ids:
-        return "counter_evidence_present"
-    if _uses_stale_or_superseded_evidence(controller, decision.evidence_ids):
-        return "stale_or_superseded_evidence"
-    if any(evidence_id in controller.policy.deleted_episode_ids for evidence_id in decision.evidence_ids):
-        return "deleted_evidence"
-    text = decision.proposed_memory.claim
-    if instruction_risk_reason(text):
-        return "possible_prompt_injection"
-    if sensitive_risk_reason(text):
-        return "sensitive_content"
-    if controller.policy.matches_do_not_use_term(text):
-        return "do_not_use_term"
-    return ""
-
-
 def _review_required_ok(decisions: Sequence[ConsolidationDecision], scenario: ConsolidationEvalScenario) -> bool:
     if not scenario.expected_review_reason:
         return True
@@ -518,6 +468,24 @@ def _review_required_ok(decisions: Sequence[ConsolidationDecision], scenario: Co
         decision.review_required and decision.reason == scenario.expected_review_reason
         for decision in decisions
     )
+
+
+def _review_items_valid(items: Sequence[object]) -> bool:
+    return all(
+        bool(item.consolidation_run_id)
+        and bool(item.consolidation_decision_id)
+        and bool(item.proposed_action)
+        and bool(item.risk_level)
+        and bool(item.evidence_ids)
+        and isinstance(item.scope, dict)
+        for item in items
+    )
+
+
+def _expected_review_captured(items: Sequence[object], scenario: ConsolidationEvalScenario) -> bool:
+    if not scenario.expected_review_reason:
+        return True
+    return any(item.reason == scenario.expected_review_reason for item in items)
 
 
 def _score_answer(answer: str, scenario: ConsolidationEvalScenario) -> bool:
@@ -557,6 +525,12 @@ def _summary(results: List[Dict[str, object]]) -> Dict[str, object]:
     approvals = sum(int(item["approved_count"]) for item in results)
     rejected = sum(int(item["rejected_count"]) for item in results)
     unsafe_approved = sum(int(item["unsafe_approved_count"]) for item in results)
+    review_queue_count = sum(int(item["review_queue_count"]) for item in results)
+    review_decision_count = sum(int(item["review_decision_count"]) for item in results)
+    proposal_count = sum(int(item["proposals_created"]) for item in results)
+    high_risk_autoapproved = sum(int(item["high_risk_autoapproved_count"]) for item in results)
+    expected_review_scenarios = [item for item in results if item["expected_review_reason"]]
+    expected_review_captured = [item for item in expected_review_scenarios if item["expected_review_captured"]]
     expected_safe = [item for item in results if item["expected_safe_consolidation"]]
     safe_approved = [
         item
@@ -587,6 +561,13 @@ def _summary(results: List[Dict[str, object]]) -> Dict[str, object]:
         "consolidation_precision": (approvals - unsafe_approved) / approvals if approvals else 1.0,
         "consolidation_recall": len(safe_approved) / len(expected_safe) if expected_safe else 1.0,
         "unsafe_consolidation_rate": unsafe_approved / approvals if approvals else 0.0,
+        "review_queue_precision": _rate(results, "review_items_valid"),
+        "review_queue_recall": len(expected_review_captured) / len(expected_review_scenarios) if expected_review_scenarios else 1.0,
+        "approval_precision": (approvals - unsafe_approved - high_risk_autoapproved) / approvals if approvals else 1.0,
+        "unsafe_approval_rate": unsafe_approved / approvals if approvals else 0.0,
+        "high_risk_autoapproval_rate": high_risk_autoapproved / review_decision_count if review_decision_count else 0.0,
+        "review_coverage": review_queue_count / proposal_count if proposal_count else 1.0,
+        "review_to_downstream_delta": (approved_pass / scenario_count) - (no_pass / scenario_count) if scenario_count else 0.0,
         "scoped_consolidation_precision": (scoped_approval_count - scoped_unsafe) / scoped_approval_count if scoped_approval_count else 1.0,
         "scoped_consolidation_recall": len(scoped_approved) / len(expected_scoped) if expected_scoped else 1.0,
         "cross_scope_reflection_leakage": _rate(results, "cross_scope_reflection_leakage"),

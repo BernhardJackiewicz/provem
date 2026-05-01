@@ -15,6 +15,7 @@ from .mem0_env import check_mem0_environment, dumps_mem0_env_report
 from .models import Episode, RetrievalRequest, TemporalFact
 from .persistence import load_snapshot, retrieval_trace_record, save_snapshot
 from .reflection import SleepCycle
+from .review import build_review_queue, simulate_review
 from .retrieval import RetrievalPlanner
 from .transcript_eval import dumps_transcript_report, evaluate_transcripts, load_transcripts
 
@@ -84,6 +85,50 @@ def run_sleep_cycle(args: argparse.Namespace) -> int:
 def run_consolidation_eval(args: argparse.Namespace) -> int:
     report = evaluate_consolidation()
     print(dumps_consolidation_eval_report(report, as_json=args.json))
+    return 0
+
+
+def run_review_queue(args: argparse.Namespace) -> int:
+    controller = MemoryController()
+    if args.demo:
+        _load_sleep_cycle_demo_memory(controller)
+    run = SleepCycle(controller.store, controller.policy).consolidate(record=args.record)
+    queue = build_review_queue(run, mode="all")
+    if args.policy != "none":
+        simulate_review(queue, policy=args.policy, controller=controller)
+    if args.record:
+        controller.store.add_review_queue(queue)
+    if args.json:
+        print(json.dumps(queue.to_dict(), indent=2, sort_keys=True))
+        return 0
+
+    print("Review queue: %s" % queue.id)
+    print("- consolidation_run: %s" % queue.consolidation_run_id)
+    print("- items: %s" % queue.summary.get("item_count", 0))
+    print("- pending: %s" % queue.summary.get("pending", 0))
+    print("- approved_simulation: %s" % queue.summary.get("approved", 0))
+    print("- rejected_simulation: %s" % queue.summary.get("rejected", 0))
+    print("- needs_more_evidence: %s" % queue.summary.get("needs_more_evidence", 0))
+    print("- deferred: %s" % queue.summary.get("deferred", 0))
+    print("- high_risk_autoapproved: %s" % queue.summary.get("high_risk_autoapproved", 0))
+    for risk, count in sorted(queue.summary.get("risk_counts", {}).items()):
+        print("- risk.%s: %s" % (risk, count))
+    decisions_by_item = {decision.review_item_id: decision for decision in queue.decisions}
+    for item in queue.items:
+        decision = decisions_by_item.get(item.id)
+        review_reason = decision.reason if decision is not None else item.reason
+        print(
+            "- item: %s action=%s risk=%s status=%s reason=%s evidence=%s counter=%s"
+            % (
+                item.id,
+                item.proposed_action,
+                item.risk_level,
+                item.status,
+                review_reason,
+                len(item.evidence_ids),
+                len(item.counter_evidence_ids),
+            )
+        )
     return 0
 
 
@@ -231,6 +276,8 @@ def run_quality_gate(args: argparse.Namespace) -> int:
     report["checks"]["persistence_smoke"] = {"passed": persistence_passed}
     sleep_cycle_passed = _quality_gate_sleep_cycle_smoke()
     report["checks"]["sleep_cycle_dry_run"] = {"passed": sleep_cycle_passed}
+    review_queue_passed = _quality_gate_review_queue_smoke()
+    report["checks"]["review_queue"] = {"passed": review_queue_passed}
     consolidation_eval_report = evaluate_consolidation()
     consolidation_summary = consolidation_eval_report["summary"]
     consolidation_eval_passed = (
@@ -242,6 +289,11 @@ def run_quality_gate(args: argparse.Namespace) -> int:
         and consolidation_summary["candidate_client_reflection_leakage"] == 0.0
         and consolidation_summary["scoped_consolidation_precision"] == 1.0
         and consolidation_summary["scoped_consolidation_recall"] == 1.0
+        and consolidation_summary["review_queue_precision"] == 1.0
+        and consolidation_summary["review_queue_recall"] == 1.0
+        and consolidation_summary["approval_precision"] == 1.0
+        and consolidation_summary["unsafe_approval_rate"] == 0.0
+        and consolidation_summary["high_risk_autoapproval_rate"] == 0.0
         and consolidation_summary["provenance_coverage"] == 1.0
     )
     report["checks"]["consolidation_eval"] = {
@@ -252,6 +304,9 @@ def run_quality_gate(args: argparse.Namespace) -> int:
         "unsafe_consolidation_rate": consolidation_summary["unsafe_consolidation_rate"],
         "scoped_consolidation_precision": consolidation_summary["scoped_consolidation_precision"],
         "scoped_consolidation_recall": consolidation_summary["scoped_consolidation_recall"],
+        "review_queue_precision": consolidation_summary["review_queue_precision"],
+        "approval_precision": consolidation_summary["approval_precision"],
+        "high_risk_autoapproval_rate": consolidation_summary["high_risk_autoapproval_rate"],
         "policy_violation_rate": consolidation_summary["policy_violation_rate"],
     }
     graphiti_report = check_graphiti_environment()
@@ -335,6 +390,19 @@ def _quality_gate_sleep_cycle_smoke() -> bool:
     )
 
 
+def _quality_gate_review_queue_smoke() -> bool:
+    controller = MemoryController()
+    _load_sleep_cycle_demo_memory(controller)
+    run = SleepCycle(controller.store, controller.policy).consolidate()
+    queue = build_review_queue(run, mode="all")
+    simulate_review(queue, policy="approve_low_risk_only", controller=controller)
+    return (
+        queue.summary.get("item_count", 0) > 0
+        and queue.summary.get("high_risk_autoapproved", 1) == 0
+        and not controller.store.list_reflections()
+    )
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="cml", description="Engram hippocampal memory layer prototype")
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -364,6 +432,18 @@ def build_parser() -> argparse.ArgumentParser:
     consolidation_eval = subparsers.add_parser("consolidation-eval", help="Evaluate local SleepCycle proposal usefulness and safety")
     consolidation_eval.add_argument("--json", action="store_true", help="Print machine-readable JSON")
     consolidation_eval.set_defaults(func=run_consolidation_eval)
+
+    review_queue = subparsers.add_parser("review-queue", help="Build and simulate a local consolidation review queue")
+    review_queue.add_argument("--demo", action="store_true", help="Use built-in fake demo memory")
+    review_queue.add_argument("--json", action="store_true", help="Print machine-readable JSON")
+    review_queue.add_argument("--record", action="store_true", help="Record the dry-run queue in the local store")
+    review_queue.add_argument(
+        "--policy",
+        choices=("none", "approve_safe", "reject_all", "approve_low_risk_only"),
+        default="approve_low_risk_only",
+        help="Simulated review policy for local fake data",
+    )
+    review_queue.set_defaults(func=run_review_queue)
 
     export_memory = subparsers.add_parser("export-memory", help="Export a local JSONL memory snapshot")
     export_memory.add_argument("--path", required=True, help="Snapshot path to write")
