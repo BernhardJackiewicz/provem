@@ -51,6 +51,32 @@ PII.
 `--apply` is reserved and currently exits with a clear error. Durable apply
 needs a separate design and tests.
 
+## Consolidation Evaluation
+
+MVP 3.1 adds a local evaluation harness:
+
+```bash
+PYTHONPATH=src python3 -m cognitive_memory consolidation-eval
+```
+
+It compares three modes on fake scenarios:
+
+- `no_consolidation`
+- `sleep_cycle_dry_run_only`
+- `simulated_human_approved_consolidation`
+
+The simulated approval mode applies only conservative decisions to an isolated
+evaluation copy. It rejects review-required proposals, stale/superseded
+evidence, prompt-injection-like text, sensitive content, conflict-overlapping
+scopes and fine-grained candidate/client/role scopes that the current
+`Reflection` model cannot safely represent.
+
+This harness reports downstream task delta, consolidation precision/recall,
+unsafe consolidation, overgeneralization, stale fact resurrection,
+review-required accuracy, provenance coverage, policy violation and scope
+leakage. It is not a production apply workflow and does not mutate durable
+memory outside the evaluation copy.
+
 ## Persistence
 
 JSONL snapshots can store `consolidation_run` records when a caller explicitly
@@ -64,4 +90,5 @@ records them. These records are audit/proposal artifacts, not applied memory.
 - Decay is metadata/report-only and does not change retrieval ranking.
 - The proposal rules are deterministic and can miss natural paraphrases or true
   long-range patterns.
-- MVP 3.0 does not prove that consolidation improves task performance.
+- MVP 3.1 tests usefulness only on fake local scenarios. It does not prove that
+  consolidation improves real-world task performance.

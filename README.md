@@ -80,6 +80,9 @@ failure modes can be exercised before integrating heavy services.
 - MVP 3.0 local dry-run start: SleepCycle now proposes evidence-backed
   consolidation decisions and review items without applying durable writes.
   It is a local proposal/review queue, not autonomous truth creation.
+- MVP 3.1 local consolidation evaluation: a deterministic harness now compares
+  no consolidation, dry-run proposals and evaluation-only simulated approval on
+  fake scenarios. It does not implement durable apply mode.
 
 ## What Is Implemented
 
@@ -108,6 +111,9 @@ failure modes can be exercised before integrating heavy services.
 - Sleep/consolidation dry-run layer that proposes evidence-backed reflection,
   conflict, decay and no-op decisions without mutating durable memory by
   default. `--apply` is reserved and intentionally not implemented.
+- Consolidation evaluation harness for checking whether SleepCycle proposals
+  would help downstream retrieval under simulated approval without increasing
+  unsafe consolidation, stale resurrection, policy leakage or scope leakage.
 - Benchmark harness with baselines:
   - No memory
   - Long context style latest-match
@@ -162,6 +168,8 @@ PYTHONPATH=src python3 -m cognitive_memory mem0-env-check
 PYTHONPATH=src python3 -m cognitive_memory graphiti-env-check
 PYTHONPATH=src python3 scripts/check_graphiti_env.py
 PYTHONPATH=src python3 scripts/smoke_graphiti.py
+PYTHONPATH=src python3 -m cognitive_memory sleep-cycle --demo
+PYTHONPATH=src python3 -m cognitive_memory consolidation-eval
 PYTHONPATH=src python3 -m cognitive_memory quality-gate
 ```
 
@@ -178,6 +186,8 @@ cml transcript-eval --input tests/fixtures/transcripts
 cml external-eval --manifest tests/fixtures/external/manifest.json
 cml mem0-env-check
 cml graphiti-env-check
+cml sleep-cycle --demo
+cml consolidation-eval
 cml quality-gate
 ```
 
@@ -431,6 +441,10 @@ Retrieval Planner: scope-first filtering, policy-aware selection, exclusions,
 SleepCycle / Consolidation:
   local MVP 3 dry-run proposal engine; produces reviewable decisions and audit
   records without autonomous truth creation.
+
+Consolidation Evaluation:
+  local MVP 3.1 harness; compares no consolidation, dry-run proposals and an
+  evaluation-only simulated approval copy. It never enables real apply mode.
 ```
 
 Run the local SleepCycle demo:
@@ -591,6 +605,9 @@ work. `scripts/smoke_graphiti.py` is guarded: it exits clearly while
 - MVP 3.0 SleepCycle is dry-run only. It can propose reflections, conflicts and
   decay metadata, but it does not automatically create durable truth or change
   retrieval ranking.
+- MVP 3.1 simulated approval is a local evaluation device. It is not a human
+  review product, not a safe apply workflow and not evidence that consolidation
+  improves real-world agent behavior.
 
 ## Integration Path
 
@@ -610,3 +627,5 @@ work. `scripts/smoke_graphiti.py` is guarded: it exits clearly while
   critical for debugging and research.
 - Treat SleepCycle output as a review queue until a future apply path has its
   own controller/policy tests.
+- Keep consolidation evaluation separate from production memory writes; the
+  current harness can approve only inside an isolated evaluation copy.

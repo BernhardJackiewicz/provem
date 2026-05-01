@@ -137,6 +137,14 @@ does not automatically create durable reflections, rewrite facts, delete
 memory or change retrieval ranking. `--apply` is reserved and intentionally not
 implemented.
 
+The current MVP 3.1 pass adds a consolidation evaluation harness. It compares
+no consolidation, SleepCycle dry-run only and simulated human-approved
+consolidation on fake local scenarios. Simulated approval writes only into an
+isolated evaluation copy and rejects review-required, unsafe, stale,
+conflicting, forbidden, sensitive or unrepresentable scoped decisions. This
+measures whether proposals might help downstream retrieval without increasing
+unsafe recall; it is not a production apply or human-review workflow.
+
 An optional schema-constrained LLM extractor interface exists for future
 comparison. It validates proposed `MemoryCandidate` output locally and keeps the
 controller as the only durable write authority. It does not make live LLM calls
@@ -232,7 +240,8 @@ SleepCycle / Reflection Stub
        |
        +-- requires multiple evidence points by default
        +-- records counter-evidence from invalidated facts
-       +-- not a full MVP 3 implementation
+       +-- consolidation-eval compares no/dry-run/simulated approval modes
+       +-- not a full autonomous MVP 3 implementation
 ```
 
 ## Implemented Baselines

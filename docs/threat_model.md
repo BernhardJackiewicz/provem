@@ -77,6 +77,11 @@
   apply path exists.
 - Consolidation decisions preserve scope, evidence, counter-evidence,
   confidence, action, reason and review requirement.
+- Consolidation evaluation rejects unsafe simulated approvals for
+  review-required, stale/superseded, conflict-overlapping, forbidden,
+  sensitive, prompt-injection-like or unrepresentable fine-scoped proposals.
+- Simulated consolidation approval is confined to an evaluation copy and is not
+  a live durable apply path.
 - Retrieval traces include selected and excluded memories.
 - Benchmark includes explicit leakage and reflection-trap scenarios.
 - Noisy benchmark suite adds indirect phrasing, distractors, natural

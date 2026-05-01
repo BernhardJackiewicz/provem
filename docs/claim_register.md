@@ -82,6 +82,10 @@ deck or product narrative.
 | MVP 3.0 has a local SleepCycle dry-run proposal engine. | Local consolidation models, `SleepCycle`, CLI and tests | Code/tests, fake demo data only | Yes, local only | Medium | Supported as proposal/review queue, not autonomous consolidation |
 | SleepCycle automatically creates durable truth. | None | Unsupported | No | High | Rejected; `--apply` is reserved and not implemented |
 | SleepCycle decay changes retrieval ranking. | None | Unsupported | No | Medium | Rejected; decay is metadata/report-only |
+| MVP 3.1 has a local consolidation evaluation harness. | `consolidation-eval`, fake consolidation scenarios and tests | Code/tests, fake scenarios only | Yes, local only | Medium | Supported as evaluation harness, not production review |
+| Simulated approval proves real-world consolidation usefulness. | None | Unsupported | No | High | Rejected; simulated approval is isolated and synthetic |
+| Simulated approval is a durable apply workflow. | None | Unsupported | No | High | Rejected; it writes only to an evaluation copy |
+| Current consolidation evaluation shows clean safety metrics on local fake scenarios. | Local `consolidation-eval` command | Internal deterministic experiment | Yes, synthetic only | Medium | Internally supported, not product evidence |
 | Reflection can improve long-range personalization. | Generative-agents-style hypothesis | Needs ablation and hallucination metric | No | High | Hypothesis |
 | The current implementation is MVP 1 complete in a production sense. | None | Unsupported | No | High | Rejected |
 

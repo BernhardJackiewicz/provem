@@ -7,6 +7,7 @@ import tempfile
 
 from .adapters.base import AdapterConfigurationError, OptionalDependencyNotInstalled
 from .benchmark import BenchmarkRunner, dumps_report
+from .consolidation_eval import dumps_consolidation_eval_report, evaluate_consolidation
 from .controller import MemoryController
 from .external_eval import ExternalValidationError, dumps_external_report, evaluate_external_manifest
 from .graphiti_env import check_graphiti_environment, dumps_graphiti_env_report
@@ -77,6 +78,12 @@ def run_sleep_cycle(args: argparse.Namespace) -> int:
                     len(decision.counter_evidence_ids),
                 )
             )
+    return 0
+
+
+def run_consolidation_eval(args: argparse.Namespace) -> int:
+    report = evaluate_consolidation()
+    print(dumps_consolidation_eval_report(report, as_json=args.json))
     return 0
 
 
@@ -224,6 +231,22 @@ def run_quality_gate(args: argparse.Namespace) -> int:
     report["checks"]["persistence_smoke"] = {"passed": persistence_passed}
     sleep_cycle_passed = _quality_gate_sleep_cycle_smoke()
     report["checks"]["sleep_cycle_dry_run"] = {"passed": sleep_cycle_passed}
+    consolidation_eval_report = evaluate_consolidation()
+    consolidation_summary = consolidation_eval_report["summary"]
+    consolidation_eval_passed = (
+        consolidation_summary["unsafe_consolidation_rate"] == 0.0
+        and consolidation_summary["policy_violation_rate"] == 0.0
+        and consolidation_summary["scope_leakage_rate"] == 0.0
+        and consolidation_summary["provenance_coverage"] == 1.0
+    )
+    report["checks"]["consolidation_eval"] = {
+        "passed": consolidation_eval_passed,
+        "scenario_count": consolidation_eval_report["scenario_count"],
+        "approved_in_simulation": consolidation_summary["approved_in_simulation"],
+        "downstream_task_delta": consolidation_summary["downstream_task_delta"],
+        "unsafe_consolidation_rate": consolidation_summary["unsafe_consolidation_rate"],
+        "policy_violation_rate": consolidation_summary["policy_violation_rate"],
+    }
     graphiti_report = check_graphiti_environment()
     report["checks"]["graphiti_status"] = {
         "passed": True,
@@ -330,6 +353,10 @@ def build_parser() -> argparse.ArgumentParser:
     sleep_cycle.add_argument("--record", action="store_true", help="Record the dry-run audit object in the local store")
     sleep_cycle.add_argument("--apply", action="store_true", help="Reserved future flag; durable apply is not implemented")
     sleep_cycle.set_defaults(func=run_sleep_cycle)
+
+    consolidation_eval = subparsers.add_parser("consolidation-eval", help="Evaluate local SleepCycle proposal usefulness and safety")
+    consolidation_eval.add_argument("--json", action="store_true", help="Print machine-readable JSON")
+    consolidation_eval.set_defaults(func=run_consolidation_eval)
 
     export_memory = subparsers.add_parser("export-memory", help="Export a local JSONL memory snapshot")
     export_memory.add_argument("--path", required=True, help="Snapshot path to write")
