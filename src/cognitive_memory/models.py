@@ -473,6 +473,7 @@ class RetrievalResult:
     abstain_recommended: bool = False
     abstain_reason: str = ""
     retrieval_trace: str = ""
+    metadata: Dict[str, Any] = field(default_factory=dict)
 
     def answer_text(self) -> str:
         if self.abstain_recommended or not self.selected_memories:
@@ -488,6 +489,7 @@ class RetrievalResult:
             "abstain_recommended": self.abstain_recommended,
             "abstain_reason": self.abstain_reason,
             "retrieval_trace": self.retrieval_trace,
+            "metadata": dict(self.metadata),
         }
 
 

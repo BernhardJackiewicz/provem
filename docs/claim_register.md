@@ -61,12 +61,15 @@ deck or product narrative.
 | A live LLM extractor has been validated on the benchmark. | None | Unsupported | No | High | Rejected |
 | Schema validation makes LLM extraction safe. | None | Unsupported | No | High | Rejected; validation is necessary but insufficient |
 | Mem0 may be more token-efficient than graph-heavy memory stacks. | Vendor/project materials and planned baseline | Independent reproduction required | No | High | Counterhypothesis |
+| MVP 2.0 includes a practically runnable optional Mem0 baseline path. | Local Mem0 adapter, benchmark runner and fake-client tests | Code/tests, live service not configured | Yes, fake client only | Medium | Supported as optional execution path, not live benchmark evidence |
+| Mem0 normalized benchmark records expose selected memories/provenance/abstention availability where available. | Local benchmark normalization code and tests | Code/tests | Yes, fake client only | Medium | Supported as local normalization behavior |
+| Mem0 was evaluated live on this repo's benchmark. | None unless `--include-mem0 --strict-optional` succeeds with configured service | Unsupported in current environment | No | High | Rejected until live run succeeds |
 | Graphiti is suitable for temporal facts and provenance. | Project docs/papers and planned integration | Adapter evaluation required | No | Medium | Candidate |
 | Graphiti adapter contract exists; real Graphiti integration is not implemented. | Local adapter package | Code/interface inspection | Yes | Low | Supported |
 | Mem0 adapter contract exists and guarded optional Mem0 baseline code is present. | Local adapter package | Code/interface inspection and fake-client tests | Yes, without live service | Medium | Supported as integration path, not benchmark evidence |
 | Letta adapter contract exists; real Letta integration is not implemented. | Local adapter package | Code/interface inspection | Yes | Low | Supported |
 | Graphiti integration works. | None | Unsupported | No | High | Rejected |
-| Mem0 live benchmark results exist for this repo. | None | Unsupported unless `--include-mem0` runs with configured service | No | High | Rejected |
+| Mem0 live benchmark results exist for this repo. | None | Unsupported unless `--include-mem0 --strict-optional` succeeds with configured service | No | High | Rejected |
 | Letta integration works. | None | Unsupported | No | High | Rejected |
 | Reflection can improve long-range personalization. | Generative-agents-style hypothesis | Needs ablation and hallucination metric | No | High | Hypothesis |
 | The current implementation is MVP 1 complete in a production sense. | None | Unsupported | No | High | Rejected |

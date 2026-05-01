@@ -33,14 +33,18 @@ python3 -m pip install -e ".[letta]"
 
 Installing an extra does not change default behavior.
 
-Mem0 can be tried as an optional baseline:
+Mem0 can be tried as an optional external baseline:
 
 ```bash
-MEM0_API_KEY=... PYTHONPATH=src python3 -m cognitive_memory benchmark --include-mem0
+MEM0_API_KEY=... PYTHONPATH=src python3 -m cognitive_memory benchmark --suite all --include-mem0
 ```
 
 If Mem0 is unavailable or unconfigured, the baseline is skipped by default with
 a clear message. Use `--strict-optional` to fail instead of skipping.
+
+For local tests, the Mem0 path uses injected fake clients and existing
+structured/noisy/recruiting/adversarial scenarios. No real transcripts or PII
+are used in the fake path.
 
 Graphiti and Letta remain stubs. They still need real adapter code,
 configuration, service tests and deletion-policy tests.
@@ -62,3 +66,16 @@ The Mem0 adapter receives the same episodes and retrieval requests as the other
 baselines. It does not receive expected outputs. Results are only valid when a
 real configured Mem0 backend actually runs; skipped optional runs are not
 benchmark evidence.
+
+Normalized Mem0 benchmark records expose:
+
+- `answer`
+- `selected_memories`, when the backend returns search memories
+- `provenance`, when Mem0 result metadata includes source episode IDs
+- `abstention`, derived from empty search results unless Mem0 exposes native
+  abstention semantics later
+- leakage flags computed by the shared benchmark evaluator
+- latency measured by the benchmark runner
+
+If a field is not exposed by Mem0, the benchmark marks it unavailable through
+`normalized_fields` rather than counting it as successful evidence.

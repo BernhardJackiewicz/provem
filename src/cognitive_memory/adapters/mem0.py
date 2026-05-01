@@ -40,15 +40,13 @@ class Mem0Backend:
             return
 
         try:
-            MemoryClient = getattr(importlib.import_module("mem0"), "MemoryClient")
+            MemoryClient = self._load_memory_client()
         except ImportError as exc:
             raise OptionalDependencyNotInstalled(
                 "Mem0Backend requires the optional 'mem0' extra. "
                 "Install with `pip install -e .[mem0]` and set MEM0_API_KEY, "
                 "or inject a test client."
             ) from exc
-        except AttributeError as exc:
-            raise OptionalDependencyNotInstalled("Installed mem0 package does not expose MemoryClient.") from exc
 
         resolved_key = api_key or os.getenv("MEM0_API_KEY")
         if not resolved_key:
@@ -69,6 +67,7 @@ class Mem0Backend:
     def search(self, request: RetrievalRequest) -> RetrievalResult:
         raw_results = self._call_search(request)
         selected: List[SelectedMemory] = []
+        provenance_available = True
         for index, raw in enumerate(raw_results[: request.top_k]):
             normalized = self._normalize_result(raw, index)
             if normalized is None:
@@ -76,6 +75,8 @@ class Mem0Backend:
             memory_id, claim, score, evidence, metadata = normalized
             if self.project_filtering and metadata.get("project_id") not in (None, request.project_id):
                 continue
+            if not evidence:
+                provenance_available = False
             selected.append(
                 SelectedMemory(
                     id=memory_id,
@@ -94,8 +95,32 @@ class Mem0Backend:
             provenance=provenance,
             confidence=confidence,
             abstain_recommended=not selected,
+            abstain_reason="no_mem0_results" if not selected else "",
             retrieval_trace="mem0 selected=%s" % (",".join(memory.id for memory in selected) or "none"),
+            metadata={
+                "backend": "mem0",
+                "selected_memories_available": True,
+                "provenance_available": provenance_available if selected else None,
+                "abstention_available": False,
+                "abstention_semantics": "derived_from_empty_search_results",
+            },
         )
+
+    def _load_memory_client(self) -> object:
+        last_import_error: Optional[ImportError] = None
+        for module_name in ("mem0", "mem0ai"):
+            try:
+                module = importlib.import_module(module_name)
+            except ImportError as exc:
+                last_import_error = exc
+                continue
+            try:
+                return getattr(module, "MemoryClient")
+            except AttributeError:
+                continue
+        if last_import_error is not None:
+            raise last_import_error
+        raise OptionalDependencyNotInstalled("Installed mem0 package does not expose MemoryClient.")
 
     def _call_search(self, request: RetrievalRequest) -> List[Any]:
         filters = {"user_id": request.user_id}

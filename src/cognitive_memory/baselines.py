@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 
 from .adapters.base import ExternalMemoryBackend
 from .extractor import DeterministicExtractor
@@ -15,11 +15,15 @@ class BaselineResult:
         trace: str,
         provenance: Optional[List[str]] = None,
         abstain_reason: str = "",
+        selected_memories: Optional[List[Dict[str, object]]] = None,
+        normalized_fields: Optional[Dict[str, object]] = None,
     ) -> None:
         self.answer = answer
         self.trace = trace
         self.provenance = provenance or []
         self.abstain_reason = abstain_reason
+        self.selected_memories = selected_memories or []
+        self.normalized_fields = normalized_fields or {}
 
 
 class NoMemoryBaseline:
@@ -218,4 +222,7 @@ class Mem0ExternalMemoryBaseline:
             result.answer_text(),
             result.retrieval_trace,
             provenance=result.provenance,
+            abstain_reason=result.abstain_reason,
+            selected_memories=[memory.to_dict() for memory in result.selected_memories],
+            normalized_fields=dict(result.metadata),
         )

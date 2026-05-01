@@ -72,6 +72,8 @@ class ScenarioScore:
     latency_ms: float
     provenance: List[str] = field(default_factory=list)
     abstain_reason: str = ""
+    selected_memories: List[Dict[str, object]] = field(default_factory=list)
+    normalized_fields: Dict[str, object] = field(default_factory=dict)
     expected_abstain: bool = False
     actual_abstain: bool = False
     obsolete_leak: bool = False
@@ -99,6 +101,8 @@ class ScenarioScore:
             "latency_ms": self.latency_ms,
             "provenance": list(self.provenance),
             "abstain_reason": self.abstain_reason,
+            "selected_memories": list(self.selected_memories),
+            "normalized_fields": dict(self.normalized_fields),
             "expected_abstain": self.expected_abstain,
             "actual_abstain": self.actual_abstain,
             "obsolete_leak": self.obsolete_leak,
@@ -2640,6 +2644,8 @@ class BenchmarkRunner:
             latency_ms=latency_ms,
             provenance=list(result.provenance),
             abstain_reason=result.abstain_reason,
+            selected_memories=list(result.selected_memories),
+            normalized_fields=dict(result.normalized_fields),
             expected_abstain=scenario.expected_abstain,
             actual_abstain=actual_abstain,
             obsolete_leak=self._contains_any(normalized, scenario.obsolete_terms),
@@ -2722,6 +2728,9 @@ class BenchmarkRunner:
             "source_conflict_handling_accuracy": self._source_conflict_handling_accuracy(scores),
             "abstention_accuracy": self._abstention_accuracy(scores),
             "provenance_coverage": self._provenance_coverage(scores),
+            "selected_memories_available_rate": self._availability_rate(scores, "selected_memories_available"),
+            "provenance_available_rate": self._availability_rate(scores, "provenance_available"),
+            "abstention_available_rate": self._availability_rate(scores, "abstention_available"),
             "reflection_trap_failure_rate": self._reflection_trap_failure_rate(scores),
             "anaphora_failure_rate": self._anaphora_failure_rate(scores),
             "p50_retrieval_latency_ms": self._percentile([score.latency_ms for score in scores], 50),
@@ -2785,10 +2794,20 @@ class BenchmarkRunner:
         return sum(1 for score in abstention_cases if score.actual_abstain == score.expected_abstain) / len(abstention_cases)
 
     def _provenance_coverage(self, scores: List[ScenarioScore]) -> Optional[float]:
-        answered = [score for score in scores if not score.actual_abstain]
+        answered = [
+            score
+            for score in scores
+            if not score.actual_abstain and score.normalized_fields.get("provenance_available", True) is not False
+        ]
         if not answered:
             return None
         return sum(1 for score in answered if score.provenance) / len(answered)
+
+    def _availability_rate(self, scores: List[ScenarioScore], field_name: str) -> Optional[float]:
+        values = [score.normalized_fields.get(field_name) for score in scores if field_name in score.normalized_fields]
+        if not values:
+            return None
+        return sum(1 for value in values if value is True) / len(values)
 
     def _reflection_trap_failure_rate(self, scores: List[ScenarioScore]) -> Optional[float]:
         selected = [score for score in scores if score.category == "reflection_trap"]

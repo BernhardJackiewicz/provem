@@ -64,6 +64,9 @@ failure modes can be exercised before integrating heavy services.
   transcript evaluator now maps approved JSON/JSONL datasets into the existing
   transcript schema. It does not download data, include real PII or prove
   external performance.
+- MVP 2.0 start: Mem0 is the first optional external baseline path. The default
+  repo still runs without Mem0. `--include-mem0` skips clearly when Mem0 is not
+  installed or configured, and `--strict-optional` fails clearly.
 - MVP 2: not implemented. There is no real Letta/MemFS stateful agent.
 - MVP 2 preparation: adapter contracts, mocks, optional extras, and real
   integration stubs exist. Mem0 now has a guarded optional baseline adapter,
@@ -125,6 +128,9 @@ failure modes can be exercised before integrating heavy services.
 - Adapter contracts for Graphiti-like, Mem0-like, and Letta-like systems, with
   local mocks, explicit Graphiti/Letta stubs, and a guarded optional Mem0
   backend.
+- Mem0 baseline normalization for answer text, selected memories when exposed,
+  provenance when exposed, derived abstention behavior and latency. Missing
+  Mem0 fields are marked unavailable rather than treated as successful evidence.
 - Optional schema-constrained LLM extractor scaffolding that validates candidate
   output locally and proposes `MemoryCandidate` objects. It is disabled by
   default and makes no live LLM calls.
@@ -137,6 +143,7 @@ PYTHONPATH=src python3 -m cognitive_memory benchmark
 PYTHONPATH=src python3 -m cognitive_memory benchmark --suite noisy
 PYTHONPATH=src python3 -m cognitive_memory benchmark --suite recruiting
 PYTHONPATH=src python3 -m cognitive_memory benchmark --suite adversarial
+PYTHONPATH=src python3 -m cognitive_memory benchmark --suite all --include-mem0
 PYTHONPATH=src python3 -m cognitive_memory demo
 PYTHONPATH=src python3 -m cognitive_memory export-memory --path demo.memory.jsonl --demo
 PYTHONPATH=src python3 -m cognitive_memory import-memory --path demo.memory.jsonl --query "current work mode"
@@ -150,6 +157,7 @@ If the package is installed in editable mode:
 ```bash
 python3 -m pip install -e .
 cml benchmark
+cml benchmark --suite all --include-mem0
 cml demo
 cml export-memory --path demo.memory.jsonl --demo
 cml import-memory --path demo.memory.jsonl --query "current work mode"
@@ -246,6 +254,18 @@ The committed external fixtures are tiny fake data. Real public or anonymized
 datasets must remain outside git, usually under ignored `data/` or
 `transcripts/`, and must be reviewed for license and PII status before
 `approved_for_eval` is set.
+
+Mem0 can be run as an optional external baseline:
+
+```bash
+PYTHONPATH=src python3 -m cognitive_memory benchmark --suite all --include-mem0
+PYTHONPATH=src python3 -m cognitive_memory benchmark --suite all --include-mem0 --strict-optional
+```
+
+Without Mem0 installed and configured, the non-strict command skips
+`mem0_external` and the strict command exits with a clear setup error. If Mem0
+does run, it receives only the same synthetic benchmark episodes and requests
+as other baselines. It never receives expected outputs and no real PII is used.
 
 The structured suite contains 34 synthetic multi-session scenarios
 covering current facts, historical facts, updated preferences, contradictions,
@@ -410,14 +430,14 @@ is installed and `MEM0_API_KEY` is configured.
 Run the optional Mem0 baseline:
 
 ```bash
-PYTHONPATH=src python3 -m cognitive_memory benchmark --include-mem0
+PYTHONPATH=src python3 -m cognitive_memory benchmark --suite all --include-mem0
 ```
 
 If Mem0 is not installed or configured, this command skips `mem0_external` with
 a clear message. To make missing optional setup fail the command:
 
 ```bash
-PYTHONPATH=src python3 -m cognitive_memory benchmark --include-mem0 --strict-optional
+PYTHONPATH=src python3 -m cognitive_memory benchmark --suite all --include-mem0 --strict-optional
 ```
 
 Optional smoke test:

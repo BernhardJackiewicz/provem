@@ -46,9 +46,10 @@ biology.
 3. MVP 1.6: Transcript evaluation layer before live integrations.
 4. MVP 1.7: Core reliability and invariant hardening.
 5. MVP 1.8: External validation readiness for reviewed local datasets.
-6. MVP 2: Stateful agent integration through Letta/MemFS-style ports.
-7. MVP 3: Sleep cycle, evidence checking, decay and review queue.
-8. MVP 4: Audit UI and domain pilot.
+6. MVP 2.0: Optional Mem0 external baseline comparison on synthetic/fake data.
+7. MVP 2: Stateful agent integration through Letta/MemFS-style ports.
+8. MVP 3: Sleep cycle, evidence checking, decay and review queue.
+9. MVP 4: Audit UI and domain pilot.
 
 ## Current Prototype Scope
 
@@ -141,6 +142,13 @@ guarded optional baseline adapter behind the `mem0` extra, but the current
 environment does not have Mem0 installed or configured, so no live Mem0 result
 has been validated here.
 
+The current MVP 2.0 start makes the optional Mem0 baseline path practically
+runnable when `mem0ai` is installed and `MEM0_API_KEY` is configured. The
+default benchmark still has no Mem0 dependency. Non-strict `--include-mem0`
+skips missing setup clearly; `--strict-optional` fails clearly. Fake-client
+tests use existing benchmark scenarios and verify result normalization without
+touching real PII or real transcripts.
+
 ## Architecture Diagram
 
 ```text
@@ -219,6 +227,12 @@ SleepCycle / Reflection Stub
 - Graphiti-only.
 - Graphiti plus controller.
 - Full Engram / Cognitive Memory Layer.
+
+Mem0 is the first external comparison because it is the strongest practical
+counterhypothesis: a token-efficient external memory layer may outperform a
+more complex graph/controller stack in real deployments. Any Mem0 result must
+state whether it came from a live configured Mem0 run or the fake local test
+path.
 
 ## External Validation Methodology
 

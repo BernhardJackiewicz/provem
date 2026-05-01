@@ -1,0 +1,10 @@
+{
+  "description": "Tiny fake/local Mem0 baseline fixture using existing benchmark scenarios only.",
+  "scenario_names": [
+    "current_work_mode_after_update",
+    "nl_current_remote_to_hybrid_offer",
+    "recruiting_candidate_ana_salary_current",
+    "adv_same_candidate_name_client_nova"
+  ],
+  "notes": "No real PII, transcripts, or expected outputs are provided to the Mem0 baseline."
+}

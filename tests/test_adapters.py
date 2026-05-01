@@ -1,4 +1,5 @@
 import importlib.util
+import json
 import os
 import sys
 import unittest
@@ -28,7 +29,8 @@ from cognitive_memory.adapters.graphiti import GraphitiBackend
 from cognitive_memory.adapters.letta import LettaBackend
 from cognitive_memory.adapters.local import LocalTemporalGraphBackend
 from cognitive_memory.adapters.mem0 import Mem0Backend
-from cognitive_memory.benchmark import BenchmarkRunner, Scenario
+from cognitive_memory.benchmark import BenchmarkRunner, Scenario, all_scenarios
+from cognitive_memory.cli import build_parser, run_benchmark
 from cognitive_memory.controller import MemoryController
 from cognitive_memory.extractor import SchemaConstrainedLLMExtractor
 from cognitive_memory.models import Episode, RetrievalRequest
@@ -65,6 +67,24 @@ class FakeMem0Client:
         for memory in self.memories:
             if user_id and memory["user_id"] != user_id:
                 continue
+            memory_tokens = set(memory["memory"].lower().replace("_", " ").replace("|", " ").split())
+            if query_tokens & memory_tokens:
+                results.append(memory)
+        return results[:limit]
+
+
+class FakeMem0ClientWithoutProvenance:
+    def __init__(self):
+        self.memories = []
+
+    def add(self, messages, user_id, metadata=None):
+        content = " ".join(message.get("content", "") for message in messages)
+        self.memories.append({"id": "no_provenance_%s" % len(self.memories), "memory": content, "score": 0.7})
+
+    def search(self, query, filters=None, limit=10, **kwargs):
+        query_tokens = set(query.lower().replace("_", " ").split())
+        results = []
+        for memory in self.memories:
             memory_tokens = set(memory["memory"].lower().replace("_", " ").replace("|", " ").split())
             if query_tokens & memory_tokens:
                 results.append(memory)
@@ -189,6 +209,18 @@ class AdapterTests(unittest.TestCase):
         self.assertIn("mem0_external", report["skipped_optional"])
         self.assertNotIn("mem0_external", report["summary"])
 
+    def test_benchmark_mem0_strict_optional_fails_clearly(self):
+        args = build_parser().parse_args(["benchmark", "--include-mem0", "--strict-optional"])
+
+        with mock.patch("cognitive_memory.adapters.mem0.importlib.import_module", side_effect=ImportError("missing mem0")):
+            self.assertEqual(run_benchmark(args), 2)
+
+    def test_quality_gate_does_not_enable_mem0_by_default(self):
+        args = build_parser().parse_args(["quality-gate"])
+
+        self.assertEqual(args.command, "quality-gate")
+        self.assertFalse(hasattr(args, "include_mem0"))
+
     def test_benchmark_mem0_with_fake_backend(self):
         scenario = Scenario(
             name="mem0_fake_baseline",
@@ -206,6 +238,52 @@ class AdapterTests(unittest.TestCase):
 
         self.assertIn("mem0_external", report["summary"])
         self.assertEqual(report["summary"]["mem0_external"]["passed"], 1.0)
+        mem0_score = [score for score in report["scores"] if score["system"] == "mem0_external"][0]
+        self.assertTrue(mem0_score["selected_memories"])
+        self.assertTrue(mem0_score["normalized_fields"]["selected_memories_available"])
+        self.assertTrue(mem0_score["normalized_fields"]["provenance_available"])
+        self.assertFalse(mem0_score["normalized_fields"]["abstention_available"])
+
+    def test_mem0_result_normalization_marks_unavailable_fields(self):
+        scenario = Scenario(
+            name="mem0_no_provenance",
+            category="current_fact",
+            episodes=[Episode("FACT user|work_mode|hybrid", timestamp=dt(1))],
+            query="work mode",
+            expected_include=["hybrid"],
+        )
+
+        report = BenchmarkRunner(
+            scenarios=[scenario],
+            include_mem0=True,
+            mem0_backend_factory=lambda: Mem0Backend(client=FakeMem0ClientWithoutProvenance()),
+        ).run()
+        mem0_score = [score for score in report["scores"] if score["system"] == "mem0_external"][0]
+
+        self.assertEqual(mem0_score["provenance"], [])
+        self.assertTrue(mem0_score["normalized_fields"]["selected_memories_available"])
+        self.assertFalse(mem0_score["normalized_fields"]["provenance_available"])
+        self.assertFalse(mem0_score["normalized_fields"]["abstention_available"])
+        self.assertIsNone(report["summary"]["mem0_external"]["provenance_coverage"])
+        self.assertEqual(report["summary"]["mem0_external"]["provenance_available_rate"], 0.0)
+
+    def test_mem0_fake_local_fixture_uses_existing_scenarios(self):
+        fixture_path = os.path.join(ROOT, "tests", "fixtures", "mem0", "fake_mem0_suite.json")
+        with open(fixture_path, "r", encoding="utf-8") as handle:
+            fixture = json.load(handle)
+        scenarios_by_name = {scenario.name: scenario for scenario in all_scenarios()}
+        scenarios = [scenarios_by_name[name] for name in fixture["scenario_names"]]
+
+        report = BenchmarkRunner(
+            scenarios=scenarios,
+            include_mem0=True,
+            mem0_backend_factory=lambda: Mem0Backend(client=FakeMem0Client()),
+        ).run()
+        mem0_scores = [score for score in report["scores"] if score["system"] == "mem0_external"]
+
+        self.assertEqual(len(mem0_scores), len(fixture["scenario_names"]))
+        self.assertNotIn("expected_include", json.dumps(mem0_scores))
+        self.assertTrue(all("normalized_fields" in score for score in mem0_scores))
 
     def test_mem0_baseline_does_not_read_expected_outputs(self):
         hidden_expected = "hidden_expected_value_that_never_appears"

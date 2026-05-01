@@ -33,6 +33,11 @@ the committed fake external manifest, while unapproved or missing-license
 manifests must fail closed. This confirms the loader/manifest path only; it is
 not evidence from real external datasets.
 
+MVP 2.0 starts with an optional Mem0 baseline gate: default tests and
+`quality-gate` must still run without Mem0, `--include-mem0` must skip missing
+setup clearly, and `--include-mem0 --strict-optional` must fail clearly when
+Mem0 is unavailable or unconfigured.
+
 ## Safety Metric Gate
 
 For Engram / the Cognitive Memory Layer on the current synthetic benchmark:
@@ -84,6 +89,9 @@ Pass criteria:
 - Adapter mocks and stubs are documented as mocks/stubs.
 - Default tests and benchmarks require no external services, API keys or heavy
   dependencies.
+- Optional Mem0 baseline execution cannot read expected outputs and must mark
+  unavailable Mem0 fields as unavailable instead of treating them as successful
+  evidence.
 
 Fail criteria:
 
@@ -132,6 +140,8 @@ Required documents:
 - Source trust is local metadata, not a verification workflow.
 - The event model is local Graphiti groundwork, not a temporal graph backend.
 - Mem0, Graphiti and Letta performance is untested.
+- Mem0 fake-client tests exercise the optional path, but no live Mem0 result is
+  validated unless a configured Mem0 run succeeds.
 - Local JSONL snapshot persistence exists, but no production database,
   migrations, encryption, access control, UI or production privacy workflow
   exists.
