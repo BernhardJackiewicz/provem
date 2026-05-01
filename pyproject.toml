@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cognitive-memory-layer"
+version = "0.1.0"
+description = "Falsifiable prototype for governed long-term memory in LLM agents."
+requires-python = ">=3.9"
+dependencies = []
+
+[project.optional-dependencies]
+graphiti = ["graphiti>=0.1.13"]
+mem0 = ["mem0ai>=2.0.0"]
+letta = ["letta-client>=1.10.3"]
+all = ["graphiti>=0.1.13", "mem0ai>=2.0.0", "letta-client>=1.10.3"]
+
+[project.scripts]
+cml = "cognitive_memory.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
