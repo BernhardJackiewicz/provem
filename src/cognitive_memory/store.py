@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Dict, Iterable, List, Optional
 
-from .models import Episode, MemoryCandidate, MemoryEvent, Reflection, TemporalFact
+from .models import ConsolidationRun, Episode, MemoryCandidate, MemoryEvent, Reflection, TemporalFact
 
 
 class InMemoryStore:
@@ -19,6 +19,7 @@ class InMemoryStore:
         self.facts: Dict[str, TemporalFact] = {}
         self.events: Dict[str, MemoryEvent] = {}
         self.reflections: Dict[str, Reflection] = {}
+        self.consolidation_runs: Dict[str, ConsolidationRun] = {}
         self.audit_log: List[Dict[str, str]] = []
         self.retrieval_traces: List[Dict[str, object]] = []
 
@@ -62,6 +63,11 @@ class InMemoryStore:
         self.audit("reflection_updated", reflection.id)
         return reflection
 
+    def add_consolidation_run(self, run: ConsolidationRun) -> ConsolidationRun:
+        self.consolidation_runs[run.id] = run
+        self.audit("consolidation_run_added", run.id)
+        return run
+
     def get_episode(self, episode_id: str) -> Optional[Episode]:
         return self.episodes.get(episode_id)
 
@@ -73,6 +79,9 @@ class InMemoryStore:
 
     def get_reflection(self, reflection_id: str) -> Optional[Reflection]:
         return self.reflections.get(reflection_id)
+
+    def get_consolidation_run(self, run_id: str) -> Optional[ConsolidationRun]:
+        return self.consolidation_runs.get(run_id)
 
     def list_episodes(self, user_id: Optional[str] = None, project_id: Optional[str] = None) -> List[Episode]:
         episodes = list(self.episodes.values())
@@ -119,6 +128,18 @@ class InMemoryStore:
             for reflection in self.list_reflections(user_id=user_id, project_id=project_id)
             if reflection.is_active()
         ]
+
+    def list_consolidation_runs(
+        self,
+        user_id: Optional[str] = None,
+        project_id: Optional[str] = None,
+    ) -> List[ConsolidationRun]:
+        runs = list(self.consolidation_runs.values())
+        if user_id is not None:
+            runs = [run for run in runs if run.user_id == user_id]
+        if project_id is not None:
+            runs = [run for run in runs if run.project_id == project_id]
+        return sorted(runs, key=lambda run: run.created_at)
 
     def matching_active_facts(
         self,

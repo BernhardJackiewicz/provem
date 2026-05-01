@@ -1,0 +1,67 @@
+# Sleep Cycle / Consolidation
+
+MVP 3.0 starts as a local dry-run proposal engine. It is not biological sleep,
+not an autonomous agent and not a production consolidation system.
+
+## Current Behavior
+
+`SleepCycle` scans local episodes, temporal facts, memory events and existing
+reflections, then returns a `ConsolidationRun` with candidates and decisions.
+By default it does not write durable facts, events or reflections.
+
+Supported decision actions:
+
+- `create_reflection`
+- `update_reflection`
+- `archive`
+- `decay`
+- `flag_conflict`
+- `no_op`
+
+Every decision carries evidence ids, counter-evidence ids, confidence, scope,
+memory type, reason and `review_required`.
+
+## Safety Rules
+
+- Single weak evidence does not create a stable reflection.
+- Deleted and do-not-use memories are ignored.
+- Prompt-injection-like content is not consolidated as instruction.
+- Sensitive memories require review and are not turned into stable reflection.
+- Conflicting evidence produces `review_required` conflict decisions.
+- Candidate, client, role, project and user scope are preserved.
+- Superseded facts produce decay/archive proposals only; they do not become
+  current truth again.
+
+## CLI
+
+```bash
+PYTHONPATH=src python3 -m cognitive_memory sleep-cycle --demo
+```
+
+The demo uses fake local data and prints counts for candidates, decisions and
+review-required items. It avoids raw sensitive values in the human summary.
+
+```bash
+PYTHONPATH=src python3 -m cognitive_memory sleep-cycle --demo --json
+```
+
+JSON output is intended for local debugging of fake data. Do not use it for real
+PII.
+
+`--apply` is reserved and currently exits with a clear error. Durable apply
+needs a separate design and tests.
+
+## Persistence
+
+JSONL snapshots can store `consolidation_run` records when a caller explicitly
+records them. These records are audit/proposal artifacts, not applied memory.
+
+## Limitations
+
+- No live LLM extraction is used.
+- No Graphiti, Mem0 or Letta integration is used.
+- No human review UI exists.
+- Decay is metadata/report-only and does not change retrieval ranking.
+- The proposal rules are deterministic and can miss natural paraphrases or true
+  long-range patterns.
+- MVP 3.0 does not prove that consolidation improves task performance.

@@ -18,6 +18,9 @@ violating one of these rules is a regression.
 - Every selected memory has provenance.
 - Every excluded memory has an exclusion reason.
 - Facts, events and reflections go through the same policy gate.
+- SleepCycle proposals do not become durable memory unless a future explicit
+  apply path is implemented and tested.
+- SleepCycle ignores deleted, do-not-use and prompt-injection-like evidence.
 - Persistence reload must not change retrieval results.
 - Replaying the same episode sequence must not create duplicate active truth.
 - Adding irrelevant distractor memory must not make unsafe memory selectable.
@@ -28,6 +31,11 @@ violating one of these rules is a regression.
 do-not-use, source conflicts, prompt-injection quarantine, wrong-scope
 exclusion, supersession, event/reflection policy gates, provenance, exclusion
 reasons, persistence round trips and replay/idempotency.
+
+`tests/test_sleep_cycle.py` covers dry-run consolidation invariants for
+evidence thresholds, conflicts, sensitive review, scope preservation,
+prompt-injection exclusion, stale/superseded decay proposals and persistence of
+recorded consolidation runs.
 
 The same file also runs 100 seeded fuzz sequences with deterministic memory
 operations:
@@ -86,3 +94,6 @@ command.
 
 Future Graphiti, Letta, Mem0 or LLM extraction work must preserve these
 invariants before being considered part of MVP 2.
+
+Future SleepCycle apply behavior must preserve these invariants before being
+considered beyond MVP 3.0 dry-run status.

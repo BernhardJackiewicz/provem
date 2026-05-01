@@ -49,7 +49,8 @@ biology.
 6. MVP 2.0: Optional Mem0 external baseline comparison on synthetic/fake data.
 7. MVP 2.1: Graphiti mapping and backend parity scaffold.
 8. MVP 2: Stateful agent integration through Letta/MemFS-style ports.
-9. MVP 3: Sleep cycle, evidence checking, decay and review queue.
+9. MVP 3.0: Local SleepCycle dry-run proposals, evidence checking, decay
+   metadata and review queue.
 10. MVP 4: Audit UI and domain pilot.
 
 ## Current Prototype Scope
@@ -128,6 +129,13 @@ path for approved local JSON/JSONL transcript datasets. It maps external
 records into the existing transcript-eval schema, refuses unapproved or
 missing-license datasets and keeps public/anonymized data outside git. This is
 readiness for external validation, not evidence from external datasets.
+
+The current MVP 3.0 start adds a local SleepCycle dry-run proposal engine. It
+returns `ConsolidationRun` records with candidates and decisions for repeated
+evidence, conflicts, stale/superseded memories and review-required cases. It
+does not automatically create durable reflections, rewrite facts, delete
+memory or change retrieval ranking. `--apply` is reserved and intentionally not
+implemented.
 
 An optional schema-constrained LLM extractor interface exists for future
 comparison. It validates proposed `MemoryCandidate` output locally and keeps the

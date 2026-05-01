@@ -52,6 +52,11 @@ Graphiti validation. `scripts/check_graphiti_env.py` and
 environment; that is acceptable when the output clearly reports missing
 Graphiti setup or the unimplemented adapter.
 
+MVP 3.0 starts with a local SleepCycle dry-run gate: `sleep-cycle --demo` must
+produce consolidation candidates and reviewable decisions without durable
+memory writes. `--apply` must fail clearly because autonomous apply behavior is
+not implemented.
+
 ## Safety Metric Gate
 
 For Engram / the Cognitive Memory Layer on the current synthetic benchmark:
@@ -113,6 +118,9 @@ Pass criteria:
   results.
 - Graphiti smoke setup failures must not be converted into successful live
   results.
+- SleepCycle dry-run decisions must not be described as applied memory.
+- SleepCycle decay metadata must not change retrieval ranking without explicit
+  tests.
 
 Fail criteria:
 

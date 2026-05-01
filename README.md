@@ -77,9 +77,9 @@ failure modes can be exercised before integrating heavy services.
   but it is not part of default execution and has not been validated against a
   configured Mem0 service in this environment. Mem0 live comparison is deferred
   until a Python 3.10+ runtime and Mem0 Platform or OSS setup are available.
-- MVP 3: only a guarded stub. The sleep cycle can create simple
-  evidence-backed reflections, but it is not used in the MVP 1 benchmark and is
-  not a full consolidation system.
+- MVP 3.0 local dry-run start: SleepCycle now proposes evidence-backed
+  consolidation decisions and review items without applying durable writes.
+  It is a local proposal/review queue, not autonomous truth creation.
 
 ## What Is Implemented
 
@@ -105,8 +105,9 @@ failure modes can be exercised before integrating heavy services.
   over weak recruiter notes and abstains on unresolved tool/user conflicts.
 - Conservative reference resolver for policy requests such as "that company",
   "that client" and "that number".
-- Sleep/consolidation layer that creates evidence-backed reflections only when
-  enough support exists. This remains an MVP 3 stub.
+- Sleep/consolidation dry-run layer that proposes evidence-backed reflection,
+  conflict, decay and no-op decisions without mutating durable memory by
+  default. `--apply` is reserved and intentionally not implemented.
 - Benchmark harness with baselines:
   - No memory
   - Long context style latest-match
@@ -427,9 +428,20 @@ Memory Controller  <---- deterministic / noisy / recruiting / adversarial / opti
 Retrieval Planner: scope-first filtering, policy-aware selection, exclusions,
                    provenance, abstention reason
 
-SleepCycle / Reflection Stub:
-  separate MVP 3 path; not part of benchmarked MVP 1 behavior by default.
+SleepCycle / Consolidation:
+  local MVP 3 dry-run proposal engine; produces reviewable decisions and audit
+  records without autonomous truth creation.
 ```
+
+Run the local SleepCycle demo:
+
+```bash
+PYTHONPATH=src python3 -m cognitive_memory sleep-cycle --demo
+```
+
+This prints candidate/decision/review counts from fake data only. It does not
+apply consolidation decisions. `--apply` is reserved for a future audited
+implementation and currently fails clearly.
 
 ## MVP 2 Adapter Preparation
 
@@ -576,7 +588,9 @@ work. `scripts/smoke_graphiti.py` is guarded: it exits clearly while
 - JSONL `schema_version` checks are compatibility guards for research
   snapshots, not a migration framework.
 - Latency numbers are local in-process timings, not service timings.
-- Reflection is deliberately constrained and should not be treated as MVP 3.
+- MVP 3.0 SleepCycle is dry-run only. It can propose reflections, conflicts and
+  decay metadata, but it does not automatically create durable truth or change
+  retrieval ranking.
 
 ## Integration Path
 
@@ -594,3 +608,5 @@ work. `scripts/smoke_graphiti.py` is guarded: it exits clearly while
 - Keep the controller as the single durable write authority.
 - Keep `RetrievalResult.excluded_memories` and provenance traces; they are
   critical for debugging and research.
+- Treat SleepCycle output as a review queue until a future apply path has its
+  own controller/policy tests.

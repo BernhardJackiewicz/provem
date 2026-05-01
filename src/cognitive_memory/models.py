@@ -383,6 +383,10 @@ class Reflection:
     user_id: str = DEFAULT_USER_ID
     project_id: str = DEFAULT_PROJECT_ID
     decay_rate: float = 0.05
+    decay_score: float = 0.0
+    last_reinforced_at: Optional[datetime] = None
+    review_after: Optional[datetime] = None
+    archived: bool = False
     last_reviewed: datetime = field(default_factory=now_utc)
     next_review_at: datetime = field(default_factory=lambda: add_days(now_utc(), 30))
     status: str = "hypothesis"
@@ -392,6 +396,11 @@ class Reflection:
     def __post_init__(self) -> None:
         self.confidence = clamp(self.confidence)
         self.decay_rate = clamp(self.decay_rate)
+        self.decay_score = clamp(self.decay_score)
+        if self.last_reinforced_at is not None:
+            self.last_reinforced_at = ensure_datetime(self.last_reinforced_at)
+        if self.review_after is not None:
+            self.review_after = ensure_datetime(self.review_after)
         self.last_reviewed = ensure_datetime(self.last_reviewed)
         self.next_review_at = ensure_datetime(self.next_review_at)
         self.created_at = ensure_datetime(self.created_at)
@@ -401,14 +410,146 @@ class Reflection:
         return self.claim
 
     def is_active(self) -> bool:
-        return self.status in ("hypothesis", "accepted")
+        return not self.archived and self.status in ("hypothesis", "accepted")
 
     def to_dict(self) -> Dict[str, Any]:
         data = asdict(self)
+        data["last_reinforced_at"] = iso(self.last_reinforced_at)
+        data["review_after"] = iso(self.review_after)
         data["last_reviewed"] = iso(self.last_reviewed)
         data["next_review_at"] = iso(self.next_review_at)
         data["created_at"] = iso(self.created_at)
         return data
+
+
+@dataclass
+class ConsolidatedMemory:
+    claim: str
+    memory_type: str = "reflection"
+    scope: Dict[str, Any] = field(default_factory=dict)
+    evidence_ids: List[str] = field(default_factory=list)
+    counter_evidence_ids: List[str] = field(default_factory=list)
+    confidence: float = 0.0
+    status: str = "proposed"
+    decay_score: float = 0.0
+    last_reinforced_at: Optional[datetime] = None
+    review_after: Optional[datetime] = None
+    archived: bool = False
+    id: str = field(default_factory=lambda: make_id("cm"))
+    created_at: datetime = field(default_factory=now_utc)
+
+    def __post_init__(self) -> None:
+        self.confidence = clamp(self.confidence)
+        self.decay_score = clamp(self.decay_score)
+        if self.last_reinforced_at is not None:
+            self.last_reinforced_at = ensure_datetime(self.last_reinforced_at)
+        if self.review_after is not None:
+            self.review_after = ensure_datetime(self.review_after)
+        self.created_at = ensure_datetime(self.created_at)
+
+    def to_dict(self) -> Dict[str, Any]:
+        data = asdict(self)
+        data["last_reinforced_at"] = iso(self.last_reinforced_at)
+        data["review_after"] = iso(self.review_after)
+        data["created_at"] = iso(self.created_at)
+        return data
+
+
+@dataclass
+class ConsolidationCandidate:
+    claim: str
+    memory_type: str = "reflection"
+    scope: Dict[str, Any] = field(default_factory=dict)
+    evidence_ids: List[str] = field(default_factory=list)
+    counter_evidence_ids: List[str] = field(default_factory=list)
+    confidence: float = 0.0
+    source_ids: List[str] = field(default_factory=list)
+    risk_flags: List[str] = field(default_factory=list)
+    proposed_memory: Optional[ConsolidatedMemory] = None
+    id: str = field(default_factory=lambda: make_id("cc"))
+    created_at: datetime = field(default_factory=now_utc)
+
+    def __post_init__(self) -> None:
+        self.confidence = clamp(self.confidence)
+        self.created_at = ensure_datetime(self.created_at)
+
+    def to_dict(self) -> Dict[str, Any]:
+        data = asdict(self)
+        data["created_at"] = iso(self.created_at)
+        data["proposed_memory"] = self.proposed_memory.to_dict() if self.proposed_memory is not None else None
+        return data
+
+
+@dataclass
+class ConsolidationDecision:
+    candidate_id: str
+    action: str
+    reason: str
+    evidence_ids: List[str] = field(default_factory=list)
+    counter_evidence_ids: List[str] = field(default_factory=list)
+    confidence: float = 0.0
+    scope: Dict[str, Any] = field(default_factory=dict)
+    memory_type: str = "reflection"
+    review_required: bool = False
+    target_id: str = ""
+    proposed_memory: Optional[ConsolidatedMemory] = None
+    decay_metadata: Dict[str, Any] = field(default_factory=dict)
+    id: str = field(default_factory=lambda: make_id("cd"))
+    created_at: datetime = field(default_factory=now_utc)
+
+    def __post_init__(self) -> None:
+        self.confidence = clamp(self.confidence)
+        self.created_at = ensure_datetime(self.created_at)
+
+    def to_dict(self) -> Dict[str, Any]:
+        data = asdict(self)
+        data["created_at"] = iso(self.created_at)
+        data["proposed_memory"] = self.proposed_memory.to_dict() if self.proposed_memory is not None else None
+        data["decay_metadata"] = _json_ready_dict(self.decay_metadata)
+        return data
+
+
+@dataclass
+class ConsolidationRun:
+    user_id: str = DEFAULT_USER_ID
+    project_id: str = DEFAULT_PROJECT_ID
+    status: str = "dry_run"
+    candidates: List[ConsolidationCandidate] = field(default_factory=list)
+    decisions: List[ConsolidationDecision] = field(default_factory=list)
+    summary: Dict[str, Any] = field(default_factory=dict)
+    audit_log: List[str] = field(default_factory=list)
+    id: str = field(default_factory=lambda: make_id("cr"))
+    created_at: datetime = field(default_factory=now_utc)
+
+    def __post_init__(self) -> None:
+        self.created_at = ensure_datetime(self.created_at)
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "user_id": self.user_id,
+            "project_id": self.project_id,
+            "status": self.status,
+            "candidates": [item.to_dict() for item in self.candidates],
+            "decisions": [item.to_dict() for item in self.decisions],
+            "summary": _json_ready_dict(self.summary),
+            "audit_log": list(self.audit_log),
+            "id": self.id,
+            "created_at": iso(self.created_at),
+        }
+
+
+def _json_ready_dict(value: Dict[str, Any]) -> Dict[str, Any]:
+    ready: Dict[str, Any] = {}
+    for key, item in value.items():
+        if hasattr(item, "isoformat"):
+            ready[key] = iso(item)
+        elif isinstance(item, dict):
+            ready[key] = _json_ready_dict(item)
+        elif isinstance(item, (list, tuple)):
+            ready[key] = [iso(entry) if hasattr(entry, "isoformat") else entry for entry in item]
+        else:
+            ready[key] = item
+    return ready
 
 
 @dataclass

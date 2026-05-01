@@ -79,6 +79,9 @@ deck or product narrative.
 | Graphiti benchmark results exist for this repo. | None | Unsupported unless a real configured Graphiti run succeeds | No | High | Rejected |
 | Mem0 live benchmark results exist for this repo. | None | Unsupported unless `--include-mem0 --strict-optional` succeeds with configured service | No | High | Rejected |
 | Letta integration works. | None | Unsupported | No | High | Rejected |
+| MVP 3.0 has a local SleepCycle dry-run proposal engine. | Local consolidation models, `SleepCycle`, CLI and tests | Code/tests, fake demo data only | Yes, local only | Medium | Supported as proposal/review queue, not autonomous consolidation |
+| SleepCycle automatically creates durable truth. | None | Unsupported | No | High | Rejected; `--apply` is reserved and not implemented |
+| SleepCycle decay changes retrieval ranking. | None | Unsupported | No | Medium | Rejected; decay is metadata/report-only |
 | Reflection can improve long-range personalization. | Generative-agents-style hypothesis | Needs ablation and hallucination metric | No | High | Hypothesis |
 | The current implementation is MVP 1 complete in a production sense. | None | Unsupported | No | High | Rejected |
 

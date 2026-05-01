@@ -19,6 +19,7 @@ Retrieval planner = policy-aware selection and abstention
 JSONL snapshots = explicit local research persistence
 Transcript evaluator = realistic local fixture harness
 Invariant tests = core safety regression guard
+SleepCycle = dry-run consolidation proposal/review queue
 ```
 
 The default system has no real Graphiti, Letta, Mem0, production database, UI
@@ -38,6 +39,7 @@ Episode
   -> accepted facts also create MemoryEvent objects when useful
   -> RetrievalPlanner filters by scope, centralized policy, source safety and time
   -> RetrievalResult returns selected memories, exclusions, provenance and abstention reason
+  -> optional SleepCycle dry-run proposes consolidation decisions without applying them
   -> optional JSONL snapshot can persist local store, policy flags and retrieval traces
 ```
 
@@ -114,6 +116,24 @@ idempotency.
 The seeded fuzz tests generate deterministic operation sequences and compare
 semantic retrieval behavior instead of UUIDs. This is intended to catch unsafe
 regressions without pretending to be exhaustive formal verification.
+
+## SleepCycle Path
+
+MVP 3.0 adds a local dry-run `SleepCycle` proposal engine. It scans existing
+episodes, facts, memory events and reflections, then returns `ConsolidationRun`
+records with candidates and decisions for repeated evidence, conflicts,
+stale/superseded memories and review-required cases.
+
+The path is deliberately non-autonomous:
+
+- it does not create durable reflections by default
+- it does not rewrite facts or events
+- it does not delete memory
+- it does not change retrieval ranking
+- `--apply` is reserved and fails clearly
+
+Consolidation records can be saved in JSONL snapshots only as audit/proposal
+artifacts. They are not applied memory.
 
 ## Local Persistence Path
 
@@ -205,6 +225,8 @@ contract is documented in `docs/graphiti_mapping.md`.
   unit tests, CI, production monitoring or external baseline validation.
 - Graphiti parity tests reduce adapter-boundary ambiguity, but they do not
   prove Graphiti API compatibility, Neo4j persistence or graph query latency.
+- SleepCycle dry-run creates useful review artifacts, but it does not prove
+  that reflection/consolidation improves task performance.
 
 ## Do Not Change Casually
 
@@ -221,6 +243,7 @@ contract is documented in `docs/graphiti_mapping.md`.
   better recall.
 - The distinction between adapter mocks/stubs and real integrations.
 - The distinction between local Graphiti parity and live Graphiti integration.
+- The distinction between SleepCycle proposals and applied durable memory.
 
 ## MVP 2 Readiness
 

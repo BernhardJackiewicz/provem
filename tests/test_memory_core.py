@@ -94,22 +94,35 @@ class MemoryCoreTests(unittest.TestCase):
 
     def test_reflection_requires_two_evidence_points(self):
         self.controller.ingest_episode(Episode("FACT user|domain|AI memory", timestamp=dt(1)))
-        self.assertEqual(SleepCycle(self.controller.store).consolidate(), [])
+        early_run = SleepCycle(self.controller.store, self.controller.policy).consolidate()
+        self.assertFalse(any(decision.action == "create_reflection" for decision in early_run.decisions))
 
         self.controller.ingest_episode(Episode("FACT user|work_mode|hybrid", timestamp=dt(2)))
-        reflections = SleepCycle(self.controller.store).consolidate()
+        run = SleepCycle(self.controller.store, self.controller.policy).consolidate()
+        reflections = [
+            decision
+            for decision in run.decisions
+            if decision.action == "create_reflection" and decision.reason == "repeated_evidence"
+        ]
 
         self.assertEqual(len(reflections), 1)
-        self.assertGreaterEqual(len(reflections[0].supporting_evidence), 2)
+        self.assertGreaterEqual(len(reflections[0].evidence_ids), 2)
+        self.assertEqual(self.controller.store.list_reflections(), [])
 
     def test_reflection_single_evidence_requires_explicit_override(self):
         self.controller.ingest_episode(Episode("FACT user|domain|AI memory", timestamp=dt(1)))
 
-        self.assertEqual(SleepCycle(self.controller.store, min_evidence=1).consolidate(), [])
-        reflections = SleepCycle(self.controller.store, allow_single_evidence=True).consolidate()
+        default_run = SleepCycle(self.controller.store, self.controller.policy, min_evidence=1).consolidate()
+        self.assertFalse(any(decision.action == "create_reflection" for decision in default_run.decisions))
+        run = SleepCycle(self.controller.store, self.controller.policy, allow_single_evidence=True).consolidate()
+        reflections = [
+            decision
+            for decision in run.decisions
+            if decision.action == "create_reflection" and decision.reason == "repeated_evidence"
+        ]
 
         self.assertEqual(len(reflections), 1)
-        self.assertEqual(len(reflections[0].supporting_evidence), 1)
+        self.assertEqual(len(reflections[0].evidence_ids), 1)
 
     def test_reflection_records_counter_evidence_from_invalidated_facts(self):
         old_episode = Episode("FACT user|work_mode|remote", timestamp=dt(1))
@@ -117,10 +130,15 @@ class MemoryCoreTests(unittest.TestCase):
         self.controller.ingest_episode(Episode("FACT user|work_mode|hybrid", timestamp=dt(2)))
         self.controller.ingest_episode(Episode("FACT user|domain|AI memory", timestamp=dt(3)))
 
-        reflections = SleepCycle(self.controller.store).consolidate()
+        run = SleepCycle(self.controller.store, self.controller.policy).consolidate()
+        reflections = [
+            decision
+            for decision in run.decisions
+            if decision.action == "create_reflection" and decision.reason == "repeated_evidence"
+        ]
 
         self.assertEqual(len(reflections), 1)
-        self.assertIn(old_episode.id, reflections[0].counter_evidence)
+        self.assertIn(old_episode.id, reflections[0].counter_evidence_ids)
 
     def test_do_not_use_marks_memory_without_deleting_evidence(self):
         fact_episode = Episode("FACT user|avoid_company|Globex", timestamp=dt(1))

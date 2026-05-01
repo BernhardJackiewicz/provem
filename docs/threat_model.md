@@ -9,6 +9,8 @@
 - Sensitive memory misuse: sensitive data is stored or retrieved without consent.
 - Cross-project contamination: facts from one project affect another project.
 - Reflection hallucination: consolidation creates unsupported user assumptions.
+- Over-consolidation: a sleep cycle turns weak, sensitive or conflicting
+  evidence into stable memory without review.
 - Memory poisoning: malicious or low-quality content becomes durable memory.
 - Prompt injection through memory: retrieved content changes tool or system
   behavior.
@@ -69,6 +71,12 @@
 - Project and user scoping.
 - Reflection requires multiple evidence points.
 - Reflection records counter-evidence from invalidated facts.
+- SleepCycle is dry-run by default and returns reviewable consolidation
+  decisions instead of creating durable truth.
+- SleepCycle `--apply` is reserved and fails clearly until a future audited
+  apply path exists.
+- Consolidation decisions preserve scope, evidence, counter-evidence,
+  confidence, action, reason and review requirement.
 - Retrieval traces include selected and excluded memories.
 - Benchmark includes explicit leakage and reflection-trap scenarios.
 - Noisy benchmark suite adds indirect phrasing, distractors, natural
@@ -158,6 +166,8 @@
 - Diarization confidence handling and speaker-attribution checks beyond the
   current fixture metadata.
 - Human review queue for high-impact reflections.
+- Real review workflow for SleepCycle decisions before any durable apply path.
+- Tests for any future retrieval-ranking effect from decay metadata.
 - Live LLM-based extraction experiments with deterministic schema validation,
   prompt-injection red-team cases and side-by-side comparison against the rule
   extractor.

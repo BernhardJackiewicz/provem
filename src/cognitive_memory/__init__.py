@@ -9,6 +9,10 @@ from .external_eval import (
     load_validation_manifest,
 )
 from .models import (
+    ConsolidatedMemory,
+    ConsolidationCandidate,
+    ConsolidationDecision,
+    ConsolidationRun,
     Episode,
     EventContext,
     EventParticipant,
@@ -29,6 +33,10 @@ from .transcript_eval import Transcript, TranscriptLabels, evaluate_transcripts,
 
 __all__ = [
     "Episode",
+    "ConsolidatedMemory",
+    "ConsolidationCandidate",
+    "ConsolidationDecision",
+    "ConsolidationRun",
     "ExternalDatasetConfig",
     "ExternalValidationError",
     "EventContext",

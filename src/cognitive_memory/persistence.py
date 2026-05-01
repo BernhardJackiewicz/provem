@@ -6,6 +6,10 @@ from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional
 
 from .models import (
+    ConsolidatedMemory,
+    ConsolidationCandidate,
+    ConsolidationDecision,
+    ConsolidationRun,
     Episode,
     EventContext,
     EventParticipant,
@@ -60,6 +64,7 @@ def save_snapshot(
     records.extend(_record("fact", item.to_dict()) for item in store.list_facts())
     records.extend(_record("event", item.to_dict()) for item in store.list_events())
     records.extend(_record("reflection", item.to_dict()) for item in store.list_reflections())
+    records.extend(_record("consolidation_run", item.to_dict()) for item in store.list_consolidation_runs())
     records.extend(_record("store_audit", dict(item)) for item in store.audit_log)
     records.extend(_record("retrieval_trace", _trace_to_dict(item)) for item in traces)
 
@@ -111,6 +116,9 @@ def load_snapshot(path: str) -> MemorySnapshot:
             elif record_type == "reflection":
                 item = _construct(Reflection, data)
                 store.reflections[item.id] = item
+            elif record_type == "consolidation_run":
+                item = _consolidation_run_from_dict(data)
+                store.consolidation_runs[item.id] = item
             elif record_type == "store_audit":
                 audit_log.append({"event": str(data.get("event", "")), "target_id": str(data.get("target_id", ""))})
             elif record_type == "retrieval_trace":
@@ -179,3 +187,34 @@ def _event_from_dict(data: Dict[str, Any]) -> MemoryEvent:
     event_data["relations"] = [_construct(EventRelation, item) for item in event_data.get("relations", [])]
     event_data["context"] = _construct(EventContext, event_data.get("context", {}))
     return _construct(MemoryEvent, event_data)
+
+
+def _consolidated_memory_from_dict(data: Optional[Dict[str, Any]]) -> Optional[ConsolidatedMemory]:
+    if not data:
+        return None
+    return _construct(ConsolidatedMemory, data)
+
+
+def _consolidation_candidate_from_dict(data: Dict[str, Any]) -> ConsolidationCandidate:
+    candidate_data = dict(data)
+    candidate_data["proposed_memory"] = _consolidated_memory_from_dict(candidate_data.get("proposed_memory"))
+    return _construct(ConsolidationCandidate, candidate_data)
+
+
+def _consolidation_decision_from_dict(data: Dict[str, Any]) -> ConsolidationDecision:
+    decision_data = dict(data)
+    decision_data["proposed_memory"] = _consolidated_memory_from_dict(decision_data.get("proposed_memory"))
+    return _construct(ConsolidationDecision, decision_data)
+
+
+def _consolidation_run_from_dict(data: Dict[str, Any]) -> ConsolidationRun:
+    run_data = dict(data)
+    run_data["candidates"] = [
+        _consolidation_candidate_from_dict(item)
+        for item in run_data.get("candidates", [])
+    ]
+    run_data["decisions"] = [
+        _consolidation_decision_from_dict(item)
+        for item in run_data.get("decisions", [])
+    ]
+    return _construct(ConsolidationRun, run_data)

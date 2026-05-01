@@ -211,3 +211,25 @@ even if benchmark accuracy improves:
 These are guarded by `tests/test_invariants.py`, including 100 seeded fuzz
 sequences. The fuzz tests are regression pressure, not a formal proof of
 safety.
+
+## SleepCycle Failure Classes
+
+MVP 3.0 introduces a dry-run consolidation proposal engine. New failure modes
+are treated as high-risk because they can create plausible but unsupported
+summary memory:
+
+- Over-consolidation: a stable reflection is proposed from one weak episode.
+- Sensitive consolidation: sensitive facts become summary memory without
+  review.
+- Forbidden evidence use: deleted or do-not-use memory supports a candidate.
+- Instruction consolidation: prompt-injection-like memory is summarized as if
+  it were agent policy.
+- Scope merge: candidate, client, role or project context is merged across
+  subjects.
+- Conflict smoothing: contradictory evidence is turned into a clean summary
+  instead of a review-required conflict.
+- Decay mutation: decay metadata silently changes retrieval behavior.
+
+Current status: `SleepCycle` is dry-run only. These risks are guarded by
+`tests/test_sleep_cycle.py`, but no claim is made that consolidation improves
+real task performance.
