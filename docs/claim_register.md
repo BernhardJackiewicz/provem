@@ -72,6 +72,7 @@ deck or product narrative.
 | A Graphiti mapping contract exists for episodes, temporal facts, memory events, participants, relations, provenance and policy metadata. | `docs/graphiti_mapping.md` and local mapping helpers | Docs/code/tests | Yes, local only | Medium | Supported as scaffold, not live integration evidence |
 | A local Graphiti-parity backend exists. | `LocalGraphitiParityBackend` and parity tests | Code/tests using local store | Yes, local only | Medium | Supported as semantic parity harness |
 | Graphiti environment readiness can be checked without printing secrets. | `graphiti-env-check` CLI and tests | Code/tests | Yes, local setup check only | Low | Supported as readiness tooling, not live validation |
+| A reproducible Graphiti live setup guide exists. | `docs/graphiti_live_setup.md`, `scripts/check_graphiti_env.py`, `scripts/smoke_graphiti.py`, optional compose file | Docs/scripts/tests; no live adapter run | Yes, readiness only | Medium | Supported as setup readiness, not benchmark evidence |
 | Mem0 adapter contract exists and guarded optional Mem0 baseline code is present. | Local adapter package | Code/interface inspection and fake-client tests | Yes, without live service | Medium | Supported as integration path, not benchmark evidence |
 | Letta adapter contract exists; real Letta integration is not implemented. | Local adapter package | Code/interface inspection | Yes | Low | Supported |
 | Graphiti integration works. | None | Unsupported | No | High | Rejected |

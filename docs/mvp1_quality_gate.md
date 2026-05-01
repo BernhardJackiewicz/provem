@@ -47,7 +47,10 @@ MVP 2.1 starts with an optional Graphiti parity gate: default tests and
 must preserve local semantic behavior for current/historical facts, event
 relationships, policy metadata, source conflicts, scope filtering and
 provenance. `graphiti-env-check` is a setup preflight only; it is not live
-Graphiti validation.
+Graphiti validation. `scripts/check_graphiti_env.py` and
+`scripts/smoke_graphiti.py` may fail with exit code `2` in the current
+environment; that is acceptable when the output clearly reports missing
+Graphiti setup or the unimplemented adapter.
 
 ## Safety Metric Gate
 
@@ -108,6 +111,8 @@ Pass criteria:
 - Graphiti parity tests must not bypass the controller or central policy gate.
 - Graphiti setup failures must be reported as setup failures, not benchmark
   results.
+- Graphiti smoke setup failures must not be converted into successful live
+  results.
 
 Fail criteria:
 
@@ -134,6 +139,7 @@ Required documents:
 - `docs/adversarial_evaluation.md`: adversarial result interpretation
 - `docs/event_model.md`: local event model and Graphiti mapping notes
 - `docs/graphiti_mapping.md`: explicit Graphiti mapping/parity contract
+- `docs/graphiti_live_setup.md`: reproducible no-PII live setup instructions
 - `docs/transcript_evaluation.md`: transcript schema, command and redaction
   limits
 - `docs/external_validation.md`: manifest-gated external validation workflow
@@ -163,6 +169,8 @@ Required documents:
   runtime setup are available.
 - Graphiti parity tests exercise local semantics only; no Graphiti/Neo4j
   service behavior is validated.
+- Graphiti live smoke is readiness-only until a real adapter implementation
+  writes and queries fake data successfully.
 - Local JSONL snapshot persistence exists, but no production database,
   migrations, encryption, access control, UI or production privacy workflow
   exists.

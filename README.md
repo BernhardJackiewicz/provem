@@ -159,6 +159,8 @@ PYTHONPATH=src python3 -m cognitive_memory transcript-eval --input tests/fixture
 PYTHONPATH=src python3 -m cognitive_memory external-eval --manifest tests/fixtures/external/manifest.json
 PYTHONPATH=src python3 -m cognitive_memory mem0-env-check
 PYTHONPATH=src python3 -m cognitive_memory graphiti-env-check
+PYTHONPATH=src python3 scripts/check_graphiti_env.py
+PYTHONPATH=src python3 scripts/smoke_graphiti.py
 PYTHONPATH=src python3 -m cognitive_memory quality-gate
 ```
 
@@ -294,11 +296,14 @@ Graphiti readiness is currently mapping/parity only:
 
 ```bash
 PYTHONPATH=src python3 -m cognitive_memory graphiti-env-check
+PYTHONPATH=src python3 scripts/check_graphiti_env.py
+PYTHONPATH=src python3 scripts/smoke_graphiti.py
 ```
 
 If Graphiti or Neo4j configuration is unavailable, the command reports setup
 failure without printing secret values. The default benchmark and quality gate
-do not require Graphiti. Mapping notes live in `docs/graphiti_mapping.md`.
+do not require Graphiti. Mapping notes live in `docs/graphiti_mapping.md`;
+live setup instructions live in `docs/graphiti_live_setup.md`.
 
 The structured suite contains 34 synthetic multi-session scenarios
 covering current facts, historical facts, updated preferences, contradictions,
@@ -507,12 +512,15 @@ Run the optional Graphiti setup check:
 
 ```bash
 PYTHONPATH=src python3 -m cognitive_memory graphiti-env-check
+PYTHONPATH=src python3 scripts/check_graphiti_env.py
+PYTHONPATH=src python3 scripts/smoke_graphiti.py
 ```
 
 The Graphiti path currently validates mapping and local parity only. A skipped
 or failed setup check is not Graphiti benchmark evidence, and a passing setup
 check would still only mean the environment appears ready for future adapter
-work.
+work. `scripts/smoke_graphiti.py` is guarded: it exits clearly while
+`GraphitiBackend` is still a stub and must not be reported as a live result.
 
 ## Known Limitations
 

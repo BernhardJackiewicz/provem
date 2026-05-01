@@ -110,11 +110,18 @@ Run the optional Graphiti setup check:
 
 ```bash
 PYTHONPATH=src python3 -m cognitive_memory graphiti-env-check
+PYTHONPATH=src python3 scripts/check_graphiti_env.py
+PYTHONPATH=src python3 scripts/smoke_graphiti.py
 ```
 
 The checker reports Python version, Graphiti package importability and Neo4j
 environment-variable presence without printing secret values. It is a readiness
 check only, not live validation.
+
+`scripts/smoke_graphiti.py` is also readiness-only at this checkpoint. It uses
+fake data, refuses missing setup, and exits clearly while `GraphitiBackend`
+remains a stub. Optional disposable Neo4j setup is documented in
+`docs/graphiti_live_setup.md` and `docker-compose.graphiti.yml`.
 
 ## Mem0 Baseline Limits
 

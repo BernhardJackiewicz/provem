@@ -163,7 +163,10 @@ semantic parity for current truth, historical truth, supersession, policy
 metadata, relationship events, scope filtering, source conflict abstention and
 provenance before a real Graphiti/Neo4j adapter is attempted. `GraphitiBackend`
 remains a lazy optional stub and no benchmark result uses live Graphiti.
-`graphiti-env-check` reports package/config readiness only.
+`graphiti-env-check`, `scripts/check_graphiti_env.py` and
+`scripts/smoke_graphiti.py` report package/config/adapter readiness only. The
+optional `docker-compose.graphiti.yml` can start disposable local Neo4j, but it
+is not used by default tests.
 
 ## Architecture Diagram
 
@@ -473,6 +476,8 @@ This is still synthetic evidence only.
   setup as evidence.
 - Keep Graphiti parity tests passing, then add real Graphiti/Neo4j service tests
   and compare against the graph-like baseline.
+- Use `docs/graphiti_live_setup.md` to reproduce local setup before attempting
+  any live Graphiti result; do not report smoke-test setup failures as evidence.
 - Add Letta client integration only after controller write authority and policy
   boundaries are preserved in contract tests.
 - Add persistent Postgres storage for episodes and audit logs.

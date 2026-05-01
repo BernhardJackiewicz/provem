@@ -65,6 +65,25 @@ def check_graphiti_environment(
     }
 
 
+def graphiti_connection_config(
+    root: str = ".",
+    env: Optional[Mapping[str, str]] = None,
+    include_dotenv: bool = True,
+) -> Dict[str, str]:
+    """Return Graphiti connection config for local setup scripts.
+
+    Callers must not print this dictionary directly because it can contain a
+    password loaded from the shell or ignored `.env`.
+    """
+
+    merged_env = _merged_env(root, env, include_dotenv)
+    return {
+        "neo4j_uri": merged_env.get("GRAPHITI_NEO4J_URI") or merged_env.get("NEO4J_URI") or "",
+        "neo4j_user": merged_env.get("GRAPHITI_NEO4J_USER") or merged_env.get("NEO4J_USER") or "",
+        "neo4j_password": merged_env.get("GRAPHITI_NEO4J_PASSWORD") or merged_env.get("NEO4J_PASSWORD") or "",
+    }
+
+
 def dumps_graphiti_env_report(report: Dict[str, Any], as_json: bool = False) -> str:
     if as_json:
         return json.dumps(report, indent=2, sort_keys=True)
