@@ -12,3 +12,5 @@ venv/
 dist/
 build/
 *.egg-info/
+*.memory.jsonl
+memory/*.jsonl

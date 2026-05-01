@@ -13,7 +13,6 @@ from .models import (
     TemporalFact,
     clamp,
     lexical_score,
-    tokenize,
 )
 from .policy import PolicyStore
 from .safety import instruction_risk_reason, sensitive_risk_reason
@@ -189,13 +188,10 @@ class RetrievalPlanner:
                 if event_score > 0:
                     excluded.append(ExcludedMemory(event.id, "insufficient_evidence", "memory_event", event.claim_text))
                 continue
-            reason = self._event_exclusion_reason(event, request)
+            reason = self.policy.exclusion_reason(event, request)
             if reason:
                 if event_score > 0 or reason in ("deleted_evidence", "do_not_use_term", "wrong_project"):
                     excluded.append(ExcludedMemory(event.id, reason, "memory_event", event.claim_text))
-                continue
-            if request.time_scope == "as_of_date" and request.as_of is not None and event.timestamp > request.as_of:
-                excluded.append(ExcludedMemory(event.id, "not_yet_valid", "memory_event", event.claim_text))
                 continue
             if event_score > 0:
                 matching.append((clamp(event_score + 0.2 * event.confidence), event))
@@ -262,34 +258,6 @@ class RetrievalPlanner:
             if relation.type == relation_type:
                 return relation.object_id or relation.value
         return ""
-
-    def _event_exclusion_reason(self, event: MemoryEvent, request: RetrievalRequest) -> str:
-        if event.context.user_id != request.user_id:
-            return "wrong_user"
-        if event.context.project_id != request.project_id:
-            return "wrong_project"
-        if not event.evidence_episode_ids and request.memory_policy.require_provenance:
-            return "missing_provenance"
-        if any(evidence_id in self.policy.deleted_episode_ids for evidence_id in event.evidence_episode_ids):
-            return "deleted_evidence"
-        if self._matches_do_not_use_term(event.claim_text):
-            return "do_not_use_term"
-        if instruction_risk_reason(event.claim_text) or sensitive_risk_reason(event.claim_text):
-            return "possible_prompt_injection"
-        if request.time_scope == "as_of_date":
-            if request.as_of is None:
-                return "missing_as_of_date"
-            if event.timestamp > request.as_of:
-                return "not_yet_valid"
-        return ""
-
-    def _matches_do_not_use_term(self, text: str) -> bool:
-        text_tokens = tokenize(text)
-        for term in self.policy.do_not_use_terms:
-            term_tokens = tokenize(term)
-            if term_tokens and term_tokens <= text_tokens:
-                return True
-        return False
 
     def _score_fact(self, request: RetrievalRequest, fact: TemporalFact) -> float:
         query_score = lexical_score(request.query, fact.claim_text)

@@ -8,6 +8,7 @@ from .adapters.base import AdapterConfigurationError, OptionalDependencyNotInsta
 from .benchmark import BenchmarkRunner, dumps_report
 from .controller import MemoryController
 from .models import Episode, RetrievalRequest
+from .persistence import load_snapshot, retrieval_trace_record, save_snapshot
 from .reflection import SleepCycle
 from .retrieval import RetrievalPlanner
 
@@ -30,6 +31,59 @@ def run_demo(args: argparse.Namespace) -> int:
     controller = MemoryController()
     retrieval = RetrievalPlanner(controller.store, controller.policy)
 
+    _load_demo_memory(controller)
+
+    SleepCycle(controller.store).consolidate()
+    result = retrieval.retrieve(RetrievalRequest(query="current work mode and domain", top_k=5))
+    print(json.dumps(result.to_dict(), indent=2, sort_keys=True))
+    return 0
+
+
+def run_export_memory(args: argparse.Namespace) -> int:
+    controller = MemoryController()
+    traces = []
+    if args.demo:
+        _load_demo_memory(controller)
+        result = RetrievalPlanner(controller.store, controller.policy).retrieve(
+            RetrievalRequest(query="current work mode and domain", top_k=5)
+        )
+        traces.append(retrieval_trace_record(result, query="current work mode and domain"))
+
+    save_snapshot(args.path, controller.store, controller.policy, retrieval_traces=traces)
+    print(
+        json.dumps(
+            {
+                "path": args.path,
+                "episodes": len(controller.store.episodes),
+                "facts": len(controller.store.facts),
+                "events": len(controller.store.events),
+                "reflections": len(controller.store.reflections),
+                "retrieval_traces": len(traces),
+            },
+            indent=2,
+            sort_keys=True,
+        )
+    )
+    return 0
+
+
+def run_import_memory(args: argparse.Namespace) -> int:
+    snapshot = load_snapshot(args.path)
+    result = RetrievalPlanner(snapshot.store, snapshot.policy).retrieve(
+        RetrievalRequest(
+            query=args.query,
+            user_id=args.user_id,
+            project_id=args.project_id,
+            task_type=args.task_type,
+            top_k=args.top_k,
+        )
+    )
+    snapshot.store.add_retrieval_trace(retrieval_trace_record(result, query=args.query))
+    print(json.dumps(result.to_dict(), indent=2, sort_keys=True))
+    return 0
+
+
+def _load_demo_memory(controller: MemoryController) -> None:
     for content in [
         "FACT user|work_mode|remote",
         "FACT user|work_mode|hybrid",
@@ -37,11 +91,6 @@ def run_demo(args: argparse.Namespace) -> int:
         "DELETE remote",
     ]:
         controller.ingest_episode(Episode(content))
-
-    SleepCycle(controller.store).consolidate()
-    result = retrieval.retrieve(RetrievalRequest(query="current work mode and domain", top_k=5))
-    print(json.dumps(result.to_dict(), indent=2, sort_keys=True))
-    return 0
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -62,6 +111,20 @@ def build_parser() -> argparse.ArgumentParser:
 
     demo = subparsers.add_parser("demo", help="Run a small governed-memory demo")
     demo.set_defaults(func=run_demo)
+
+    export_memory = subparsers.add_parser("export-memory", help="Export a local JSONL memory snapshot")
+    export_memory.add_argument("--path", required=True, help="Snapshot path to write")
+    export_memory.add_argument("--demo", action="store_true", help="Export the built-in demo memory instead of an empty snapshot")
+    export_memory.set_defaults(func=run_export_memory)
+
+    import_memory = subparsers.add_parser("import-memory", help="Load a JSONL snapshot and run a retrieval query")
+    import_memory.add_argument("--path", required=True, help="Snapshot path to read")
+    import_memory.add_argument("--query", required=True, help="Retrieval query to run")
+    import_memory.add_argument("--user-id", default="user", help="User scope for retrieval")
+    import_memory.add_argument("--project-id", default="default", help="Project scope for retrieval")
+    import_memory.add_argument("--task-type", default="general", help="Retrieval task type")
+    import_memory.add_argument("--top-k", type=int, default=5, help="Maximum selected memories")
+    import_memory.set_defaults(func=run_import_memory)
     return parser
 
 

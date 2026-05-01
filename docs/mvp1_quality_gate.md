@@ -52,6 +52,9 @@ Pass criteria:
 - Deleted and do-not-use terms block fact and event retrieval.
 - Source conflicts abstain unless a clear local precedence rule exists.
 - Event-aware retrieval remains conservative and query-scope gated.
+- Facts, reflections and events share the same core policy exclusion path.
+- JSONL reload preserves policy flags, source trust, invalidation/supersession
+  and event context without resurrecting unsafe memory.
 - Adapter mocks and stubs are documented as mocks/stubs.
 - Default tests and benchmarks require no external services, API keys or heavy
   dependencies.
@@ -64,6 +67,8 @@ Fail criteria:
   highly
 - benchmark expectations are read by any system under test
 - docs imply production readiness or real-world recruiting validation
+- local persistence is described as production durability, database migration
+  support, encryption or privacy compliance
 
 ## Documentation Gate
 
@@ -89,4 +94,6 @@ Required documents:
 - Source trust is local metadata, not a verification workflow.
 - The event model is local Graphiti groundwork, not a temporal graph backend.
 - Mem0, Graphiti and Letta performance is untested.
-- No UI, persistence, migrations or production privacy workflow exists.
+- Local JSONL snapshot persistence exists, but no production database,
+  migrations, encryption, access control, UI or production privacy workflow
+  exists.

@@ -10,6 +10,9 @@ deck or product narrative.
 | MVP 1 exists as a local synthetic research prototype. | Local code, tests, benchmark and docs | Internal deterministic experiment and architecture review | Yes, local only | Medium | Supported |
 | MVP 1 is ready for production deployment. | None | Unsupported | No | High | Rejected |
 | The MVP 1 freeze candidate establishes an audit boundary before MVP 2 work. | Local docs and verification commands | Documentation and tests | Yes, local only | Low | Supported as process claim |
+| MVP 1.5 has local JSONL persistence for episodes, facts, events, policy flags and retrieval traces. | Local persistence code and tests | Code/tests | Yes, local only | Medium | Supported as local research persistence |
+| MVP 1.5 provides production-grade persistence. | None | Unsupported | No | High | Rejected |
+| Facts, reflections and events share a common policy/safety exclusion path. | Local policy/retrieval code and tests | Code/tests | Yes, local only | Medium | Supported as architecture cleanup |
 | The structured benchmark result proves robust real-world memory. | None | Unsupported | No | High | Rejected |
 | A noisy natural-language benchmark suite exists. | Local benchmark code | Code/tests and local benchmark command | Yes, synthetic only | Medium | Supported as stress harness, not product evidence |
 | The noisy suite exposed at least one CML limitation before the scope/reference hardening pass. | Local noisy benchmark and failure taxonomy | Internal deterministic experiment | Yes, synthetic only | Medium | Fixed on current synthetic suite; still not product evidence |
@@ -37,6 +40,7 @@ deck or product narrative.
 | Event-aware retrieval improves client-specific candidate fact handling on synthetic scenarios. | Local recruiting/adversarial benchmark | Internal deterministic experiment | Yes, synthetic only | Medium | Internally supported, not product-proven |
 | Current safety behavior is validated for production recruiting use. | None | Unsupported | No | High | Rejected |
 | Current safety behavior is covered by local synthetic tests and regression guards. | Local tests and benchmark metrics | Internal deterministic experiment | Yes, synthetic only | High | Internally supported, not product-proven |
+| Safety behavior remains valid after local snapshot reload. | Local persistence tests | Internal deterministic experiment | Yes, synthetic only | High | Internally supported for JSONL snapshots only |
 | A schema-constrained LLM extractor interface exists. | Local extractor code | Code/tests | Yes, no live model | Low | Supported as interface/scaffold only |
 | A live LLM extractor has been validated on the benchmark. | None | Unsupported | No | High | Rejected |
 | Schema validation makes LLM extraction safe. | None | Unsupported | No | High | Rejected; validation is necessary but insufficient |

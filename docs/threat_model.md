@@ -4,6 +4,8 @@
 
 - Stale memory use: the agent acts on invalidated facts.
 - Deleted memory leakage: information remains available after a forget request.
+- Deleted memory resurrection: local reload restores information that policy had
+  already deleted or forbidden.
 - Sensitive memory misuse: sensitive data is stored or retrieved without consent.
 - Cross-project contamination: facts from one project affect another project.
 - Reflection hallucination: consolidation creates unsupported user assumptions.
@@ -41,6 +43,8 @@
 - Policy bypass: external memory returns facts the controller would forbid.
 - Deletion mismatch: one backend forgets a fact while another still serves it.
 - Stale external memory: external caches preserve invalidated facts.
+- Local snapshot exposure: JSONL files may contain user/candidate memory if
+  exported outside a controlled test environment.
 
 ## Prototype Controls
 
@@ -96,6 +100,14 @@
   as synthetic and local.
 - Regression tests cover event retrieval under wrong-scope, deletion and
   do-not-use policy so relationship context cannot bypass policy silently.
+- Facts, reflections and events share the same core policy exclusion path for
+  deleted evidence, do-not-use terms, provenance, project/user mismatch and
+  unsafe retrieved content.
+- Local JSONL persistence tests verify that deleted, do-not-use, superseded,
+  source-conflict and prompt-injection-quarantined memory does not become usable
+  again after reload.
+- `*.memory.jsonl` snapshots are ignored by git to reduce accidental commits of
+  local memory exports.
 
 ## Controls Still Needed
 
@@ -126,7 +138,9 @@
   matching.
 - Stronger mutation and paraphrase evaluation against non-handwritten traces.
 - Adapter tests against real Graphiti, Letta and Mem0 deployments.
-- Real persistence-layer deletion tests.
+- Production persistence-layer deletion tests, encryption, migration strategy,
+  access control and retention enforcement. Current JSONL snapshots only cover
+  local research reload behavior.
 - Domain-specific privacy and consent policies.
 - Cross-backend reconciliation tests before enabling multiple memory systems at
   once.

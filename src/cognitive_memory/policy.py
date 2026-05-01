@@ -6,12 +6,14 @@ from typing import Iterable, List, Optional, Set
 from .models import (
     Episode,
     MemoryCandidate,
+    MemoryEvent,
     Reflection,
     RetrievalRequest,
     TemporalFact,
     ensure_datetime,
     tokenize,
 )
+from .safety import instruction_risk_reason, sensitive_risk_reason
 
 
 class PolicyStore:
@@ -65,6 +67,8 @@ class PolicyStore:
     def exclusion_reason(self, item: object, request: RetrievalRequest) -> Optional[str]:
         if isinstance(item, TemporalFact):
             return self._fact_exclusion_reason(item, request)
+        if isinstance(item, MemoryEvent):
+            return self._event_exclusion_reason(item, request)
         if isinstance(item, Reflection):
             return self._reflection_exclusion_reason(item, request)
         return "unsupported_memory_type"
@@ -118,13 +122,63 @@ class PolicyStore:
             return "weak_reflection_evidence"
         return None
 
-    def _matches_do_not_use_term(self, text: str) -> bool:
+    def _event_exclusion_reason(self, event: MemoryEvent, request: RetrievalRequest) -> Optional[str]:
+        if event.id in self.do_not_use_memory_ids and request.memory_policy.exclude_do_not_use:
+            return "do_not_use"
+        if event.status in ("deleted", "do_not_use") and request.memory_policy.exclude_do_not_use:
+            return event.status
+        if event.context.user_id != request.user_id:
+            return "wrong_user"
+        if event.context.project_id != request.project_id:
+            return "wrong_project"
+        if request.memory_policy.require_provenance and not event.evidence_episode_ids:
+            return "missing_provenance"
+        if any(evidence_id in self.deleted_episode_ids for evidence_id in event.evidence_episode_ids):
+            return "deleted_evidence"
+        if self.matches_do_not_use_term(event.claim_text):
+            return "do_not_use_term"
+        if instruction_risk_reason(event.claim_text) or sensitive_risk_reason(event.claim_text):
+            return "possible_prompt_injection"
+        if request.time_scope == "current" and not event.is_active():
+            return event.status
+        if request.time_scope == "as_of_date":
+            as_of = request.as_of
+            if as_of is None:
+                return "missing_as_of_date"
+            target = ensure_datetime(as_of)
+            if event.timestamp > target:
+                return "not_yet_valid"
+        return None
+
+    def matches_do_not_use_term(self, text: str) -> bool:
         text_tokens = tokenize(text)
         for term in self.do_not_use_terms:
             term_tokens = tokenize(term)
             if term_tokens and term_tokens <= text_tokens:
                 return True
         return False
+
+    def _matches_do_not_use_term(self, text: str) -> bool:
+        return self.matches_do_not_use_term(text)
+
+    def to_dict(self) -> dict:
+        return {
+            "deleted_episode_ids": sorted(self.deleted_episode_ids),
+            "do_not_use_memory_ids": sorted(self.do_not_use_memory_ids),
+            "do_not_use_terms": sorted(self.do_not_use_terms),
+            "legal_hold_memory_ids": sorted(self.legal_hold_memory_ids),
+            "audit_log": list(self.audit_log),
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "PolicyStore":
+        policy = cls()
+        policy.deleted_episode_ids = set(data.get("deleted_episode_ids", []))
+        policy.do_not_use_memory_ids = set(data.get("do_not_use_memory_ids", []))
+        policy.do_not_use_terms = set(data.get("do_not_use_terms", []))
+        policy.legal_hold_memory_ids = set(data.get("legal_hold_memory_ids", []))
+        policy.audit_log = list(data.get("audit_log", []))
+        return policy
 
 
 def retention_expired(episode: Episode, at: Optional[datetime] = None) -> bool:

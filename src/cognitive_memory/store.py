@@ -20,6 +20,7 @@ class InMemoryStore:
         self.events: Dict[str, MemoryEvent] = {}
         self.reflections: Dict[str, Reflection] = {}
         self.audit_log: List[Dict[str, str]] = []
+        self.retrieval_traces: List[Dict[str, object]] = []
 
     def add_episode(self, episode: Episode) -> Episode:
         self.episodes[episode.id] = episode
@@ -142,3 +143,6 @@ class InMemoryStore:
 
     def audit(self, event: str, target_id: str) -> None:
         self.audit_log.append({"event": event, "target_id": target_id})
+
+    def add_retrieval_trace(self, trace: Dict[str, object]) -> None:
+        self.retrieval_traces.append(dict(trace))

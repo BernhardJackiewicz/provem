@@ -49,6 +49,10 @@ failure modes can be exercised before integrating heavy services.
 - MVP 1 freeze candidate: architecture and quality-gate docs now define the
   current local/synthetic bar. This is a research freeze candidate, not a
   production readiness milestone.
+- MVP 1.5 local durability groundwork: an explicit JSONL snapshot path now
+  persists episodes, candidates, temporal facts, memory events, reflections,
+  policy flags and optional retrieval traces. This is local research
+  persistence only, not a production database or privacy workflow.
 - MVP 2: not implemented. There is no real Letta/MemFS stateful agent.
 - MVP 2 preparation: adapter contracts, mocks, optional extras, and real
   integration stubs exist. Mem0 now has a guarded optional baseline adapter,
@@ -66,6 +70,9 @@ failure modes can be exercised before integrating heavy services.
   relationship-heavy recruiting cases.
 - Memory candidates with importance, novelty, confidence, lifespan and risk.
 - Policy store for deletion, do-not-use, sensitivity, consent and project scope.
+- Unified policy/safety evaluation for facts, reflections and memory events so
+  event retrieval cannot silently bypass deleted evidence, do-not-use terms,
+  provenance, project/user scope or prompt-injection quarantine checks.
 - Memory controller as the only durable write authority.
 - Retrieval planner with selected and excluded memories, reasons, provenance,
   confidence, abstention recommendation and abstention reason.
@@ -91,6 +98,8 @@ failure modes can be exercised before integrating heavy services.
 - Unit tests for update handling, deletion, do-not-use, project scope,
   sensitivity, low-confidence candidates, reflection evidence/counter-evidence,
   benchmark coverage and expected-output anti-cheat behavior.
+- Local JSONL snapshot persistence for explicit import/export of research
+  memory state, including policy flags and optional retrieval traces.
 - Adapter contracts for Graphiti-like, Mem0-like, and Letta-like systems, with
   local mocks, explicit Graphiti/Letta stubs, and a guarded optional Mem0
   backend.
@@ -107,6 +116,8 @@ PYTHONPATH=src python3 -m cognitive_memory benchmark --suite noisy
 PYTHONPATH=src python3 -m cognitive_memory benchmark --suite recruiting
 PYTHONPATH=src python3 -m cognitive_memory benchmark --suite adversarial
 PYTHONPATH=src python3 -m cognitive_memory demo
+PYTHONPATH=src python3 -m cognitive_memory export-memory --path demo.memory.jsonl --demo
+PYTHONPATH=src python3 -m cognitive_memory import-memory --path demo.memory.jsonl --query "current work mode"
 ```
 
 If the package is installed in editable mode:
@@ -115,7 +126,14 @@ If the package is installed in editable mode:
 python3 -m pip install -e .
 cml benchmark
 cml demo
+cml export-memory --path demo.memory.jsonl --demo
+cml import-memory --path demo.memory.jsonl --query "current work mode"
 ```
+
+`*.memory.jsonl` files are ignored by git because local snapshots may contain
+user or candidate memory. The JSONL format is intentionally inspectable and
+dependency-free, but it is not encrypted, concurrent, migrated or production
+safe.
 
 ## Structured Episode Markup
 
@@ -261,6 +279,7 @@ Memory Controller  <---- deterministic / noisy / recruiting / adversarial / opti
       +--> Memory Event Store: participants, relations, candidate/client/role context
       +--> Policy Store: deletion, do-not-use, consent, sensitivity, scope
       +--> Reference Resolver: narrow, conservative "that X" policy resolution
+      +--> JSONL Snapshots: explicit local save/load for research state
       |
       v
 Retrieval Planner: scope-first filtering, policy-aware selection, exclusions,
@@ -344,7 +363,9 @@ PYTHONPATH=src python3 scripts/smoke_mem0.py
 - The noisy suite currently includes known failure probes, including ambiguous
   reference handling. The current probes pass after conservative fixes; do not
   treat that as real-world coverage.
-- Storage is in memory; there is no Postgres, Neo4j, Graphiti or persistence.
+- Runtime storage remains in memory by default. Explicit JSONL snapshots exist
+  for local research save/load, but there is no Postgres, Neo4j, Graphiti,
+  encryption, migration system or production persistence.
 - Baselines are lightweight approximations, not full Mem0, Graphiti or
   production RAG systems.
 - The optional Mem0 baseline maps synthetic benchmark episodes into Mem0

@@ -100,6 +100,12 @@ The current freeze-candidate pass adds explicit architecture review and quality
 gate documentation. It does not add product features. Its purpose is to make the
 MVP 1 boundary auditable before MVP 2 adapter or live-integration work begins.
 
+The current MVP 1.5 durability pass adds explicit local JSONL snapshots and a
+shared policy/safety evaluation path for facts, reflections and memory events.
+This makes local reload/regression testing possible without starting MVP 2. It
+is not production persistence and does not change the synthetic nature of the
+benchmark evidence.
+
 An optional schema-constrained LLM extractor interface exists for future
 comparison. It validates proposed `MemoryCandidate` output locally and keeps the
 controller as the only durable write authority. It does not make live LLM calls
@@ -136,6 +142,7 @@ Memory Controller  (only durable write authority)
        +-- Policy Store with deletion / do-not-use / sensitivity / scope
        +-- Reference Resolver for narrow "that X" policy commands
        +-- Source Trust / Safety Layer for source conflicts and memory injection quarantine
+       +-- JSONL Snapshot Persistence for explicit local save/load/debug traces
        |
        v
 Retrieval Planner
@@ -313,6 +320,8 @@ This is still synthetic evidence only.
   rename consistency and paraphrase extraction.
 - The event model is local, deterministic and additive. It is useful as
   Graphiti groundwork, but it is not a real temporal knowledge graph.
+- JSONL snapshots provide local reload/debug persistence only. They are not a
+  production database, migration layer, encryption layer or privacy workflow.
 - Some pitch-safety scenarios use explicit synthetic status facts. They test
   governed retrieval and policy blocking, not a full recruiting decision engine.
 - The current noisy extractor does not perform robust coreference resolution,

@@ -14,6 +14,7 @@ from .models import (
     TemporalFact,
 )
 from .policy import PolicyStore
+from .persistence import MemorySnapshot, load_snapshot, retrieval_trace_record, save_snapshot
 from .reflection import SleepCycle
 from .retrieval import RetrievalPlanner
 from .store import InMemoryStore
@@ -27,6 +28,7 @@ __all__ = [
     "MemoryCandidate",
     "MemoryEvent",
     "MemoryController",
+    "MemorySnapshot",
     "PolicyStore",
     "Reflection",
     "RetrievalPlanner",
@@ -34,4 +36,7 @@ __all__ = [
     "RetrievalResult",
     "SleepCycle",
     "TemporalFact",
+    "load_snapshot",
+    "retrieval_trace_record",
+    "save_snapshot",
 ]

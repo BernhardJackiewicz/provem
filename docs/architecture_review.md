@@ -16,11 +16,12 @@ Memory events = local relationship context
 Policy store = use restrictions
 Controller = only durable write authority
 Retrieval planner = policy-aware selection and abstention
+JSONL snapshots = explicit local research persistence
 ```
 
-The default system has no real Graphiti, Letta, Mem0, database, UI or live LLM
-integration. Adapter contracts and stubs exist for later MVP 2 work, but the
-benchmark runs locally with standard Python.
+The default system has no real Graphiti, Letta, Mem0, production database, UI
+or live LLM integration. Adapter contracts and stubs exist for later MVP 2 work,
+but the benchmark runs locally with standard Python.
 
 ## Data Flow
 
@@ -30,8 +31,9 @@ Episode
   -> MemoryController evaluates policy and safety
   -> accepted candidates become TemporalFact objects
   -> accepted facts also create MemoryEvent objects when useful
-  -> RetrievalPlanner filters by scope, policy, source safety and time
+  -> RetrievalPlanner filters by scope, centralized policy, source safety and time
   -> RetrievalResult returns selected memories, exclusions, provenance and abstention reason
+  -> optional JSONL snapshot can persist local store, policy flags and retrieval traces
 ```
 
 The benchmark systems receive the same scenario episodes and request. Expected
@@ -80,9 +82,27 @@ The prototype has explicit synthetic controls for:
 - conservative reference resolution for simple "that company/client/number"
   policy commands
 
+Facts, reflections and memory events now share the same internal policy
+evaluation path for deleted evidence, do-not-use, wrong user/project,
+provenance and unsafe retrieved content. Retrieval still owns relation-specific
+event matching, source-conflict checks across selected memories and abstention
+decisions that require looking at a query result set.
+
 These controls are local and deterministic. They do not replace a production
 privacy model, source verification workflow, identity service or security
 review.
+
+## Local Persistence Path
+
+MVP 1.5 adds explicit JSONL snapshots through `cognitive_memory.persistence`
+and CLI import/export helpers. A snapshot can contain episodes, memory
+candidates, temporal facts, memory events, reflections, policy flags, store
+audit records and optional retrieval traces.
+
+`InMemoryStore` remains the default runtime store. JSONL snapshots are intended
+for local inspection, reproducible debugging and reload tests. They are not a
+production persistence layer: no encryption, locking, migrations,
+authorization or concurrent write safety exists.
 
 ## Event And Relationship Model
 
@@ -108,9 +128,8 @@ splitting, entity linking or ontology design.
   retrieval under wrong-scope, deletion and do-not-use policy.
 - The biggest quality risk is benchmark-shaped extraction. The noisy,
   recruiting and adversarial extractors contain curated phrase handling.
-- Event safety filtering intentionally duplicates some `PolicyStore` checks
-  because events are not `TemporalFact` objects. This is acceptable for MVP 1
-  but should be unified before a persistent backend.
+- Event safety filtering previously duplicated some `PolicyStore` checks. That
+  common policy path has now been unified for facts, reflections and events.
 - Same-day candidate/client context linking is a useful local heuristic, not a
   robust conversation model.
 - Source trust is deterministic metadata, not real source verification.
@@ -118,6 +137,9 @@ splitting, entity linking or ontology design.
   a full recruiting decision engine.
 - CLI output and benchmark metrics are useful for local research, but latency
   numbers are in-process timings only.
+- JSONL persistence is useful for local reload/regression checks, but it should
+  not be used for real user/candidate memory without a separate privacy and
+  security design.
 
 ## Do Not Change Casually
 
@@ -128,6 +150,8 @@ splitting, entity linking or ontology design.
 - Prompt-injection quarantine before durable fact writes.
 - Provenance requirements for selected memory claims.
 - Conservative abstention for ambiguous references and ambiguous identity.
+- Local persistence reloads must not resurrect deleted, do-not-use,
+  prompt-injection-quarantined or wrong-scope memory.
 - The distinction between adapter mocks/stubs and real integrations.
 
 ## MVP 2 Readiness
