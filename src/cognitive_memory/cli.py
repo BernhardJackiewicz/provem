@@ -237,6 +237,11 @@ def run_quality_gate(args: argparse.Namespace) -> int:
         consolidation_summary["unsafe_consolidation_rate"] == 0.0
         and consolidation_summary["policy_violation_rate"] == 0.0
         and consolidation_summary["scope_leakage_rate"] == 0.0
+        and consolidation_summary["cross_scope_reflection_leakage"] == 0.0
+        and consolidation_summary["role_scope_leakage"] == 0.0
+        and consolidation_summary["candidate_client_reflection_leakage"] == 0.0
+        and consolidation_summary["scoped_consolidation_precision"] == 1.0
+        and consolidation_summary["scoped_consolidation_recall"] == 1.0
         and consolidation_summary["provenance_coverage"] == 1.0
     )
     report["checks"]["consolidation_eval"] = {
@@ -245,6 +250,8 @@ def run_quality_gate(args: argparse.Namespace) -> int:
         "approved_in_simulation": consolidation_summary["approved_in_simulation"],
         "downstream_task_delta": consolidation_summary["downstream_task_delta"],
         "unsafe_consolidation_rate": consolidation_summary["unsafe_consolidation_rate"],
+        "scoped_consolidation_precision": consolidation_summary["scoped_consolidation_precision"],
+        "scoped_consolidation_recall": consolidation_summary["scoped_consolidation_recall"],
         "policy_violation_rate": consolidation_summary["policy_violation_rate"],
     }
     graphiti_report = check_graphiti_environment()

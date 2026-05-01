@@ -258,6 +258,17 @@ EVENT_RELATION_TYPES = {
     "objection_resolved",
 }
 
+REFLECTION_TYPES = {
+    "user_preference",
+    "candidate_preference",
+    "client_requirement",
+    "role_requirement",
+    "project_pattern",
+    "procedural_rule",
+    "risk_warning",
+    "unresolved_hypothesis",
+}
+
 
 @dataclass
 class EventParticipant:
@@ -382,6 +393,14 @@ class Reflection:
     scope: str = "user"
     user_id: str = DEFAULT_USER_ID
     project_id: str = DEFAULT_PROJECT_ID
+    actor_type: str = "unknown"
+    candidate_id: str = ""
+    client_id: str = ""
+    role_id: str = ""
+    subject_id: str = ""
+    relation_type: str = ""
+    scope_confidence: float = 0.0
+    reflection_type: str = "unresolved_hypothesis"
     decay_rate: float = 0.05
     decay_score: float = 0.0
     last_reinforced_at: Optional[datetime] = None
@@ -395,8 +414,13 @@ class Reflection:
 
     def __post_init__(self) -> None:
         self.confidence = clamp(self.confidence)
+        self.scope_confidence = clamp(self.scope_confidence)
         self.decay_rate = clamp(self.decay_rate)
         self.decay_score = clamp(self.decay_score)
+        if self.reflection_type not in REFLECTION_TYPES:
+            self.reflection_type = "unresolved_hypothesis"
+        if not self.subject_id:
+            self.subject_id = self.candidate_id or self.client_id or self.role_id or self.user_id
         if self.last_reinforced_at is not None:
             self.last_reinforced_at = ensure_datetime(self.last_reinforced_at)
         if self.review_after is not None:
@@ -430,6 +454,7 @@ class ConsolidatedMemory:
     evidence_ids: List[str] = field(default_factory=list)
     counter_evidence_ids: List[str] = field(default_factory=list)
     confidence: float = 0.0
+    reflection_type: str = "unresolved_hypothesis"
     status: str = "proposed"
     decay_score: float = 0.0
     last_reinforced_at: Optional[datetime] = None
@@ -441,6 +466,8 @@ class ConsolidatedMemory:
     def __post_init__(self) -> None:
         self.confidence = clamp(self.confidence)
         self.decay_score = clamp(self.decay_score)
+        if self.reflection_type not in REFLECTION_TYPES:
+            self.reflection_type = "unresolved_hypothesis"
         if self.last_reinforced_at is not None:
             self.last_reinforced_at = ensure_datetime(self.last_reinforced_at)
         if self.review_after is not None:

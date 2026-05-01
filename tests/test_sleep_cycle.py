@@ -149,6 +149,9 @@ class SleepCycleTests(unittest.TestCase):
         for decision in run.decisions:
             if decision.action == "create_reflection":
                 self.assertEqual(decision.scope.get("project_id"), "alpha")
+                self.assertIn(decision.proposed_memory.reflection_type, ("candidate_preference", "unresolved_hypothesis"))
+                self.assertEqual(decision.proposed_memory.scope.get("actor_type"), "candidate")
+                self.assertEqual(decision.proposed_memory.scope.get("relation_type"), "profile")
 
     def test_superseded_fact_gets_decay_decision_not_current_truth(self):
         controller = MemoryController()

@@ -197,6 +197,8 @@ class SleepCycle:
             subject = scoped_facts[0].subject
             relations = sorted({fact.relation for fact in scoped_facts})
             scope = self._scope_for_fact(scoped_facts[0])
+            relation_type = self._consolidated_relation_type(relations)
+            scope["relation_type"] = relation_type
             claim = "%s has recurring memory context around %s" % (subject, ", ".join(relations[:4]))
             if len(evidence_ids) < self.min_evidence:
                 candidates.append(
@@ -238,6 +240,7 @@ class SleepCycle:
                 evidence_ids=evidence_ids,
                 counter_evidence_ids=counter_evidence,
                 confidence=confidence,
+                reflection_type=self._reflection_type_for_scope(scope),
                 status="proposed",
                 last_reinforced_at=now_utc(),
                 review_after=add_days(now_utc(), 30),
@@ -390,11 +393,13 @@ class SleepCycle:
             scope = {
                 "user_id": event.context.user_id,
                 "project_id": event.context.project_id,
+                "actor_type": self._actor_type_for_event_scope(event.context.candidate_id, event.context.client_id, event.context.role_id),
                 "candidate_id": event.context.candidate_id,
                 "client_id": event.context.client_id,
                 "role_id": event.context.role_id,
                 "subject_id": event.context.subject_id,
                 "scope_confidence": event.context.confidence,
+                "relation_type": relation.relation or relation.type,
             }
             claim = "%s has recurring event context around %s" % (
                 event.context.subject_id or relation.subject_id,
@@ -406,6 +411,7 @@ class SleepCycle:
                 scope=scope,
                 evidence_ids=evidence_ids,
                 confidence=min(0.8, 0.45 + 0.1 * min(len(evidence_ids), 4)),
+                reflection_type=self._reflection_type_for_scope(scope),
                 status="proposed",
                 id=self._stable_id("cm", [claim, ",".join(evidence_ids)]),
             )
@@ -442,6 +448,13 @@ class SleepCycle:
                 "user_id": reflection.user_id,
                 "project_id": reflection.project_id,
                 "scope": reflection.scope,
+                "actor_type": reflection.actor_type,
+                "candidate_id": reflection.candidate_id,
+                "client_id": reflection.client_id,
+                "role_id": reflection.role_id,
+                "subject_id": reflection.subject_id,
+                "relation_type": reflection.relation_type,
+                "scope_confidence": reflection.scope_confidence,
             }
             confidence = max(0.0, reflection.confidence - reflection.decay_rate)
             metadata = {
@@ -590,7 +603,43 @@ class SleepCycle:
             "scope_confidence": fact.scope_confidence,
             "subject": fact.subject,
             "relation": fact.relation,
+            "relation_type": fact.relation,
         }
+
+    def _consolidated_relation_type(self, relations: List[str]) -> str:
+        if len(relations) == 1:
+            return relations[0]
+        return "profile"
+
+    def _actor_type_for_event_scope(self, candidate_id: str, client_id: str, role_id: str) -> str:
+        if candidate_id and client_id:
+            return "mixed"
+        if candidate_id:
+            return "candidate"
+        if client_id:
+            return "client"
+        if role_id:
+            return "role"
+        return "unknown"
+
+    def _reflection_type_for_scope(self, scope: Dict[str, Any]) -> str:
+        actor_type = str(scope.get("actor_type") or "unknown")
+        relation_type = str(scope.get("relation_type") or scope.get("relation") or "")
+        if actor_type == "candidate":
+            return "candidate_preference"
+        if actor_type == "client":
+            return "client_requirement"
+        if actor_type == "role":
+            return "role_requirement"
+        if actor_type == "project":
+            return "project_pattern"
+        if actor_type == "mixed":
+            if relation_type in ("pitch_blocked", "do_not_contact", "do_not_mention", "objection"):
+                return "risk_warning"
+            return "candidate_preference"
+        if actor_type in ("user", "unknown") and str(scope.get("subject") or scope.get("subject_id")) == "user":
+            return "user_preference"
+        return "unresolved_hypothesis"
 
     def _scope_key(self, fact: TemporalFact, *, include_relation: bool) -> str:
         parts = [

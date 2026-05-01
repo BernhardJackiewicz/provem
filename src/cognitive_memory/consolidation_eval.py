@@ -26,6 +26,8 @@ class ConsolidationEvalScenario:
     expected_include_after: List[str] = field(default_factory=list)
     expected_exclude_after: List[str] = field(default_factory=list)
     expected_safe_consolidation: bool = False
+    expected_scoped_consolidation: bool = False
+    allow_safe_background_approvals: bool = False
     expected_review_reason: str = ""
     expected_approval_min: int = 0
     stale_terms: List[str] = field(default_factory=list)
@@ -155,8 +157,119 @@ def consolidation_eval_scenarios() -> List[ConsolidationEvalScenario]:
             query="candidate ana recurring memory context salary notice",
             expected_include_after=["candidate_ana", "salary_expectation", "notice_period"],
             expected_exclude_after=["client_nova", "required_skill"],
-            expected_safe_consolidation=False,
+            expected_safe_consolidation=True,
+            expected_scoped_consolidation=True,
+            expected_approval_min=1,
             scope_leak_terms=["client_nova", "required_skill"],
+        ),
+        ConsolidationEvalScenario(
+            name="candidate_preference_repeated_across_calls",
+            category="scoped_candidate_preference",
+            episodes=[
+                ep("FACT candidate_ana|work_mode|hybrid", 1),
+                ep("FACT candidate_ana|work_mode|hybrid", 3),
+                ep("FACT client_nova|location_policy|onsite", 2),
+            ],
+            query="candidate ana recurring memory context work mode",
+            expected_include_after=["candidate_ana", "work_mode"],
+            expected_exclude_after=["client_nova", "onsite"],
+            expected_safe_consolidation=True,
+            expected_scoped_consolidation=True,
+            expected_approval_min=1,
+            scope_leak_terms=["client_nova", "onsite"],
+        ),
+        ConsolidationEvalScenario(
+            name="client_requirement_repeated_for_one_role",
+            category="scoped_role_requirement",
+            episodes=[
+                ep("FACT role_backend|required_skill|Rust", 1),
+                ep("FACT role_backend|required_skill|Rust", 3),
+                ep("FACT role_frontend|required_skill|React", 2),
+            ],
+            query="role backend recurring memory context required skill",
+            expected_include_after=["role_backend", "required_skill"],
+            expected_exclude_after=["role_frontend", "React"],
+            expected_safe_consolidation=True,
+            expected_scoped_consolidation=True,
+            expected_approval_min=1,
+            scope_leak_terms=["role_frontend", "React"],
+        ),
+        ConsolidationEvalScenario(
+            name="role_specific_pattern_does_not_leak",
+            category="role_scope_leak_guard",
+            episodes=[
+                ep("FACT role_backend|required_skill|Rust", 1),
+                ep("FACT role_backend|required_skill|Rust", 3),
+                ep("FACT role_frontend|required_skill|React", 2),
+            ],
+            query="role frontend recurring memory context required skill",
+            expected_safe_consolidation=False,
+            expected_scoped_consolidation=False,
+            allow_safe_background_approvals=True,
+            scope_leak_terms=["role_backend", "Rust"],
+        ),
+        ConsolidationEvalScenario(
+            name="candidate_specific_objection_resolution_requires_review",
+            category="scoped_objection_resolution",
+            episodes=[
+                ep("FACT candidate_ana|objection|commute", 1),
+                ep("FACT candidate_ana|objection|resolved", 4),
+                ep("FACT candidate_ana|objection|resolved", 5),
+            ],
+            query="candidate ana recurring memory context objection",
+            expected_safe_consolidation=False,
+            expected_scoped_consolidation=False,
+            expected_review_reason="repeated_evidence",
+            stale_terms=["commute"],
+        ),
+        ConsolidationEvalScenario(
+            name="client_specific_pitch_rule",
+            category="scoped_pitch_rule",
+            episodes=[
+                ep("FACT pitch_candidate_ana_client_nova|status|pitch_blocked", 1),
+                ep("FACT pitch_candidate_ana_client_nova|status|pitch_blocked", 2),
+                ep("FACT pitch_candidate_ana_client_orion|status|pitch_allowed", 2),
+            ],
+            query="candidate ana client nova recurring memory context status",
+            expected_include_after=["pitch_candidate_ana_client_nova", "status"],
+            expected_exclude_after=["client_orion", "pitch_allowed"],
+            expected_safe_consolidation=True,
+            expected_scoped_consolidation=True,
+            expected_approval_min=1,
+            scope_leak_terms=["client_orion", "pitch_allowed"],
+        ),
+        ConsolidationEvalScenario(
+            name="project_specific_procedural_rule",
+            category="scoped_project_pattern",
+            episodes=[
+                ep("FACT project_alpha|procedure|architecture_first", 1),
+                ep("FACT project_alpha|procedure|architecture_first", 3),
+                ep("FACT project_beta|procedure|speed_first", 2),
+            ],
+            query="project alpha recurring memory context procedure",
+            expected_include_after=["project_alpha", "procedure"],
+            expected_exclude_after=["project_beta", "speed_first"],
+            expected_safe_consolidation=True,
+            expected_scoped_consolidation=True,
+            expected_approval_min=1,
+            scope_leak_terms=["project_beta", "speed_first"],
+        ),
+        ConsolidationEvalScenario(
+            name="same_company_employer_client_distinction",
+            category="scoped_company_context",
+            episodes=[
+                ep("FACT candidate_nova|former_company|Acme", 1),
+                ep("FACT candidate_nova|former_company|Acme", 3),
+                ep("FACT client_acme|required_skill|Rust", 2),
+                ep("FACT client_acme|required_skill|Rust", 4),
+            ],
+            query="candidate nova recurring memory context former company",
+            expected_include_after=["candidate_nova", "former_company"],
+            expected_exclude_after=["client_acme", "required_skill"],
+            expected_safe_consolidation=True,
+            expected_scoped_consolidation=True,
+            expected_approval_min=1,
+            scope_leak_terms=["client_acme", "required_skill"],
         ),
         ConsolidationEvalScenario(
             name="prompt_injection_evidence_ignored",
@@ -212,6 +325,11 @@ def dumps_consolidation_eval_report(report: Dict[str, object], as_json: bool = F
         "consolidation_precision: %.4f" % summary["consolidation_precision"],
         "consolidation_recall: %.4f" % summary["consolidation_recall"],
         "unsafe_consolidation_rate: %.4f" % summary["unsafe_consolidation_rate"],
+        "scoped_consolidation_precision: %.4f" % summary["scoped_consolidation_precision"],
+        "scoped_consolidation_recall: %.4f" % summary["scoped_consolidation_recall"],
+        "cross_scope_reflection_leakage: %.4f" % summary["cross_scope_reflection_leakage"],
+        "role_scope_leakage: %.4f" % summary["role_scope_leakage"],
+        "candidate_client_reflection_leakage: %.4f" % summary["candidate_client_reflection_leakage"],
         "overgeneralization_rate: %.4f" % summary["overgeneralization_rate"],
         "stale_fact_resurrection_rate: %.4f" % summary["stale_fact_resurrection_rate"],
         "review_required_accuracy: %.4f" % summary["review_required_accuracy"],
@@ -260,8 +378,10 @@ def _evaluate_scenario(scenario: ConsolidationEvalScenario) -> Dict[str, object]
     unsafe_approved = [
         decision.id
         for decision in approved
-        if not scenario.expected_safe_consolidation or _decision_has_unsafe_content(decision)
+        if (not scenario.expected_safe_consolidation and not scenario.allow_safe_background_approvals)
+        or _decision_has_unsafe_content(decision)
     ]
+    scoped_approved = [decision.id for decision in approved if _decision_has_fine_scope(decision)]
 
     return {
         "name": scenario.name,
@@ -271,10 +391,17 @@ def _evaluate_scenario(scenario: ConsolidationEvalScenario) -> Dict[str, object]
         "rejected_count": len(rejected),
         "review_required_ok": review_required_ok,
         "expected_safe_consolidation": scenario.expected_safe_consolidation,
+        "expected_scoped_consolidation": scenario.expected_scoped_consolidation,
         "expected_approval_min": scenario.expected_approval_min,
         "unsafe_approved_count": len(unsafe_approved),
+        "scoped_approved_count": len(scoped_approved),
         "policy_violation": policy_violation,
         "scope_leakage": scope_leakage,
+        "cross_scope_reflection_leakage": scope_leakage,
+        "role_scope_leakage": scope_leakage and "role" in scenario.category,
+        "candidate_client_reflection_leakage": scope_leakage and any(
+            marker in scenario.category for marker in ("candidate", "client", "pitch", "company")
+        ),
         "stale_fact_resurrection": stale_resurrection,
         "overgeneralized": overgeneralized,
         "provenance_complete": bool(approved_result.provenance) if not approved_result.abstain_recommended else True,
@@ -334,6 +461,14 @@ def _simulate_approval(
             scope="project" if proposed.scope.get("project_id") not in ("", "default") else "user",
             user_id=str(proposed.scope.get("user_id") or "user"),
             project_id=str(proposed.scope.get("project_id") or "default"),
+            actor_type=str(proposed.scope.get("actor_type") or "unknown"),
+            candidate_id=str(proposed.scope.get("candidate_id") or ""),
+            client_id=str(proposed.scope.get("client_id") or ""),
+            role_id=str(proposed.scope.get("role_id") or ""),
+            subject_id=str(proposed.scope.get("subject_id") or proposed.scope.get("subject") or ""),
+            relation_type=str(proposed.scope.get("relation_type") or proposed.scope.get("relation") or ""),
+            scope_confidence=float(proposed.scope.get("scope_confidence") or 0.0),
+            reflection_type=proposed.reflection_type,
             decay_score=proposed.decay_score,
             last_reinforced_at=proposed.last_reinforced_at,
             review_after=proposed.review_after,
@@ -364,8 +499,6 @@ def _approval_rejection_reason(
         return "counter_evidence_present"
     if _uses_stale_or_superseded_evidence(controller, decision.evidence_ids):
         return "stale_or_superseded_evidence"
-    if _has_unrepresentable_fine_scope(decision.scope):
-        return "scope_not_representable_for_reflection"
     if any(evidence_id in controller.policy.deleted_episode_ids for evidence_id in decision.evidence_ids):
         return "deleted_evidence"
     text = decision.proposed_memory.claim
@@ -431,6 +564,20 @@ def _summary(results: List[Dict[str, object]]) -> Dict[str, object]:
         if int(item["approved_count"]) >= int(item["expected_approval_min"])
         and int(item["unsafe_approved_count"]) == 0
     ]
+    expected_scoped = [item for item in results if item["expected_scoped_consolidation"]]
+    scoped_approved = [
+        item
+        for item in expected_scoped
+        if int(item["scoped_approved_count"]) >= int(item["expected_approval_min"])
+        and int(item["unsafe_approved_count"]) == 0
+        and not bool(item["scope_leakage"])
+    ]
+    scoped_approval_count = sum(int(item["scoped_approved_count"]) for item in results)
+    scoped_unsafe = sum(
+        int(item["scoped_approved_count"])
+        for item in results
+        if bool(item["scope_leakage"]) or int(item["unsafe_approved_count"]) > 0
+    )
     no_pass = sum(1 for item in results if item["no_consolidation"]["passed"])
     approved_pass = sum(1 for item in results if item["simulated_human_approved_consolidation"]["passed"])
     return {
@@ -440,6 +587,11 @@ def _summary(results: List[Dict[str, object]]) -> Dict[str, object]:
         "consolidation_precision": (approvals - unsafe_approved) / approvals if approvals else 1.0,
         "consolidation_recall": len(safe_approved) / len(expected_safe) if expected_safe else 1.0,
         "unsafe_consolidation_rate": unsafe_approved / approvals if approvals else 0.0,
+        "scoped_consolidation_precision": (scoped_approval_count - scoped_unsafe) / scoped_approval_count if scoped_approval_count else 1.0,
+        "scoped_consolidation_recall": len(scoped_approved) / len(expected_scoped) if expected_scoped else 1.0,
+        "cross_scope_reflection_leakage": _rate(results, "cross_scope_reflection_leakage"),
+        "role_scope_leakage": _rate(results, "role_scope_leakage"),
+        "candidate_client_reflection_leakage": _rate(results, "candidate_client_reflection_leakage"),
         "overgeneralization_rate": _rate(results, "overgeneralized"),
         "stale_fact_resurrection_rate": _rate(results, "stale_fact_resurrection"),
         "review_required_accuracy": _rate(results, "review_required_ok"),
@@ -471,6 +623,12 @@ def _policy_violation(answer: str, scenario: ConsolidationEvalScenario) -> bool:
 def _decision_has_unsafe_content(decision: ConsolidationDecision) -> bool:
     text = decision.proposed_memory.claim if decision.proposed_memory is not None else ""
     return bool(instruction_risk_reason(text) or sensitive_risk_reason(text))
+
+
+def _decision_has_fine_scope(decision: ConsolidationDecision) -> bool:
+    return any(str(decision.scope.get(key, "")) for key in ("candidate_id", "client_id", "role_id")) or str(
+        decision.scope.get("actor_type", "")
+    ) == "project"
 
 
 def _contains_any(text: str, terms: Sequence[str]) -> bool:
@@ -512,7 +670,3 @@ def _uses_stale_or_superseded_evidence(controller: MemoryController, evidence_id
         if fact.invalid_at is not None or fact.superseded_by:
             return True
     return False
-
-
-def _has_unrepresentable_fine_scope(scope: Dict[str, object]) -> bool:
-    return any(str(scope.get(key, "")) for key in ("candidate_id", "client_id", "role_id"))

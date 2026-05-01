@@ -51,7 +51,10 @@ biology.
 8. MVP 2: Stateful agent integration through Letta/MemFS-style ports.
 9. MVP 3.0: Local SleepCycle dry-run proposals, evidence checking, decay
    metadata and review queue.
-10. MVP 4: Audit UI and domain pilot.
+10. MVP 3.1: Consolidation evaluation with simulated approval in an isolated
+    evaluation copy.
+11. MVP 3.2: Scope-aware reflections and consolidated memories.
+12. MVP 4: Audit UI and domain pilot.
 
 ## Current Prototype Scope
 
@@ -141,9 +144,17 @@ The current MVP 3.1 pass adds a consolidation evaluation harness. It compares
 no consolidation, SleepCycle dry-run only and simulated human-approved
 consolidation on fake local scenarios. Simulated approval writes only into an
 isolated evaluation copy and rejects review-required, unsafe, stale,
-conflicting, forbidden, sensitive or unrepresentable scoped decisions. This
+conflicting, forbidden or sensitive decisions. This
 measures whether proposals might help downstream retrieval without increasing
 unsafe recall; it is not a production apply or human-review workflow.
+
+The current MVP 3.2 pass adds scope-aware reflection and consolidated-memory
+metadata. Reflections can now preserve candidate, client, role, project, user,
+actor, subject, relation and confidence scope, plus an explicit reflection
+type. This lets the consolidation evaluator simulate safe candidate/client/role
+approval without merging client requirements into candidate preferences or role
+requirements across roles. It is still local and synthetic. It does not enable
+real apply mode, human review, Graphiti storage or production consolidation.
 
 An optional schema-constrained LLM extractor interface exists for future
 comparison. It validates proposed `MemoryCandidate` output locally and keeps the
@@ -241,6 +252,7 @@ SleepCycle / Reflection Stub
        +-- requires multiple evidence points by default
        +-- records counter-evidence from invalidated facts
        +-- consolidation-eval compares no/dry-run/simulated approval modes
+       +-- scoped reflections preserve candidate/client/role/project metadata
        +-- not a full autonomous MVP 3 implementation
 ```
 

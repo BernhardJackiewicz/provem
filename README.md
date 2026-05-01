@@ -83,6 +83,10 @@ failure modes can be exercised before integrating heavy services.
 - MVP 3.1 local consolidation evaluation: a deterministic harness now compares
   no consolidation, dry-run proposals and evaluation-only simulated approval on
   fake scenarios. It does not implement durable apply mode.
+- MVP 3.2 scope-aware consolidation: reflections and consolidated memories now
+  preserve candidate/client/role/project/user scope and explicit reflection
+  types. This allows safe simulated approval for scoped memories in the
+  evaluation copy only. Durable apply mode is still not implemented.
 
 ## What Is Implemented
 
@@ -114,6 +118,9 @@ failure modes can be exercised before integrating heavy services.
 - Consolidation evaluation harness for checking whether SleepCycle proposals
   would help downstream retrieval under simulated approval without increasing
   unsafe consolidation, stale resurrection, policy leakage or scope leakage.
+- Scope-aware reflection metadata and retrieval filtering so candidate
+  preferences, client requirements, role requirements and project patterns do
+  not collapse into global reflections during simulated consolidation.
 - Benchmark harness with baselines:
   - No memory
   - Long context style latest-match
@@ -445,6 +452,8 @@ SleepCycle / Consolidation:
 Consolidation Evaluation:
   local MVP 3.1 harness; compares no consolidation, dry-run proposals and an
   evaluation-only simulated approval copy. It never enables real apply mode.
+  MVP 3.2 adds scope-aware reflection metadata for candidate/client/role/project
+  consolidation inside that evaluation copy.
 ```
 
 Run the local SleepCycle demo:
@@ -608,6 +617,10 @@ work. `scripts/smoke_graphiti.py` is guarded: it exits clearly while
 - MVP 3.1 simulated approval is a local evaluation device. It is not a human
   review product, not a safe apply workflow and not evidence that consolidation
   improves real-world agent behavior.
+- MVP 3.2 scope-aware reflections are still local and synthetic. They reduce
+  scoped leakage in the fake consolidation harness, but they do not validate
+  real transcripts, human review, Graphiti persistence or production apply
+  behavior.
 
 ## Integration Path
 
@@ -629,3 +642,5 @@ work. `scripts/smoke_graphiti.py` is guarded: it exits clearly while
   own controller/policy tests.
 - Keep consolidation evaluation separate from production memory writes; the
   current harness can approve only inside an isolated evaluation copy.
+- Preserve fine-grained reflection scope fields before any future apply path;
+  otherwise consolidation can reintroduce candidate/client/role leakage.

@@ -16,7 +16,13 @@ from .models import (
 )
 from .policy import PolicyStore
 from .safety import instruction_risk_reason, sensitive_risk_reason
-from .scope import has_ambiguous_reference, infer_scope_from_query, relation_matches, scope_exclusion_reason
+from .scope import (
+    has_ambiguous_reference,
+    infer_scope_from_query,
+    reflection_scope_exclusion_reason,
+    relation_matches,
+    scope_exclusion_reason,
+)
 from .store import InMemoryStore
 
 
@@ -88,8 +94,20 @@ class RetrievalPlanner:
                 )
 
         for reflection in self.store.list_reflections():
-            reason = self.policy.exclusion_reason(reflection, request)
             score = self._score_reflection(request, reflection)
+            scope_reason = reflection_scope_exclusion_reason(query_scope, reflection)
+            if scope_reason is not None:
+                if score > 0:
+                    excluded.append(
+                        ExcludedMemory(
+                            id=reflection.id,
+                            reason=scope_reason,
+                            memory_type="reflection",
+                            claim=reflection.claim,
+                        )
+                    )
+                continue
+            reason = self.policy.exclusion_reason(reflection, request)
             if reason is not None:
                 if score > 0 or reason in ("wrong_project", "deleted_evidence", "weak_reflection_evidence"):
                     excluded.append(

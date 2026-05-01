@@ -11,6 +11,8 @@
 - Reflection hallucination: consolidation creates unsupported user assumptions.
 - Over-consolidation: a sleep cycle turns weak, sensitive or conflicting
   evidence into stable memory without review.
+- Cross-scope reflection leakage: a consolidated candidate/client/role/project
+  hypothesis is used outside the scope that produced it.
 - Memory poisoning: malicious or low-quality content becomes durable memory.
 - Prompt injection through memory: retrieved content changes tool or system
   behavior.
@@ -79,9 +81,14 @@
   confidence, action, reason and review requirement.
 - Consolidation evaluation rejects unsafe simulated approvals for
   review-required, stale/superseded, conflict-overlapping, forbidden,
-  sensitive, prompt-injection-like or unrepresentable fine-scoped proposals.
+  sensitive, prompt-injection-like or unresolved proposals.
 - Simulated consolidation approval is confined to an evaluation copy and is not
   a live durable apply path.
+- Scope-aware reflections preserve candidate, client, role, project, actor,
+  subject, relation, confidence and reflection-type metadata.
+- Reflection retrieval excludes known wrong-scope reflections before ranking.
+- Consolidation evaluation reports scoped precision/recall and cross-scope,
+  role-scope and candidate/client reflection leakage metrics.
 - Retrieval traces include selected and excluded memories.
 - Benchmark includes explicit leakage and reflection-trap scenarios.
 - Noisy benchmark suite adds indirect phrasing, distractors, natural
@@ -172,6 +179,10 @@
   current fixture metadata.
 - Human review queue for high-impact reflections.
 - Real review workflow for SleepCycle decisions before any durable apply path.
+- Human review and explicit apply semantics for scope-aware reflections. The
+  current scoped approval path is evaluation-only.
+- External-data validation for scoped reflections; current coverage is fake and
+  deterministic.
 - Tests for any future retrieval-ranking effect from decay metadata.
 - Live LLM-based extraction experiments with deterministic schema validation,
   prompt-injection red-team cases and side-by-side comparison against the rule

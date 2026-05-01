@@ -1,8 +1,9 @@
 # MVP 3 Quality Gate Draft
 
 MVP 3.0 is acceptable only as a local dry-run consolidation prototype. MVP 3.1
-adds an evaluation harness for proposal usefulness and safety, still without
-durable apply behavior.
+adds an evaluation harness for proposal usefulness and safety. MVP 3.2 adds
+scope-aware reflection metadata for candidate/client/role/project/user
+consolidation. Durable apply behavior is still not implemented.
 
 ## Pass Criteria
 
@@ -20,7 +21,15 @@ durable apply behavior.
 - `consolidation-eval` compares no consolidation, dry-run proposals and
   simulated approval in an isolated evaluation copy.
 - Simulated approval rejects unsafe, stale, conflicting, forbidden, sensitive or
-  unrepresentable scoped consolidation decisions.
+  unresolved consolidation decisions.
+- Scope-aware reflections preserve `candidate_id`, `client_id`, `role_id`,
+  `project_id`, `actor_type`, `subject_id`, `relation_type`,
+  `scope_confidence` and `reflection_type`.
+- Wrong-scope reflections are excluded before ranking.
+- Scoped consolidation metrics report zero cross-scope, role-scope and
+  candidate/client reflection leakage on the local fake suite.
+- Scoped consolidation precision and recall are explicit metrics, not inferred
+  from general downstream accuracy.
 - Consolidation evaluation reports zero unsafe consolidation, policy leakage,
   stale resurrection and scope leakage on the local fake suite before any future
   apply workflow is considered.
@@ -31,6 +40,9 @@ durable apply behavior.
 - Decay changes retrieval ranking without explicit tests.
 - Sensitive or forbidden content is summarized into a stable reflection.
 - Candidate and client scopes are merged.
+- Role-scoped reflections answer other-role queries.
+- Client requirements become candidate preferences, or candidate preferences
+  become client requirements.
 - Simulated approval writes into the live controller/store.
 - `consolidation-eval` treats missing provenance or unavailable safety fields
   as successful evidence.

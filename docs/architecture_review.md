@@ -20,6 +20,7 @@ JSONL snapshots = explicit local research persistence
 Transcript evaluator = realistic local fixture harness
 Invariant tests = core safety regression guard
 SleepCycle = dry-run consolidation proposal/review queue
+Scoped reflections = candidate/client/role/project-aware hypotheses
 ```
 
 The default system has no real Graphiti, Letta, Mem0, production database, UI
@@ -135,6 +136,18 @@ The path is deliberately non-autonomous:
 Consolidation records can be saved in JSONL snapshots only as audit/proposal
 artifacts. They are not applied memory.
 
+MVP 3.2 extends reflections and consolidated memories with explicit fine scope:
+`candidate_id`, `client_id`, `role_id`, `actor_type`, `subject_id`,
+`relation_type`, `scope_confidence` and `reflection_type`. SleepCycle can now
+propose scoped candidate preferences, client requirements, role requirements,
+project patterns, procedural rules, risk warnings and unresolved hypotheses
+without collapsing them into user-global statements.
+
+Retrieval applies the same scope-first safety posture to reflections as it does
+to temporal facts: wrong-scope reflections are excluded before ranking, and a
+role/client/candidate reflection must not satisfy another entity's query simply
+because its text is lexically similar.
+
 ## Local Persistence Path
 
 MVP 1.5 adds explicit JSONL snapshots through `cognitive_memory.persistence`
@@ -227,6 +240,8 @@ contract is documented in `docs/graphiti_mapping.md`.
   prove Graphiti API compatibility, Neo4j persistence or graph query latency.
 - SleepCycle dry-run creates useful review artifacts, but it does not prove
   that reflection/consolidation improves task performance.
+- Scope-aware reflections improve the local evaluation copy, but real apply,
+  human review, external data and live graph storage are still unimplemented.
 
 ## Do Not Change Casually
 
@@ -244,6 +259,8 @@ contract is documented in `docs/graphiti_mapping.md`.
 - The distinction between adapter mocks/stubs and real integrations.
 - The distinction between local Graphiti parity and live Graphiti integration.
 - The distinction between SleepCycle proposals and applied durable memory.
+- Fine-grained reflection scope fields; removing them reintroduces
+  candidate/client/role leakage risk.
 
 ## MVP 2 Readiness
 

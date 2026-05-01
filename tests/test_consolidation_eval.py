@@ -25,7 +25,7 @@ class ConsolidationEvalTests(unittest.TestCase):
         report = evaluate_consolidation()
         summary = report["summary"]
 
-        self.assertGreaterEqual(report["scenario_count"], 11)
+        self.assertGreaterEqual(report["scenario_count"], 18)
         self.assertEqual(
             report["modes"],
             [
@@ -38,6 +38,11 @@ class ConsolidationEvalTests(unittest.TestCase):
             "consolidation_precision",
             "consolidation_recall",
             "unsafe_consolidation_rate",
+            "scoped_consolidation_precision",
+            "scoped_consolidation_recall",
+            "cross_scope_reflection_leakage",
+            "role_scope_leakage",
+            "candidate_client_reflection_leakage",
             "overgeneralization_rate",
             "stale_fact_resurrection_rate",
             "review_required_accuracy",
@@ -69,14 +74,13 @@ class ConsolidationEvalTests(unittest.TestCase):
         self.assertTrue(item["simulated_human_approved_consolidation"]["passed"])
         self.assertGreaterEqual(item["approved_count"], 1)
 
-    def test_unsafe_or_unrepresentable_proposals_are_not_approved(self):
+    def test_unsafe_or_unresolved_proposals_are_not_approved(self):
         report = evaluate_consolidation()
         unsafe_names = {
             "outdated_preference_requires_review",
             "historical_old_fact_not_current",
             "source_conflict_requires_review",
             "sensitive_evidence_requires_review",
-            "candidate_client_facts_do_not_merge",
             "prompt_injection_evidence_ignored",
             "deleted_and_do_not_use_evidence_ignored",
         }
@@ -109,8 +113,27 @@ class ConsolidationEvalTests(unittest.TestCase):
 
         self.assertEqual(summary["provenance_coverage"], 1.0)
         self.assertEqual(summary["unsafe_consolidation_rate"], 0.0)
+        self.assertEqual(summary["scoped_consolidation_precision"], 1.0)
+        self.assertEqual(summary["scoped_consolidation_recall"], 1.0)
         self.assertEqual(summary["policy_violation_rate"], 0.0)
         self.assertEqual(summary["scope_leakage_rate"], 0.0)
+        self.assertEqual(summary["cross_scope_reflection_leakage"], 0.0)
+        self.assertEqual(summary["role_scope_leakage"], 0.0)
+        self.assertEqual(summary["candidate_client_reflection_leakage"], 0.0)
+
+    def test_scoped_candidate_client_consolidation_is_approved_without_leaking(self):
+        item = _report_item("candidate_client_facts_do_not_merge")
+
+        self.assertTrue(item["simulated_human_approved_consolidation"]["passed"])
+        self.assertGreaterEqual(item["scoped_approved_count"], 1)
+        self.assertFalse(item["candidate_client_reflection_leakage"])
+
+    def test_role_scoped_background_approval_does_not_answer_wrong_role_query(self):
+        item = _report_item("role_specific_pattern_does_not_leak")
+
+        self.assertTrue(item["simulated_human_approved_consolidation"]["passed"])
+        self.assertEqual(item["simulated_human_approved_consolidation"]["answer"], "ABSTAIN")
+        self.assertFalse(item["role_scope_leakage"])
 
     def test_json_cli_output_is_machine_readable(self):
         args = build_parser().parse_args(["consolidation-eval", "--json"])
@@ -120,7 +143,7 @@ class ConsolidationEvalTests(unittest.TestCase):
         self.assertEqual(code, 0)
         payload = json.loads(captured.output)
         self.assertIn("summary", payload)
-        self.assertGreaterEqual(payload["scenario_count"], 11)
+        self.assertGreaterEqual(payload["scenario_count"], 18)
 
 
 def _scenario(name):

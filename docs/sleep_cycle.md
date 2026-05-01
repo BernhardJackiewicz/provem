@@ -67,9 +67,40 @@ It compares three modes on fake scenarios:
 
 The simulated approval mode applies only conservative decisions to an isolated
 evaluation copy. It rejects review-required proposals, stale/superseded
-evidence, prompt-injection-like text, sensitive content, conflict-overlapping
-scopes and fine-grained candidate/client/role scopes that the current
-`Reflection` model cannot safely represent.
+evidence, prompt-injection-like text, sensitive content and
+conflict-overlapping scopes.
+
+MVP 3.2 adds scope-aware reflection metadata so safe simulated approval can
+represent candidate-, client-, role-, project- and user-scoped consolidated
+memories without flattening them into global claims. A reflection or
+consolidated memory now preserves:
+
+- `user_id`
+- `project_id`
+- `candidate_id`
+- `client_id`
+- `role_id`
+- `actor_type`
+- `subject_id`
+- `relation_type`
+- `scope_confidence`
+- `reflection_type`
+
+Supported reflection types are:
+
+- `user_preference`
+- `candidate_preference`
+- `client_requirement`
+- `role_requirement`
+- `project_pattern`
+- `procedural_rule`
+- `risk_warning`
+- `unresolved_hypothesis`
+
+SleepCycle may propose scoped reflections only when evidence stays in the same
+scope, actor type and relation family. Retrieval excludes wrong-scope
+reflections before ranking, using the same conservative stance as temporal
+facts.
 
 This harness reports downstream task delta, consolidation precision/recall,
 unsafe consolidation, overgeneralization, stale fact resurrection,
@@ -88,7 +119,8 @@ records them. These records are audit/proposal artifacts, not applied memory.
 - No Graphiti, Mem0 or Letta integration is used.
 - No human review UI exists.
 - Decay is metadata/report-only and does not change retrieval ranking.
+- Scoped reflection approval exists only inside the evaluation copy.
 - The proposal rules are deterministic and can miss natural paraphrases or true
   long-range patterns.
-- MVP 3.1 tests usefulness only on fake local scenarios. It does not prove that
+- MVP 3.2 tests usefulness only on fake local scenarios. It does not prove that
   consolidation improves real-world task performance.

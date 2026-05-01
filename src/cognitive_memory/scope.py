@@ -4,7 +4,7 @@ from dataclasses import asdict, dataclass
 import re
 from typing import Optional
 
-from .models import DEFAULT_PROJECT_ID, TemporalFact
+from .models import DEFAULT_PROJECT_ID, Reflection, TemporalFact
 
 
 @dataclass
@@ -136,30 +136,52 @@ def infer_scope_from_query(query: str, project_id: str = DEFAULT_PROJECT_ID) -> 
 
 def scope_exclusion_reason(query_scope: MemoryScope, fact: TemporalFact) -> Optional[str]:
     fact_scope = scope_from_fact(fact)
+    return memory_scope_exclusion_reason(query_scope, fact_scope, fact.subject, fact.relation)
+
+
+def reflection_scope_exclusion_reason(query_scope: MemoryScope, reflection: Reflection) -> Optional[str]:
+    reflection_scope = scope_from_reflection(reflection)
+    return memory_scope_exclusion_reason(query_scope, reflection_scope, reflection.subject_id, reflection.relation_type)
+
+
+def memory_scope_exclusion_reason(
+    query_scope: MemoryScope,
+    memory_scope: MemoryScope,
+    subject_id: str,
+    relation_type: str,
+) -> Optional[str]:
     if query_scope.actor_type not in ("unknown", "mixed"):
-        if fact_scope.actor_type != "unknown" and fact_scope.actor_type != query_scope.actor_type:
+        if memory_scope.actor_type != "unknown" and memory_scope.actor_type != query_scope.actor_type:
             return "wrong_scope"
-        if fact_scope.actor_type == "unknown" and fact.subject != query_scope.subject_id:
+        if query_scope.subject_id and memory_scope.subject_id and memory_scope.subject_id != query_scope.subject_id:
+            return "wrong_scope"
+        if memory_scope.actor_type == "unknown" and query_scope.subject_id and subject_id and subject_id != query_scope.subject_id:
             return "wrong_scope"
 
     if query_scope.actor_type == "candidate" and query_scope.candidate_id:
-        if fact_scope.candidate_id and fact_scope.candidate_id != query_scope.candidate_id:
+        if memory_scope.candidate_id and memory_scope.candidate_id != query_scope.candidate_id:
             return "wrong_scope"
     if query_scope.actor_type == "client" and query_scope.client_id:
-        if fact_scope.client_id and fact_scope.client_id != query_scope.client_id:
+        if memory_scope.client_id and memory_scope.client_id != query_scope.client_id:
             return "wrong_scope"
     if query_scope.actor_type == "role" and query_scope.role_id:
-        if fact_scope.role_id and fact_scope.role_id != query_scope.role_id:
+        if memory_scope.role_id and memory_scope.role_id != query_scope.role_id:
             return "wrong_scope"
     if query_scope.actor_type == "mixed":
-        if fact_scope.actor_type == "candidate" and query_scope.candidate_id and fact_scope.candidate_id != query_scope.candidate_id:
+        if memory_scope.actor_type == "candidate" and query_scope.candidate_id and memory_scope.candidate_id != query_scope.candidate_id:
             return "wrong_scope"
-        if fact_scope.actor_type == "client" and query_scope.client_id and fact_scope.client_id != query_scope.client_id:
+        if memory_scope.actor_type == "client" and query_scope.client_id and memory_scope.client_id != query_scope.client_id:
             return "wrong_scope"
-        if fact_scope.actor_type == "role" and query_scope.role_id and fact_scope.role_id != query_scope.role_id:
+        if memory_scope.actor_type == "role" and query_scope.role_id and memory_scope.role_id != query_scope.role_id:
+            return "wrong_scope"
+        if memory_scope.candidate_id and query_scope.candidate_id and memory_scope.candidate_id != query_scope.candidate_id:
+            return "wrong_scope"
+        if memory_scope.client_id and query_scope.client_id and memory_scope.client_id != query_scope.client_id:
+            return "wrong_scope"
+        if memory_scope.role_id and query_scope.role_id and memory_scope.role_id != query_scope.role_id:
             return "wrong_scope"
 
-    if query_scope.relation and not relation_matches(query_scope.relation, fact.relation, query_scope.actor_type):
+    if query_scope.relation and relation_type and relation_type != "profile" and not relation_matches(query_scope.relation, relation_type, query_scope.actor_type):
         return "insufficient_evidence"
     return None
 
@@ -174,6 +196,19 @@ def scope_from_fact(fact: TemporalFact) -> MemoryScope:
         subject_id=fact.scope.get("subject_id", fact.subject),
         scope_confidence=float(fact.scope.get("scope_confidence", 0.0)),
         relation=fact.scope.get("relation", fact.relation),
+    )
+
+
+def scope_from_reflection(reflection: Reflection) -> MemoryScope:
+    return MemoryScope(
+        actor_type=reflection.actor_type,
+        candidate_id=reflection.candidate_id,
+        client_id=reflection.client_id,
+        role_id=reflection.role_id,
+        project_id=reflection.project_id,
+        subject_id=reflection.subject_id,
+        scope_confidence=reflection.scope_confidence,
+        relation=reflection.relation_type,
     )
 
 

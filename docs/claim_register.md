@@ -86,6 +86,10 @@ deck or product narrative.
 | Simulated approval proves real-world consolidation usefulness. | None | Unsupported | No | High | Rejected; simulated approval is isolated and synthetic |
 | Simulated approval is a durable apply workflow. | None | Unsupported | No | High | Rejected; it writes only to an evaluation copy |
 | Current consolidation evaluation shows clean safety metrics on local fake scenarios. | Local `consolidation-eval` command | Internal deterministic experiment | Yes, synthetic only | Medium | Internally supported, not product evidence |
+| MVP 3.2 has scope-aware reflection metadata for candidate/client/role/project/user consolidation. | Local models, retrieval filtering, SleepCycle proposals and tests | Code/tests, fake scenarios only | Yes, local only | Medium | Supported as local scaffold, not production consolidation |
+| Scope-aware reflections prevent real-world candidate/client/role leakage. | None | Unsupported | No | High | Rejected; current support is synthetic/local only |
+| Scoped consolidation has been validated on real transcripts or live graph storage. | None | Unsupported | No | High | Rejected |
+| Scope-aware simulated approval is a real human-review apply workflow. | None | Unsupported | No | High | Rejected; it still writes only to an evaluation copy |
 | Reflection can improve long-range personalization. | Generative-agents-style hypothesis | Needs ablation and hallucination metric | No | High | Hypothesis |
 | The current implementation is MVP 1 complete in a production sense. | None | Unsupported | No | High | Rejected |
 
