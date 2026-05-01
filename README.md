@@ -53,6 +53,13 @@ failure modes can be exercised before integrating heavy services.
   persists episodes, candidates, temporal facts, memory events, reflections,
   policy flags and optional retrieval traces. This is local research
   persistence only, not a production database or privacy workflow.
+- MVP 1.6 transcript evaluation groundwork: a local transcript evaluation
+  harness now loads fake/anonymized JSON or JSONL call transcripts, converts
+  turns to episodes, scores optional human labels and reports redacted
+  diagnostics. It is not production transcript processing or real-world proof.
+- MVP 1.7 core reliability groundwork: invariant tests, seeded fuzz/replay
+  checks, snapshot schema-version validation and a local quality-gate command
+  now guard the memory core against unsafe regressions.
 - MVP 2: not implemented. There is no real Letta/MemFS stateful agent.
 - MVP 2 preparation: adapter contracts, mocks, optional extras, and real
   integration stubs exist. Mem0 now has a guarded optional baseline adapter,
@@ -100,6 +107,14 @@ failure modes can be exercised before integrating heavy services.
   benchmark coverage and expected-output anti-cheat behavior.
 - Local JSONL snapshot persistence for explicit import/export of research
   memory state, including policy flags and optional retrieval traces.
+- Transcript evaluation harness for fake or anonymized call transcripts, with
+  optional labels, redacted reporting, local persistence smoke support and
+  transcript-specific metrics.
+- Core invariant catalog and deterministic invariant/fuzz tests for deletion,
+  do-not-use, source conflict, prompt-injection quarantine, scope isolation,
+  supersession, provenance, policy gates, replay and persistence reload safety.
+- `quality-gate` CLI command for local benchmark, transcript and persistence
+  smoke checks.
 - Adapter contracts for Graphiti-like, Mem0-like, and Letta-like systems, with
   local mocks, explicit Graphiti/Letta stubs, and a guarded optional Mem0
   backend.
@@ -118,6 +133,8 @@ PYTHONPATH=src python3 -m cognitive_memory benchmark --suite adversarial
 PYTHONPATH=src python3 -m cognitive_memory demo
 PYTHONPATH=src python3 -m cognitive_memory export-memory --path demo.memory.jsonl --demo
 PYTHONPATH=src python3 -m cognitive_memory import-memory --path demo.memory.jsonl --query "current work mode"
+PYTHONPATH=src python3 -m cognitive_memory transcript-eval --input tests/fixtures/transcripts
+PYTHONPATH=src python3 -m cognitive_memory quality-gate
 ```
 
 If the package is installed in editable mode:
@@ -128,12 +145,17 @@ cml benchmark
 cml demo
 cml export-memory --path demo.memory.jsonl --demo
 cml import-memory --path demo.memory.jsonl --query "current work mode"
+cml transcript-eval --input tests/fixtures/transcripts
+cml quality-gate
 ```
 
 `*.memory.jsonl` files are ignored by git because local snapshots may contain
 user or candidate memory. The JSONL format is intentionally inspectable and
 dependency-free, but it is not encrypted, concurrent, migrated or production
 safe.
+
+Local transcript datasets are also ignored through `data/` and `transcripts/`.
+Only fake fixtures under `tests/fixtures/transcripts/` should be committed.
 
 ## Structured Episode Markup
 
@@ -266,6 +288,44 @@ Current local CML benchmark snapshot after the local event-model pass:
 The remaining adversarial failures are mostly safe abstentions and extraction
 misses. This is still a local synthetic MVP 1 prototype.
 
+## Transcript Evaluation
+
+Synthetic benchmarks are not enough. The transcript harness loads JSON/JSONL
+call transcripts with participants, turns, caller identity, optional existing
+context and optional expected labels. It converts turns to episodes and runs
+the same controller, policy and retrieval path as the benchmark.
+
+```bash
+PYTHONPATH=src python3 -m cognitive_memory transcript-eval --input tests/fixtures/transcripts
+PYTHONPATH=src python3 -m cognitive_memory transcript-eval --input path/to/local/anonymized/transcripts --persist-path tmp.memory.jsonl
+```
+
+The fixture set currently has 11 fake transcripts: 10 labeled and 1 unlabeled
+diagnostic. It covers recruiting calls, client intake, follow-ups, repeat
+customer service, complaint escalation, appointment rescheduling, handwerk
+repair follow-up, ambiguous identity, do-not-use, sensitive facts and ASR-like
+noise. The current run intentionally exposes a complaint-escalation extraction
+miss; that is useful failure evidence.
+
+Metrics include extraction/write precision and recall, sensitive storage
+violations, do-not-use leakage, identity and scope accuracy, current/historical
+truth accuracy, abstention accuracy, follow-up action safety, provenance
+coverage and transcript-to-memory latency.
+
+See `docs/transcript_evaluation.md` for the schema and fixture methodology.
+
+## Quality Gate
+
+MVP 1.7 adds a local quality gate:
+
+```bash
+PYTHONPATH=src python3 -m cognitive_memory quality-gate
+```
+
+It checks the full synthetic benchmark, transcript fixtures and a persistence
+smoke test. It does not replace the full unittest command. Core invariants are
+documented in `docs/core_invariants.md`.
+
 ## Architecture
 
 ```text
@@ -382,6 +442,13 @@ PYTHONPATH=src python3 scripts/smoke_mem0.py
 - The current high benchmark scores can still reflect benchmark shaping. They
   do not validate real transcripts, live integrations, production privacy
   controls or recruiting business outcomes.
+- Transcript evaluation currently uses fake fixtures. Real or anonymized
+  transcripts must stay local and must not be committed. Basic redaction in
+  reports is not production anonymization.
+- The quality gate is a local reliability check, not CI, deployment monitoring
+  or production validation.
+- JSONL `schema_version` checks are compatibility guards for research
+  snapshots, not a migration framework.
 - Latency numbers are local in-process timings, not service timings.
 - Reflection is deliberately constrained and should not be treated as MVP 3.
 

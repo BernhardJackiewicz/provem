@@ -1,0 +1,33 @@
+{
+  "transcript_id": "tx_recruiting_client_intake",
+  "domain": "recruiting",
+  "timestamp": "2026-03-02T10:00:00+00:00",
+  "caller_identity": {
+    "stated_name": "Orion Hiring",
+    "crm_id": "client_orion",
+    "confidence": 0.9
+  },
+  "participants": [
+    {"speaker_id": "c1", "role": "client", "name": "Orion Hiring"},
+    {"speaker_id": "r1", "role": "recruiter"}
+  ],
+  "turns": [
+    {"speaker": "c1", "text": "Client Orion budget is 150k for the role.", "asr_confidence": 0.95},
+    {"speaker": "c1", "text": "Client Orion requires Python and the location policy is hybrid.", "asr_confidence": 0.92}
+  ],
+  "redaction_terms": ["Orion Hiring"],
+  "expected_labels": {
+    "facts_that_should_be_stored": [
+      "client_orion budget 150k",
+      "client_orion required_skill Python"
+    ],
+    "current_truth": [
+      {"query": "client orion budget", "include": ["150k"]},
+      {"query": "client orion required skill", "include": ["Python"]}
+    ],
+    "scope_expected": [
+      {"query": "candidate orion required skill", "expected_abstain": true, "exclude": ["Python"]}
+    ],
+    "identity_resolution_expected": {"crm_id": "client_orion"}
+  }
+}

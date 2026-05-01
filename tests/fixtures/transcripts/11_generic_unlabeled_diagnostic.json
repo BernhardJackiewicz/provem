@@ -1,0 +1,18 @@
+{
+  "transcript_id": "tx_generic_unlabeled_diagnostic",
+  "domain": "generic",
+  "timestamp": "2026-03-19T10:00:00+00:00",
+  "caller_identity": {
+    "stated_name": "Demo Caller",
+    "phone_number_hash": "phonehash_generic_1",
+    "confidence": 0.72
+  },
+  "participants": [
+    {"speaker_id": "caller", "role": "unknown", "name": "Demo Caller"},
+    {"speaker_id": "agent", "role": "agent"}
+  ],
+  "turns": [
+    {"speaker": "caller", "text": "I'm not sure what you have on file; maybe check the old note before using anything.", "asr_confidence": 0.74}
+  ],
+  "redaction_terms": ["Demo Caller"]
+}

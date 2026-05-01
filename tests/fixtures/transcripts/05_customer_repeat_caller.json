@@ -1,0 +1,30 @@
+{
+  "transcript_id": "tx_customer_repeat_caller",
+  "domain": "customer_service",
+  "timestamp": "2026-03-13T08:30:00+00:00",
+  "caller_identity": {
+    "phone_number_hash": "phonehash_customer_17",
+    "stated_name": "Mira Test",
+    "crm_id": "customer_17",
+    "confidence": 0.86
+  },
+  "participants": [
+    {"speaker_id": "cust", "role": "customer", "name": "Mira Test"},
+    {"speaker_id": "agent", "role": "agent"}
+  ],
+  "existing_context": {
+    "prior_tickets": [
+      {"content": "FACT customer_17|issue|invoice_delay", "source": "tool", "timestamp": "2026-03-05T08:00:00+00:00"}
+    ]
+  },
+  "turns": [
+    {"speaker": "cust", "text": "I'm calling again about the same invoice delay, but I don't have the ticket number handy.", "asr_confidence": 0.84}
+  ],
+  "redaction_terms": ["Mira Test"],
+  "expected_labels": {
+    "current_truth": [
+      {"query": "customer 17 issue", "include": ["invoice_delay"]}
+    ],
+    "identity_resolution_expected": {"crm_id": "customer_17"}
+  }
+}

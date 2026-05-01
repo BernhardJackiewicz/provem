@@ -1,0 +1,30 @@
+{
+  "transcript_id": "tx_recruiting_candidate_call",
+  "domain": "recruiting",
+  "timestamp": "2026-03-01T09:00:00+00:00",
+  "caller_identity": {
+    "stated_name": "Ana Demo",
+    "crm_id": "candidate_ana",
+    "confidence": 0.92
+  },
+  "participants": [
+    {"speaker_id": "s1", "role": "candidate", "name": "Ana Demo"},
+    {"speaker_id": "s2", "role": "recruiter"}
+  ],
+  "turns": [
+    {"speaker": "s1", "text": "Candidate Ana salary expectation is 120k.", "asr_confidence": 0.97},
+    {"speaker": "s1", "text": "Candidate Ana is remote only for now.", "asr_confidence": 0.96}
+  ],
+  "redaction_terms": ["Ana Demo"],
+  "expected_labels": {
+    "facts_that_should_be_stored": [
+      "candidate_ana salary_expectation 120k",
+      "candidate_ana work_mode remote_only"
+    ],
+    "current_truth": [
+      {"query": "candidate ana salary expectation", "include": ["120k"]},
+      {"query": "candidate ana work mode", "include": ["remote_only"]}
+    ],
+    "identity_resolution_expected": {"crm_id": "candidate_ana"}
+  }
+}

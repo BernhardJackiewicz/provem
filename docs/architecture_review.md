@@ -17,6 +17,8 @@ Policy store = use restrictions
 Controller = only durable write authority
 Retrieval planner = policy-aware selection and abstention
 JSONL snapshots = explicit local research persistence
+Transcript evaluator = realistic local fixture harness
+Invariant tests = core safety regression guard
 ```
 
 The default system has no real Graphiti, Letta, Mem0, production database, UI
@@ -27,6 +29,7 @@ but the benchmark runs locally with standard Python.
 
 ```text
 Episode
+  <- optional transcript turns from TranscriptEvaluation
   -> extractor proposes MemoryCandidate objects
   -> MemoryController evaluates policy and safety
   -> accepted candidates become TemporalFact objects
@@ -38,6 +41,11 @@ Episode
 
 The benchmark systems receive the same scenario episodes and request. Expected
 answers stay in evaluator data only; anti-cheat tests guard this.
+
+The transcript evaluator receives JSON/JSONL files, converts turns and existing
+context to episodes, and then uses the same controller/policy/retrieval path.
+It has its own labels and diagnostics, but it does not become a second write
+authority.
 
 ## Write Path
 
@@ -92,6 +100,19 @@ These controls are local and deterministic. They do not replace a production
 privacy model, source verification workflow, identity service or security
 review.
 
+## Core Reliability Path
+
+MVP 1.7 adds an explicit invariant catalog and deterministic tests for the
+core safety contract. The protected behaviors include deletion/do-not-use
+precedence, prompt-injection quarantine, wrong-scope exclusion before ranking,
+source-conflict abstention, supersession, provenance, exclusion reasons,
+policy-gated events/reflections, persistence reload safety and replay
+idempotency.
+
+The seeded fuzz tests generate deterministic operation sequences and compare
+semantic retrieval behavior instead of UUIDs. This is intended to catch unsafe
+regressions without pretending to be exhaustive formal verification.
+
 ## Local Persistence Path
 
 MVP 1.5 adds explicit JSONL snapshots through `cognitive_memory.persistence`
@@ -103,6 +124,28 @@ audit records and optional retrieval traces.
 for local inspection, reproducible debugging and reload tests. They are not a
 production persistence layer: no encryption, locking, migrations,
 authorization or concurrent write safety exists.
+
+Snapshot records now carry `schema_version`. The importer accepts current v1
+records and old/minimal v1-shaped records, but rejects unknown future versions
+or unknown record types clearly.
+
+## Transcript Evaluation Path
+
+MVP 1.6 adds `cognitive_memory.transcript_eval` and the `transcript-eval` CLI
+command. It loads fake or local anonymized transcripts with caller identity,
+participants, turns, optional existing context and optional expected labels.
+
+The evaluator:
+
+- uses the same deterministic extractors and controller write path
+- withholds low-confidence caller content from durable extraction
+- scores labels for extraction/write recall, current and historical truth,
+  identity/scope, abstention, leakage, follow-up safety and provenance
+- emits redacted reports by default for names, emails, phone numbers and
+  configured sensitive terms
+
+This path is an evaluation harness, not production call processing. Real
+transcripts must remain local and outside git.
 
 ## Event And Relationship Model
 
@@ -128,6 +171,8 @@ splitting, entity linking or ontology design.
   retrieval under wrong-scope, deletion and do-not-use policy.
 - The biggest quality risk is benchmark-shaped extraction. The noisy,
   recruiting and adversarial extractors contain curated phrase handling.
+- Transcript fixtures expose the same risk: the complaint-escalation fixture is
+  missed by the deterministic extractor.
 - Event safety filtering previously duplicated some `PolicyStore` checks. That
   common policy path has now been unified for facts, reflections and events.
 - Same-day candidate/client context linking is a useful local heuristic, not a
@@ -140,6 +185,10 @@ splitting, entity linking or ontology design.
 - JSONL persistence is useful for local reload/regression checks, but it should
   not be used for real user/candidate memory without a separate privacy and
   security design.
+- Transcript redaction is basic report masking and should not be confused with
+  production anonymization.
+- The quality-gate CLI is a local preflight check. It does not replace full
+  unit tests, CI, production monitoring or external baseline validation.
 
 ## Do Not Change Casually
 
@@ -152,6 +201,8 @@ splitting, entity linking or ontology design.
 - Conservative abstention for ambiguous references and ambiguous identity.
 - Local persistence reloads must not resurrect deleted, do-not-use,
   prompt-injection-quarantined or wrong-scope memory.
+- Invariant tests should fail loudly rather than silently weakening safety for
+  better recall.
 - The distinction between adapter mocks/stubs and real integrations.
 
 ## MVP 2 Readiness

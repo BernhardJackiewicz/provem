@@ -1,0 +1,32 @@
+{
+  "transcript_id": "tx_recruiting_salary_followup",
+  "domain": "recruiting",
+  "timestamp": "2026-03-10T11:00:00+00:00",
+  "caller_identity": {
+    "stated_name": "Ana Demo",
+    "crm_id": "candidate_ana",
+    "confidence": 0.94
+  },
+  "participants": [
+    {"speaker_id": "s1", "role": "candidate", "name": "Ana Demo"},
+    {"speaker_id": "s2", "role": "recruiter"}
+  ],
+  "existing_context": {
+    "previous_call_summaries": [
+      {"content": "FACT candidate_ana|salary_expectation|120k", "source": "candidate", "timestamp": "2026-03-01T09:00:00+00:00"}
+    ]
+  },
+  "turns": [
+    {"speaker": "s1", "text": "Candidate Ana salary expectation is now 140k after thinking about the commute.", "asr_confidence": 0.91}
+  ],
+  "redaction_terms": ["Ana Demo"],
+  "expected_labels": {
+    "facts_that_should_be_stored": ["candidate_ana salary_expectation 140k"],
+    "current_truth": [
+      {"query": "candidate ana salary expectation", "include": ["140k"], "exclude": ["120k"]}
+    ],
+    "historical_truth": [
+      {"query": "candidate ana salary expectation", "time_scope": "as_of_date", "as_of": "2026-03-05T12:00:00+00:00", "include": ["120k"], "exclude": ["140k"]}
+    ]
+  }
+}

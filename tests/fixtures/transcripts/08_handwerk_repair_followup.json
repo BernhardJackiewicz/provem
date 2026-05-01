@@ -1,0 +1,25 @@
+{
+  "transcript_id": "tx_handwerk_repair_followup",
+  "domain": "handwerk",
+  "timestamp": "2026-03-16T07:45:00+00:00",
+  "caller_identity": {
+    "phone_number_hash": "phonehash_repair_5",
+    "stated_name": "Timo Fixture",
+    "crm_id": "repair_customer_5",
+    "confidence": 0.78
+  },
+  "participants": [
+    {"speaker_id": "cust", "role": "customer", "name": "Timo Fixture"},
+    {"speaker_id": "agent", "role": "agent"}
+  ],
+  "turns": [
+    {"speaker": "cust", "text": "My preferred repair window is morning.", "asr_confidence": 0.91}
+  ],
+  "redaction_terms": ["Timo Fixture"],
+  "expected_labels": {
+    "facts_that_should_be_stored": ["repair_customer_5 repair_window morning"],
+    "current_truth": [
+      {"query": "repair window", "include": ["morning"]}
+    ]
+  }
+}

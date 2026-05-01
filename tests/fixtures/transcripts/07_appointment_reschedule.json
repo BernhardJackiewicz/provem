@@ -1,0 +1,25 @@
+{
+  "transcript_id": "tx_appointment_reschedule",
+  "domain": "appointment",
+  "timestamp": "2026-03-15T12:00:00+00:00",
+  "caller_identity": {
+    "phone_number_hash": "phonehash_appt_9",
+    "stated_name": "Noah Fixture",
+    "crm_id": "appointment_customer_9",
+    "confidence": 0.82
+  },
+  "participants": [
+    {"speaker_id": "cust", "role": "customer", "name": "Noah Fixture"},
+    {"speaker_id": "agent", "role": "agent"}
+  ],
+  "turns": [
+    {"speaker": "cust", "text": "Afternoons are better now because mornings are blocked.", "asr_confidence": 0.9}
+  ],
+  "redaction_terms": ["Noah Fixture"],
+  "expected_labels": {
+    "facts_that_should_be_stored": ["appointment_customer_9 meeting_time afternoon"],
+    "current_truth": [
+      {"query": "meeting time", "include": ["afternoon"]}
+    ]
+  }
+}

@@ -13,6 +13,16 @@ deck or product narrative.
 | MVP 1.5 has local JSONL persistence for episodes, facts, events, policy flags and retrieval traces. | Local persistence code and tests | Code/tests | Yes, local only | Medium | Supported as local research persistence |
 | MVP 1.5 provides production-grade persistence. | None | Unsupported | No | High | Rejected |
 | Facts, reflections and events share a common policy/safety exclusion path. | Local policy/retrieval code and tests | Code/tests | Yes, local only | Medium | Supported as architecture cleanup |
+| MVP 1.6 has a local transcript evaluation harness. | Local transcript evaluation code, fake fixtures and tests | Code/tests and local transcript-eval command | Yes, fake fixtures only | Medium | Supported as evaluation harness, not product evidence |
+| Transcript evaluation validates real-world call performance. | None | Unsupported | No | High | Rejected |
+| Basic transcript report redaction is production-grade anonymization. | None | Unsupported | No | High | Rejected |
+| The first transcript fixture run exposes a complaint-escalation extraction miss. | Local fake transcript fixtures | Internal deterministic experiment | Yes, fake fixtures only | Medium | Supported as failure evidence |
+| No real PII is committed in transcript fixtures. | Fixture inspection and fake test data | Code/data review | Yes | High | Supported for current fixtures only |
+| MVP 1.7 has a documented core invariant catalog and deterministic invariant tests. | Local docs and tests | Code/tests | Yes, local only | Medium | Supported as local reliability guard |
+| Seeded fuzz tests prove memory safety exhaustively. | None | Unsupported | No | High | Rejected; fuzzing is regression pressure, not proof |
+| Quality-gate command validates benchmark, transcript fixtures and persistence smoke locally. | Local CLI command | Code/tests and command run | Yes, local only | Medium | Supported as local preflight check |
+| Quality-gate command replaces full unit tests or CI. | None | Unsupported | No | High | Rejected |
+| JSONL snapshot schema versioning is production migration support. | None | Unsupported | No | High | Rejected |
 | The structured benchmark result proves robust real-world memory. | None | Unsupported | No | High | Rejected |
 | A noisy natural-language benchmark suite exists. | Local benchmark code | Code/tests and local benchmark command | Yes, synthetic only | Medium | Supported as stress harness, not product evidence |
 | The noisy suite exposed at least one CML limitation before the scope/reference hardening pass. | Local noisy benchmark and failure taxonomy | Internal deterministic experiment | Yes, synthetic only | Medium | Fixed on current synthetic suite; still not product evidence |

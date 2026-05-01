@@ -43,9 +43,11 @@ biology.
 
 1. MVP 0: Benchmark harness and baselines.
 2. MVP 1: Non-autonomous memory core.
-3. MVP 2: Stateful agent integration through Letta/MemFS-style ports.
-4. MVP 3: Sleep cycle, evidence checking, decay and review queue.
-5. MVP 4: Audit UI and domain pilot.
+3. MVP 1.6: Transcript evaluation layer before live integrations.
+4. MVP 1.7: Core reliability and invariant hardening.
+5. MVP 2: Stateful agent integration through Letta/MemFS-style ports.
+6. MVP 3: Sleep cycle, evidence checking, decay and review queue.
+7. MVP 4: Audit UI and domain pilot.
 
 ## Current Prototype Scope
 
@@ -106,6 +108,18 @@ This makes local reload/regression testing possible without starting MVP 2. It
 is not production persistence and does not change the synthetic nature of the
 benchmark evidence.
 
+The current MVP 1.6 transcript evaluation pass adds a local JSON/JSONL
+transcript harness before live integrations. It converts transcript turns into
+episodes, supports optional human labels, evaluates identity/scope/current and
+historical truth checks, applies basic report redaction and preserves the same
+controller/policy write path. The fixture set is fake and intentionally exposes
+a complaint-escalation extraction miss.
+
+The current MVP 1.7 core reliability pass adds an explicit invariant catalog,
+deterministic invariant tests, seeded fuzz/replay checks, snapshot
+schema-version validation and a local quality-gate command. It is a foundation
+hardening pass, not a new feature or recall-improvement pass.
+
 An optional schema-constrained LLM extractor interface exists for future
 comparison. It validates proposed `MemoryCandidate` output locally and keeps the
 controller as the only durable write authority. It does not make live LLM calls
@@ -127,6 +141,12 @@ User / Test Scenario
        |
        v
 Episode ingestion
+       ^
+       |
+Transcript evaluation harness
+  - JSON/JSONL fake or anonymized transcripts
+  - optional expected labels
+  - redacted diagnostics
        |
        v
 Memory Controller  (only durable write authority)
@@ -322,6 +342,17 @@ This is still synthetic evidence only.
   Graphiti groundwork, but it is not a real temporal knowledge graph.
 - JSONL snapshots provide local reload/debug persistence only. They are not a
   production database, migration layer, encryption layer or privacy workflow.
+- Snapshot schema-version checks are local compatibility guards, not production
+  migration support.
+- Invariant and fuzz tests make the memory core harder to break accidentally,
+  but they are not exhaustive formal verification.
+- Transcript evaluation currently uses fake fixtures. It is a realistic
+  harness, not real-world evidence; local/anonymized transcripts must not be
+  committed.
+- Transcript report redaction is basic masking, not production anonymization.
+- The transcript harness currently exposes a complaint-escalation extraction
+  miss, showing that deterministic extraction does not generalize to all
+  realistic utterances.
 - Some pitch-safety scenarios use explicit synthetic status facts. They test
   governed retrieval and policy blocking, not a full recruiting decision engine.
 - The current noisy extractor does not perform robust coreference resolution,
@@ -353,6 +384,10 @@ This is still synthetic evidence only.
 ## Next Steps
 
 - Treat `docs/mvp1_quality_gate.md` as the entry checklist before any MVP 2
+  work.
+- Add anonymized or synthetic-realistic transcript packs and compare failures
+  against the current fake fixture set before adding Graphiti/Letta/Mem0.
+- Keep the MVP 1.7 invariants passing before any adapter or live extraction
   work.
 - Compare the recruiting rule extractor with a schema-constrained LLM extractor
   on the same recruiting scenarios, with live model calls disabled by default

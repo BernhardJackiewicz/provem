@@ -1,0 +1,29 @@
+{
+  "transcript_id": "tx_recruiting_workmode_followup",
+  "domain": "recruiting",
+  "timestamp": "2026-03-12T13:00:00+00:00",
+  "caller_identity": {
+    "stated_name": "Ben Fixture",
+    "crm_id": "candidate_ben",
+    "confidence": 0.9
+  },
+  "participants": [
+    {"speaker_id": "s1", "role": "candidate", "name": "Ben Fixture"},
+    {"speaker_id": "s2", "role": "recruiter"}
+  ],
+  "existing_context": {
+    "previous_call_summaries": [
+      {"content": "FACT candidate_ben|work_mode|remote_only", "source": "candidate", "timestamp": "2026-03-01T09:00:00+00:00"}
+    ]
+  },
+  "turns": [
+    {"speaker": "s1", "text": "Candidate Ben says hybrid is okay now if the offer is strong.", "asr_confidence": 0.88}
+  ],
+  "redaction_terms": ["Ben Fixture"],
+  "expected_labels": {
+    "facts_that_should_be_stored": ["candidate_ben work_mode hybrid"],
+    "current_truth": [
+      {"query": "candidate ben work mode", "include": ["hybrid"], "exclude": ["remote_only"]}
+    ]
+  }
+}

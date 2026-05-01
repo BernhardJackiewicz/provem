@@ -14,3 +14,8 @@ build/
 *.egg-info/
 *.memory.jsonl
 memory/*.jsonl
+data/*
+!data/README.md
+transcripts/*
+!transcripts/README.md
+*.transcript-report.json

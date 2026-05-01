@@ -152,3 +152,62 @@ and system-policy do-not-use surviving later user restatement.
   not validate a full recruiting decision engine.
 - No live LLM extractor, Graphiti, Letta, Mem0 or persistent database behavior
   is validated by this taxonomy.
+
+## Transcript Evaluation Failure Classes
+
+Transcript evaluation adds a more realistic local harness before live
+integrations. The current fixtures are fake and must not be treated as real
+call evidence.
+
+- ASR noise: transcription errors change entity names, numbers or intent.
+- Diarization ambiguity: the wrong speaker is attached to a fact or constraint.
+- Identity ambiguity: caller identity is too weak to bind transcript content to
+  an existing user, candidate, client or customer.
+- Vague reference: "that company" or similar references lack a safe antecedent.
+- Correction missed: the extractor misses a later update or treats it as an
+  unrelated note.
+- Consent missed: a sensitive fact is stored without explicit consent.
+- Sensitive info over-stored: medical, family, address or identifier data
+  becomes durable memory.
+- Action suggestion unsafe: a follow-up action uses forbidden, stale or
+  wrong-scope memory.
+- Scope confusion: candidate/client/customer/project context is mixed.
+- Insufficient abstention: the system recalls a plausible memory when evidence
+  is too weak.
+- Stale fact carried forward: prior call context overrides a newer correction.
+
+### Current Transcript Fixture Findings
+
+| Transcript | Expected Behavior | Actual Behavior | Root Cause | Risk | Decision |
+| --- | --- | --- | --- | --- | --- |
+| `tx_complaint_escalation` | Store or retrieve `customer_22 complaint_status escalated` | Abstains / does not write that memory | Deterministic extractor does not understand "I want this escalated" as a durable complaint-status update | Medium | Document now; defer to richer transcript extractor |
+| `tx_ambiguous_identity` | Abstain and avoid durable candidate memory | Abstains and stores no fact | Identity confidence below threshold | High | Fixed by transcript harness guard |
+| `tx_forget_sensitive_asr_noise` | Do not reveal former company after do-not-use; do not store migraine | Do-not-use leakage 0 and sensitive storage violation 0 | Existing policy path handles explicit term and consent-required sensitive note | High | Covered by tests |
+
+The complaint-escalation miss is intentionally left visible. It is a realistic
+example of why the synthetic benchmark score is not enough and why MVP 2 should
+not start before transcript-level extractor comparison exists.
+
+## Core Invariant Failure Classes
+
+MVP 1.7 adds tests for failures that should be treated as core regressions,
+even if benchmark accuracy improves:
+
+- Forbidden selection: deleted or do-not-use memory is selected.
+- Scope-ranking bypass: wrong-scope memory survives filtering and wins by score.
+- Source conflict bypass: unresolved conflicting sources produce an answer
+  instead of abstention.
+- Stale current truth: superseded facts reappear in current retrieval.
+- Historical leakage: historical facts are exposed outside explicit as-of
+  retrieval.
+- Missing provenance: selected memory lacks evidence.
+- Missing exclusion reason: excluded memory has no reason.
+- Policy split: facts, events or reflections bypass the shared policy gate.
+- Reload resurrection: snapshot import makes forbidden memory usable again.
+- Replay duplication: reprocessing the same episode sequence creates duplicate
+  active truth.
+- Distractor instability: irrelevant memory changes a safety decision.
+
+These are guarded by `tests/test_invariants.py`, including 100 seeded fuzz
+sequences. The fuzz tests are regression pressure, not a formal proof of
+safety.

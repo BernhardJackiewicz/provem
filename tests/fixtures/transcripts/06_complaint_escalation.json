@@ -1,0 +1,26 @@
+{
+  "transcript_id": "tx_complaint_escalation",
+  "domain": "customer_service",
+  "timestamp": "2026-03-14T15:00:00+00:00",
+  "caller_identity": {
+    "phone_number_hash": "phonehash_customer_22",
+    "stated_name": "Lea Fixture",
+    "crm_id": "customer_22",
+    "confidence": 0.8
+  },
+  "participants": [
+    {"speaker_id": "cust", "role": "customer", "name": "Lea Fixture"},
+    {"speaker_id": "agent", "role": "agent"}
+  ],
+  "turns": [
+    {"speaker": "cust", "text": "I'm pretty frustrated and want this escalated, but I know this call is messy.", "asr_confidence": 0.79},
+    {"speaker": "agent", "text": "I can summarize this as an escalation request for review.", "asr_confidence": 0.93}
+  ],
+  "redaction_terms": ["Lea Fixture"],
+  "expected_labels": {
+    "facts_that_should_be_stored": ["customer_22 complaint_status escalated"],
+    "current_truth": [
+      {"query": "customer 22 complaint status", "include": ["escalated"]}
+    ]
+  }
+}

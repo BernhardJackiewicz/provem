@@ -1,0 +1,25 @@
+{
+  "transcript_id": "tx_ambiguous_identity",
+  "domain": "recruiting",
+  "timestamp": "2026-03-17T09:15:00+00:00",
+  "caller_identity": {
+    "stated_name": "Nina Maybe",
+    "crm_id": "",
+    "confidence": 0.25
+  },
+  "participants": [
+    {"speaker_id": "s1", "role": "candidate", "name": "Nina Maybe"},
+    {"speaker_id": "s2", "role": "recruiter"}
+  ],
+  "turns": [
+    {"speaker": "s1", "text": "Candidate Nina salary expectation is 130k, or maybe you already had that in the CRM.", "asr_confidence": 0.67}
+  ],
+  "redaction_terms": ["Nina Maybe"],
+  "expected_labels": {
+    "facts_that_should_not_be_stored": ["candidate_nina salary_expectation 130k"],
+    "expected_abstentions": [
+      {"query": "candidate nina salary expectation", "expected_abstain": true, "exclude": ["130k"]}
+    ],
+    "identity_resolution_expected": {"expected_abstain": true}
+  }
+}

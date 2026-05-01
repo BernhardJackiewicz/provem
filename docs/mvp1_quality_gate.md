@@ -20,6 +20,14 @@ Known adversarial misses are acceptable when they are safe abstentions,
 extraction misses or documented benchmark mutation artifacts. Do not chase 100%
 by adding string-specific rules.
 
+The transcript harness is an MVP 1.6 readiness gate, not part of the synthetic
+benchmark gate. The current fake fixture target is that `transcript-eval
+--input tests/fixtures/transcripts` runs locally, reports 11 fake transcripts
+and keeps leakage metrics at 0 while documenting any extraction misses.
+
+MVP 1.7 adds a core reliability gate: invariant tests and seeded fuzz/replay
+checks must pass before any MVP 2 adapter work starts.
+
 ## Safety Metric Gate
 
 For Engram / the Cognitive Memory Layer on the current synthetic benchmark:
@@ -55,6 +63,14 @@ Pass criteria:
 - Facts, reflections and events share the same core policy exclusion path.
 - JSONL reload preserves policy flags, source trust, invalidation/supersession
   and event context without resurrecting unsafe memory.
+- Snapshot import validates schema versions and rejects unsupported future
+  versions clearly.
+- Replaying the same episode sequence does not create duplicate active truth.
+- Seeded fuzz sequences preserve safety invariants and deterministic semantic
+  retrieval behavior.
+- Transcript-derived memories use the same controller, policy and retrieval
+  path as benchmark episodes.
+- Low-confidence transcript identity does not become durable extracted memory.
 - Adapter mocks and stubs are documented as mocks/stubs.
 - Default tests and benchmarks require no external services, API keys or heavy
   dependencies.
@@ -69,6 +85,8 @@ Fail criteria:
 - docs imply production readiness or real-world recruiting validation
 - local persistence is described as production durability, database migration
   support, encryption or privacy compliance
+- invariant failures are hidden or converted into recall-focused benchmark
+  tuning
 
 ## Documentation Gate
 
@@ -81,12 +99,18 @@ Required documents:
 - `docs/failure_taxonomy.md`: fixed and remaining failure classes
 - `docs/adversarial_evaluation.md`: adversarial result interpretation
 - `docs/event_model.md`: local event model and Graphiti mapping notes
+- `docs/transcript_evaluation.md`: transcript schema, command and redaction
+  limits
+- `docs/core_invariants.md`: non-negotiable memory-core invariants and test
+  coverage
 - `docs/architecture_review.md`: current architecture and fragile invariants
 - `docs/mvp1_quality_gate.md`: this checklist
 
 ## Accepted MVP 1 Limitations
 
 - All evidence is synthetic.
+- Transcript fixtures are fake. They are more realistic than scenario strings
+  but still not real-world validation.
 - Extractors are deterministic and benchmark-shaped.
 - Recruiting usefulness is plausible but unvalidated on real transcripts.
 - Project switching inside one paragraph is still brittle.

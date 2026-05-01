@@ -45,6 +45,16 @@
 - Stale external memory: external caches preserve invalidated facts.
 - Local snapshot exposure: JSONL files may contain user/candidate memory if
   exported outside a controlled test environment.
+- Snapshot compatibility drift: old or future JSONL records can be loaded
+  incorrectly if schema assumptions are implicit.
+- Core invariant regression: a local refactor can silently weaken deletion,
+  do-not-use, provenance, scope or source-conflict behavior.
+- Transcript dataset exposure: real call transcripts may contain phone
+  numbers, emails, names, addresses, medical details, salary data or CRM notes.
+- ASR and diarization errors: noisy transcripts can attribute statements to the
+  wrong speaker or corrupt entity names.
+- Consent missed in transcripts: sensitive facts mentioned casually can be
+  over-stored if the transcript path bypasses consent policy.
 
 ## Prototype Controls
 
@@ -108,11 +118,27 @@
   again after reload.
 - `*.memory.jsonl` snapshots are ignored by git to reduce accidental commits of
   local memory exports.
+- Snapshot records include `schema_version`; future versions fail clearly and
+  old/minimal v1-shaped records import only when the type is known.
+- Core invariant tests and seeded fuzz/replay tests guard the local safety
+  contract.
+- `quality-gate` runs benchmark, transcript fixture and persistence smoke
+  checks as a local preflight.
+- `data/` and `transcripts/` are ignored for local transcript datasets; only
+  fake fixtures under `tests/fixtures/transcripts/` should be committed.
+- Transcript evaluation withholds low-confidence caller content from durable
+  extraction until identity is resolved.
+- Transcript reports apply basic local redaction for emails, phone numbers and
+  configured sensitive/redaction terms, but this is only a reporting helper.
 
 ## Controls Still Needed
 
 - Real or anonymized recruiting transcripts to test whether the synthetic
-  extractors and event model generalize.
+  extractors and event model generalize, with strict local handling and no PII
+  committed.
+- Production-grade anonymization/redaction before any real transcript sharing.
+- Diarization confidence handling and speaker-attribution checks beyond the
+  current fixture metadata.
 - Human review queue for high-impact reflections.
 - Live LLM-based extraction experiments with deterministic schema validation,
   prompt-injection red-team cases and side-by-side comparison against the rule
@@ -141,6 +167,9 @@
 - Production persistence-layer deletion tests, encryption, migration strategy,
   access control and retention enforcement. Current JSONL snapshots only cover
   local research reload behavior.
+- Real migration tooling if JSONL snapshots ever evolve beyond local research
+  artifacts.
+- CI integration for invariant and quality-gate commands.
 - Domain-specific privacy and consent policies.
 - Cross-backend reconciliation tests before enabling multiple memory systems at
   once.

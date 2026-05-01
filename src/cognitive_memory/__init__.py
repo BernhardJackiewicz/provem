@@ -18,6 +18,7 @@ from .persistence import MemorySnapshot, load_snapshot, retrieval_trace_record, 
 from .reflection import SleepCycle
 from .retrieval import RetrievalPlanner
 from .store import InMemoryStore
+from .transcript_eval import Transcript, TranscriptLabels, evaluate_transcripts, load_transcripts
 
 __all__ = [
     "Episode",
@@ -36,7 +37,11 @@ __all__ = [
     "RetrievalResult",
     "SleepCycle",
     "TemporalFact",
+    "Transcript",
+    "TranscriptLabels",
+    "evaluate_transcripts",
     "load_snapshot",
+    "load_transcripts",
     "retrieval_trace_record",
     "save_snapshot",
 ]

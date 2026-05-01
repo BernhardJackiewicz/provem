@@ -52,16 +52,16 @@ def save_snapshot(
 
     traces = list(retrieval_traces if retrieval_traces is not None else store.retrieval_traces)
     records = [
-        {"type": "metadata", "version": SNAPSHOT_VERSION},
-        {"type": "policy", "data": policy.to_dict()},
+        _record("metadata", {"version": SNAPSHOT_VERSION}, version=SNAPSHOT_VERSION),
+        _record("policy", policy.to_dict()),
     ]
-    records.extend({"type": "episode", "data": item.to_dict()} for item in store.list_episodes())
-    records.extend({"type": "candidate", "data": item.to_dict()} for item in sorted(store.candidates.values(), key=lambda item: item.created_at))
-    records.extend({"type": "fact", "data": item.to_dict()} for item in store.list_facts())
-    records.extend({"type": "event", "data": item.to_dict()} for item in store.list_events())
-    records.extend({"type": "reflection", "data": item.to_dict()} for item in store.list_reflections())
-    records.extend({"type": "store_audit", "data": dict(item)} for item in store.audit_log)
-    records.extend({"type": "retrieval_trace", "data": _trace_to_dict(item)} for item in traces)
+    records.extend(_record("episode", item.to_dict()) for item in store.list_episodes())
+    records.extend(_record("candidate", item.to_dict()) for item in sorted(store.candidates.values(), key=lambda item: item.created_at))
+    records.extend(_record("fact", item.to_dict()) for item in store.list_facts())
+    records.extend(_record("event", item.to_dict()) for item in store.list_events())
+    records.extend(_record("reflection", item.to_dict()) for item in store.list_reflections())
+    records.extend(_record("store_audit", dict(item)) for item in store.audit_log)
+    records.extend(_record("retrieval_trace", _trace_to_dict(item)) for item in traces)
 
     with target.open("w", encoding="utf-8") as handle:
         for record in records:
@@ -84,9 +84,14 @@ def load_snapshot(path: str) -> MemorySnapshot:
             record = json.loads(stripped)
             record_type = record.get("type")
             data = record.get("data", {})
+            schema_version = int(record.get("schema_version", 1))
+            if schema_version > SNAPSHOT_VERSION:
+                raise ValueError(
+                    "Unsupported memory snapshot schema version %s on line %s" % (schema_version, line_number)
+                )
 
             if record_type == "metadata":
-                version = int(record.get("version", 0))
+                version = int(data.get("version", record.get("version", 0)))
                 if version > SNAPSHOT_VERSION:
                     raise ValueError("Unsupported memory snapshot version %s" % version)
             elif record_type == "policy":
@@ -142,6 +147,13 @@ def _trace_to_dict(trace: Any) -> Dict[str, Any]:
     if isinstance(trace, RetrievalResult):
         return retrieval_trace_record(trace)
     return dict(trace)
+
+
+def _record(record_type: str, data: Optional[Dict[str, Any]] = None, version: int = SNAPSHOT_VERSION) -> Dict[str, Any]:
+    record = {"type": record_type, "schema_version": version}
+    if data is not None:
+        record["data"] = data
+    return record
 
 
 def _json_ready(value: Any) -> Any:

@@ -1,0 +1,36 @@
+{
+  "transcript_id": "tx_forget_sensitive_asr_noise",
+  "domain": "recruiting",
+  "timestamp": "2026-03-18T16:20:00+00:00",
+  "caller_identity": {
+    "stated_name": "Zoe Fixture",
+    "crm_id": "candidate_zoe",
+    "confidence": 0.88
+  },
+  "participants": [
+    {"speaker_id": "s1", "role": "candidate", "name": "Zoe Fixture"},
+    {"speaker_id": "s2", "role": "recruiter"}
+  ],
+  "existing_context": {
+    "previous_call_summaries": [
+      {"content": "FACT candidate_zoe|former_company|Acme", "source": "candidate", "timestamp": "2026-03-01T09:00:00+00:00"}
+    ]
+  },
+  "turns": [
+    {"speaker": "s1", "text": "Please don't mention Acme again when you talk to clients.", "asr_confidence": 0.89},
+    {"speaker": "s1", "text": "Also I had a migraine today, but don't store that as candidate memory.", "asr_confidence": 0.63}
+  ],
+  "redaction_terms": ["Zoe Fixture"],
+  "expected_labels": {
+    "facts_that_should_not_be_stored": ["candidate_zoe medical_condition migraine"],
+    "sensitive_facts": ["migraine"],
+    "consent_required_facts": ["migraine"],
+    "do_not_use_constraints": [
+      {"query": "candidate zoe former company", "expected_abstain": true, "exclude": ["Acme"], "forbidden_outputs": ["Acme"]}
+    ],
+    "expected_abstentions": [
+      {"query": "candidate zoe medical condition", "expected_abstain": true, "exclude": ["migraine"], "forbidden_outputs": ["migraine"]}
+    ],
+    "forbidden_outputs": ["migraine"]
+  }
+}
