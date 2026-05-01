@@ -45,6 +45,12 @@ class ConsolidationEvalTests(unittest.TestCase):
             "high_risk_autoapproval_rate",
             "review_coverage",
             "review_to_downstream_delta",
+            "low_risk_approval_rate",
+            "medium_risk_review_rate",
+            "high_risk_rejection_rate",
+            "useful_review_item_rate",
+            "over_conservative_rejection_rate",
+            "approval_downstream_delta",
             "scoped_consolidation_precision",
             "scoped_consolidation_recall",
             "cross_scope_reflection_leakage",
@@ -126,6 +132,12 @@ class ConsolidationEvalTests(unittest.TestCase):
         self.assertEqual(summary["unsafe_approval_rate"], 0.0)
         self.assertEqual(summary["high_risk_autoapproval_rate"], 0.0)
         self.assertEqual(summary["review_coverage"], 1.0)
+        self.assertGreater(summary["low_risk_approval_rate"], 0.0)
+        self.assertEqual(summary["medium_risk_review_rate"], 1.0)
+        self.assertEqual(summary["high_risk_rejection_rate"], 1.0)
+        self.assertGreater(summary["useful_review_item_rate"], 0.0)
+        self.assertEqual(summary["over_conservative_rejection_rate"], 0.0)
+        self.assertGreater(summary["approval_downstream_delta"], 0.0)
         self.assertEqual(summary["scoped_consolidation_precision"], 1.0)
         self.assertEqual(summary["scoped_consolidation_recall"], 1.0)
         self.assertEqual(summary["policy_violation_rate"], 0.0)
@@ -147,6 +159,22 @@ class ConsolidationEvalTests(unittest.TestCase):
         self.assertTrue(item["simulated_human_approved_consolidation"]["passed"])
         self.assertEqual(item["simulated_human_approved_consolidation"]["answer"], "ABSTAIN")
         self.assertFalse(item["role_scope_leakage"])
+
+    def test_review_calibration_scenarios_are_present(self):
+        scenario_names = {scenario.name for scenario in consolidation_eval_scenarios()}
+
+        for name in (
+            "review_calibration_low_risk_repeated_preference",
+            "review_calibration_medium_scoped_reflection",
+            "review_calibration_high_risk_sensitive",
+            "review_calibration_conflict_requires_review",
+            "review_calibration_deleted_do_not_use",
+            "review_calibration_prompt_injection",
+            "review_calibration_candidate_client_scoped_memory",
+            "review_calibration_safe_procedural_rule",
+            "review_calibration_risky_overgeneralization",
+        ):
+            self.assertIn(name, scenario_names)
 
     def test_json_cli_output_is_machine_readable(self):
         args = build_parser().parse_args(["consolidation-eval", "--json"])

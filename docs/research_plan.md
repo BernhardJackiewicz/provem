@@ -164,6 +164,12 @@ simulation can approve safe items or reject/defer risky ones, but it changes
 only review status and evaluation copies. It is not a real human-review UI and
 does not implement durable apply.
 
+MVP 3.3 calibration keeps high-risk safety intact while proving the review
+gate is not purely reject-only. The demo and consolidation evaluator must show
+at least one useful low-risk approval, zero unsafe approvals, zero high-risk
+autoapprovals, complete review coverage and positive downstream delta before
+the project moves back to external baseline work such as Mem0.
+
 An optional schema-constrained LLM extractor interface exists for future
 comparison. It validates proposed `MemoryCandidate` output locally and keeps the
 controller as the only durable write authority. It does not make live LLM calls

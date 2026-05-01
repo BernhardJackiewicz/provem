@@ -128,12 +128,21 @@ Risk classification is deliberately conservative:
 
 High-risk review items are never auto-approved by local simulation.
 
+MVP 3.3 calibration narrows only one over-conservative blocker: a high-risk
+item in broad `user/default` scope no longer blocks an unrelated safe user
+preference. Concrete candidate, client, role, same-subject/same-relation,
+sensitive, conflict, deletion, do-not-use and prompt-injection risks remain
+blocked. The built-in demo now contains one low-risk approval, one high-risk
+rejection and medium-risk deferred items.
+
 This harness reports downstream task delta, consolidation precision/recall,
 unsafe consolidation, review queue precision/recall, approval precision,
-unsafe approval, high-risk autoapproval, review coverage, overgeneralization,
+unsafe approval, high-risk autoapproval, review coverage, low-risk approval,
+medium-risk review, high-risk rejection, useful review item rate,
+over-conservative rejection, approval downstream delta, overgeneralization,
 stale fact resurrection, review-required accuracy, provenance coverage, policy
-violation and scope leakage. It is not a production apply workflow and does not
-mutate durable memory outside the evaluation copy.
+violation and scope leakage. It is not a production apply workflow and does
+not mutate durable memory outside the evaluation copy.
 
 ## Review Queue CLI
 

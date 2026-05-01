@@ -181,7 +181,31 @@ class ReviewQueueTests(unittest.TestCase):
         payload = json.loads(captured.output)
         self.assertIn("items", payload)
         self.assertIn("decisions", payload)
+        self.assertGreaterEqual(payload["summary"]["approved"], 1)
         self.assertEqual(payload["summary"]["high_risk_autoapproved"], 0)
+
+    def test_unrelated_user_sensitive_item_does_not_block_low_risk_preference(self):
+        controller = _safe_user_controller()
+        episode = controller.store.add_episode(Episode("redacted sensitive fixture", timestamp=dt(3), sensitivity="high"))
+        controller.store.add_fact(
+            TemporalFact(
+                "user",
+                "medical_condition",
+                "redacted",
+                valid_at=dt(3),
+                evidence=[episode.id],
+                privacy_policy="sensitive",
+            )
+        )
+        run = SleepCycle(controller.store, controller.policy).consolidate()
+        queue = build_review_queue(run, mode="all")
+
+        simulate_review(queue, policy="approve_low_risk_only", controller=controller)
+
+        approved = [item for item in queue.items if item.status == ReviewStatus.APPROVED]
+        self.assertTrue(approved)
+        self.assertTrue(any(item.risk_level == "low" for item in approved))
+        self.assertEqual(queue.summary["high_risk_autoapproved"], 0)
 
 
 def _safe_user_controller():

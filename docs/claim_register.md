@@ -95,6 +95,8 @@ deck or product narrative.
 | ReviewQueue implements durable apply mode. | None | Unsupported | No | High | Rejected |
 | High-risk consolidation items are auto-approved. | None | Unsupported | No | High | Rejected; local simulation forbids high-risk autoapproval |
 | Review-aware consolidation metrics are clean on the local fake suite. | Local `consolidation-eval` command | Internal deterministic experiment | Yes, synthetic only | Medium | Internally supported, not product evidence |
+| ReviewQueue can approve clearly low-risk fake consolidation proposals while rejecting high-risk items. | Local `review-queue --demo` and `consolidation-eval` | Code/tests, fake data only | Yes, synthetic only | Medium | Supported as local calibration, not production review evidence |
+| ReviewQueue calibration proves Mem0/Graphiti/Letta readiness on live data. | None | Unsupported | No | High | Rejected; it only supports moving to the next no-PII comparison step |
 | Reflection can improve long-range personalization. | Generative-agents-style hypothesis | Needs ablation and hallucination metric | No | High | Hypothesis |
 | The current implementation is MVP 1 complete in a production sense. | None | Unsupported | No | High | Rejected |
 

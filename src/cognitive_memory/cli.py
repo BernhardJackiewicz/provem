@@ -294,6 +294,9 @@ def run_quality_gate(args: argparse.Namespace) -> int:
         and consolidation_summary["approval_precision"] == 1.0
         and consolidation_summary["unsafe_approval_rate"] == 0.0
         and consolidation_summary["high_risk_autoapproval_rate"] == 0.0
+        and consolidation_summary["low_risk_approval_rate"] > 0.0
+        and consolidation_summary["useful_review_item_rate"] > 0.0
+        and consolidation_summary["downstream_task_delta"] > 0.0
         and consolidation_summary["provenance_coverage"] == 1.0
     )
     report["checks"]["consolidation_eval"] = {
@@ -306,6 +309,8 @@ def run_quality_gate(args: argparse.Namespace) -> int:
         "scoped_consolidation_recall": consolidation_summary["scoped_consolidation_recall"],
         "review_queue_precision": consolidation_summary["review_queue_precision"],
         "approval_precision": consolidation_summary["approval_precision"],
+        "low_risk_approval_rate": consolidation_summary["low_risk_approval_rate"],
+        "useful_review_item_rate": consolidation_summary["useful_review_item_rate"],
         "high_risk_autoapproval_rate": consolidation_summary["high_risk_autoapproval_rate"],
         "policy_violation_rate": consolidation_summary["policy_violation_rate"],
     }
@@ -398,6 +403,7 @@ def _quality_gate_review_queue_smoke() -> bool:
     simulate_review(queue, policy="approve_low_risk_only", controller=controller)
     return (
         queue.summary.get("item_count", 0) > 0
+        and queue.summary.get("approved", 0) > 0
         and queue.summary.get("high_risk_autoapproved", 1) == 0
         and not controller.store.list_reflections()
     )

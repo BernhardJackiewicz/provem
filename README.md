@@ -91,6 +91,11 @@ failure modes can be exercised before integrating heavy services.
   auditable review items with risk classification and simulated reviewer
   decisions. Simulation is local and evaluation-only; it is not a production
   human-review or apply workflow.
+- MVP 3.3 calibration: the local review simulation now demonstrates at least
+  one safe low-risk approval while still rejecting high-risk items. Broad
+  `user/default` sensitive items no longer block unrelated low-risk user
+  preferences, but same-subject/same-relation and candidate/client/role
+  conflicts remain conservative.
 
 ## What Is Implemented
 
@@ -128,6 +133,8 @@ failure modes can be exercised before integrating heavy services.
 - ReviewQueue models and CLI for inspecting consolidation decisions, risk
   levels, simulated approval/rejection counts and review reasons without
   applying memory changes.
+- Review calibration metrics for low-risk approval, medium-risk review,
+  high-risk rejection, useful review items and over-conservative rejection.
 - Benchmark harness with baselines:
   - No memory
   - Long context style latest-match
@@ -467,7 +474,8 @@ Consolidation Evaluation:
 Review Queue:
   local MVP 3.3 review gate; converts SleepCycle decisions into review items,
   risk labels and simulated reviewer decisions. It still does not apply durable
-  memory.
+  memory. The demo includes one low-risk approval, one high-risk rejection and
+  medium-risk deferred items.
 ```
 
 Run the local SleepCycle demo:
@@ -647,6 +655,9 @@ work. `scripts/smoke_graphiti.py` is guarded: it exits clearly while
   behavior.
 - MVP 3.3 ReviewQueue is a local audit and simulation layer. It is not a human
   review UI, not a workflow system and not a durable apply path.
+- MVP 3.3 calibration is still synthetic. It proves that the local gate can
+  approve clearly low-risk fake proposals, not that real reviewers or live
+  memory integrations are ready.
 
 ## Integration Path
 
@@ -660,6 +671,10 @@ work. `scripts/smoke_graphiti.py` is guarded: it exits clearly while
 - Connect Letta/MemFS as the active state and procedural-memory layer.
 - Run and calibrate the optional Mem0 baseline with a real configured Mem0
   service and noisier natural-language scenarios.
+- Mem0 comparison is the next reasonable external baseline once review
+  calibration stays green: unsafe approvals must remain zero, high-risk
+  autoapproval must remain zero, review coverage must stay complete and the
+  demo/evaluator must approve at least one useful low-risk item.
 - Add harder scope and coreference cases before adding product features.
 - Keep the controller as the single durable write authority.
 - Keep `RetrievalResult.excluded_memories` and provenance traces; they are

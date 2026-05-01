@@ -96,6 +96,10 @@
 - Review simulation rejects or defers high-risk, unsupported, insufficient,
   stale, deleted, do-not-use, sensitive and prompt-injection-like items.
 - High-risk review items are never auto-approved by local simulation.
+- Review calibration allows unrelated low-risk user preferences to be approved
+  in simulation even when a broad user-scope high-risk item also exists; the
+  blocker still applies to concrete candidate/client/role and same-relation
+  overlaps.
 - Retrieval traces include selected and excluded memories.
 - Benchmark includes explicit leakage and reflection-trap scenarios.
 - Noisy benchmark suite adds indirect phrasing, distractors, natural

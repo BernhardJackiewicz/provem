@@ -331,12 +331,34 @@ def _scope_overlaps_conflict(scope: Dict[str, object], conflict_scope: Dict[str,
         return False
     if str(scope.get("project_id", "default")) != str(conflict_scope.get("project_id", "default")):
         return False
-    for key in ("candidate_id", "client_id", "role_id", "subject_id", "subject"):
+    for key in ("candidate_id", "client_id", "role_id"):
         left = str(scope.get(key, ""))
         right = str(conflict_scope.get(key, ""))
         if left and right and left == right:
             return True
-    return False
+
+    left_subject = str(scope.get("subject_id") or scope.get("subject") or "")
+    right_subject = str(conflict_scope.get("subject_id") or conflict_scope.get("subject") or "")
+    if not left_subject or not right_subject or left_subject != right_subject:
+        return False
+
+    if left_subject != "user":
+        return True
+
+    return _same_specific_relation(scope, conflict_scope)
+
+
+def _same_specific_relation(scope: Dict[str, object], conflict_scope: Dict[str, object]) -> bool:
+    broad_relations = {"", "profile", "context", "memory_context"}
+    left_relations = {
+        str(scope.get("relation") or ""),
+        str(scope.get("relation_type") or ""),
+    } - broad_relations
+    right_relations = {
+        str(conflict_scope.get("relation") or ""),
+        str(conflict_scope.get("relation_type") or ""),
+    } - broad_relations
+    return bool(left_relations.intersection(right_relations))
 
 
 def _stable_id(prefix: str, parts: Iterable[str]) -> str:

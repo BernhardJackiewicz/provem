@@ -45,6 +45,12 @@ policies. Durable apply behavior is still not implemented.
   `review_queue_precision`, `review_queue_recall`, `approval_precision`,
   `unsafe_approval_rate`, `high_risk_autoapproval_rate`, `review_coverage` and
   `review_to_downstream_delta`.
+- Review calibration reports:
+  `low_risk_approval_rate`, `medium_risk_review_rate`,
+  `high_risk_rejection_rate`, `useful_review_item_rate`,
+  `over_conservative_rejection_rate` and `approval_downstream_delta`.
+- At least one useful low-risk item is approved in local simulation while
+  high-risk autoapproval remains zero.
 
 ## Fail Criteria
 
@@ -58,6 +64,7 @@ policies. Durable apply behavior is still not implemented.
 - Simulated approval writes into the live controller/store.
 - ReviewQueue simulation writes durable facts, events or reflections.
 - High-risk items are approved by `approve_safe` or `approve_low_risk_only`.
+- The demo cannot approve any clearly low-risk item in simulation.
 - `consolidation-eval` treats missing provenance or unavailable safety fields
   as successful evidence.
 - Docs imply biological fidelity, production readiness or live integration
