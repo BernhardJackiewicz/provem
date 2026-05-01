@@ -149,6 +149,7 @@ PYTHONPATH=src python3 -m cognitive_memory export-memory --path demo.memory.json
 PYTHONPATH=src python3 -m cognitive_memory import-memory --path demo.memory.jsonl --query "current work mode"
 PYTHONPATH=src python3 -m cognitive_memory transcript-eval --input tests/fixtures/transcripts
 PYTHONPATH=src python3 -m cognitive_memory external-eval --manifest tests/fixtures/external/manifest.json
+PYTHONPATH=src python3 -m cognitive_memory mem0-env-check
 PYTHONPATH=src python3 -m cognitive_memory quality-gate
 ```
 
@@ -163,6 +164,7 @@ cml export-memory --path demo.memory.jsonl --demo
 cml import-memory --path demo.memory.jsonl --query "current work mode"
 cml transcript-eval --input tests/fixtures/transcripts
 cml external-eval --manifest tests/fixtures/external/manifest.json
+cml mem0-env-check
 cml quality-gate
 ```
 
@@ -258,6 +260,7 @@ datasets must remain outside git, usually under ignored `data/` or
 Mem0 can be run as an optional external baseline:
 
 ```bash
+PYTHONPATH=src python3 -m cognitive_memory mem0-env-check
 PYTHONPATH=src python3 -m cognitive_memory benchmark --suite all --include-mem0
 PYTHONPATH=src python3 -m cognitive_memory benchmark --suite all --include-mem0 --strict-optional
 ```
@@ -266,6 +269,16 @@ Without Mem0 installed and configured, the non-strict command skips
 `mem0_external` and the strict command exits with a clear setup error. If Mem0
 does run, it receives only the same synthetic benchmark episodes and requests
 as other baselines. It never receives expected outputs and no real PII is used.
+
+Two Mem0 execution modes are recognized:
+
+- Platform mode uses `mem0.MemoryClient` and requires `MEM0_API_KEY`.
+- OSS mode uses `mem0.Memory.from_config` and requires `MEM0_MODE=oss` plus
+  `MEM0_OSS_CONFIG_PATH` pointing to a local Mem0 config. A no-secret OSS run
+  still needs local providers, for example Ollama LLM and embedding models plus
+  a configured vector store. Skipped or failed setup is not benchmark evidence.
+
+Detailed setup is documented in `docs/mem0_live_setup.md`.
 
 The structured suite contains 34 synthetic multi-session scenarios
 covering current facts, historical facts, updated preferences, contradictions,
@@ -425,11 +438,12 @@ python3 -m pip install -e ".[letta]"
 
 These extras only install candidate client packages. Graphiti and Letta still
 raise clear stub errors. Mem0 can be run as an optional baseline when `mem0ai`
-is installed and `MEM0_API_KEY` is configured.
+is installed and either platform or OSS Mem0 configuration is available.
 
 Run the optional Mem0 baseline:
 
 ```bash
+PYTHONPATH=src python3 -m cognitive_memory mem0-env-check
 PYTHONPATH=src python3 -m cognitive_memory benchmark --suite all --include-mem0
 ```
 
@@ -439,6 +453,28 @@ a clear message. To make missing optional setup fail the command:
 ```bash
 PYTHONPATH=src python3 -m cognitive_memory benchmark --suite all --include-mem0 --strict-optional
 ```
+
+Platform setup:
+
+```bash
+python3 -m pip install -e ".[mem0]"
+export MEM0_API_KEY="..."
+PYTHONPATH=src python3 -m cognitive_memory benchmark --suite all --include-mem0 --strict-optional
+```
+
+OSS/local setup:
+
+```bash
+python3 -m pip install -e ".[mem0]"
+export MEM0_MODE=oss
+export MEM0_OSS_CONFIG_PATH=/path/to/local/mem0_config.json
+PYTHONPATH=src python3 -m cognitive_memory benchmark --suite all --include-mem0 --strict-optional
+```
+
+For OSS mode, the config must define usable local or self-hosted LLM, embedder
+and vector-store components. The current repo does not commit such a config
+because local model names, dimensions and vector-store paths are machine
+specific.
 
 Optional smoke test:
 

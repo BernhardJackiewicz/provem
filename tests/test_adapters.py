@@ -2,6 +2,7 @@ import importlib.util
 import json
 import os
 import sys
+import tempfile
 import unittest
 from datetime import datetime, timezone
 from unittest import mock
@@ -89,6 +90,25 @@ class FakeMem0ClientWithoutProvenance:
             if query_tokens & memory_tokens:
                 results.append(memory)
         return results[:limit]
+
+
+class FakeMem0Memory(FakeMem0Client):
+    def __init__(self, config=None, config_path=None):
+        super().__init__()
+        self.config = config
+        self.config_path = config_path
+
+    @classmethod
+    def from_config(cls, config):
+        return cls(config=config)
+
+    @classmethod
+    def from_config_file(cls, config_path):
+        return cls(config_path=config_path)
+
+
+class FakeMem0Module:
+    Memory = FakeMem0Memory
 
 
 class AdapterTests(unittest.TestCase):
@@ -190,6 +210,37 @@ class AdapterTests(unittest.TestCase):
         self.assertEqual(len(client.add_calls), 1)
         self.assertIn("hybrid", result.answer_text())
         self.assertEqual(result.provenance, [episode.id])
+
+    def test_mem0_backend_oss_mode_uses_memory_from_config(self):
+        with mock.patch("cognitive_memory.adapters.mem0.importlib.import_module", return_value=FakeMem0Module):
+            backend = Mem0Backend(mode="oss", oss_config={"llm": {"provider": "ollama"}})
+
+        episode = Episode("FACT user|work_mode|hybrid", timestamp=dt(1))
+        backend.ingest(episode)
+        result = backend.search(RetrievalRequest(query="work mode"))
+
+        self.assertEqual(backend.mode, "oss")
+        self.assertEqual(backend.client.config, {"llm": {"provider": "ollama"}})
+        self.assertIn("hybrid", result.answer_text())
+        self.assertEqual(result.metadata["mode"], "oss")
+
+    def test_mem0_backend_oss_mode_can_use_config_path_without_api_key(self):
+        with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False) as handle:
+            json.dump({"embedder": {"provider": "ollama"}}, handle)
+            config_path = handle.name
+        try:
+            with mock.patch("cognitive_memory.adapters.mem0.importlib.import_module", return_value=FakeMem0Module):
+                backend = Mem0Backend(mode="oss", oss_config_path=config_path)
+        finally:
+            os.unlink(config_path)
+
+        self.assertEqual(backend.mode, "oss")
+        self.assertEqual(backend.client.config_path, config_path)
+
+    def test_mem0_backend_oss_mode_requires_config(self):
+        with mock.patch("cognitive_memory.adapters.mem0.importlib.import_module", return_value=FakeMem0Module):
+            with self.assertRaises(AdapterConfigurationError):
+                Mem0Backend(mode="oss")
 
     def test_mem0_backend_filters_project_metadata(self):
         client = FakeMem0Client()

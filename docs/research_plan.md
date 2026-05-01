@@ -139,15 +139,19 @@ behavior.
 
 External Graphiti and Letta integrations are not implemented. Mem0 now has a
 guarded optional baseline adapter behind the `mem0` extra, but the current
-environment does not have Mem0 installed or configured, so no live Mem0 result
-has been validated here.
+environment does not have Mem0 installed or fully configured, so no live Mem0
+result has been validated here.
 
 The current MVP 2.0 start makes the optional Mem0 baseline path practically
-runnable when `mem0ai` is installed and `MEM0_API_KEY` is configured. The
-default benchmark still has no Mem0 dependency. Non-strict `--include-mem0`
-skips missing setup clearly; `--strict-optional` fails clearly. Fake-client
-tests use existing benchmark scenarios and verify result normalization without
-touching real PII or real transcripts.
+runnable when `mem0ai` is installed and either Mem0 Platform or Mem0 OSS is
+configured. Platform mode requires `MEM0_API_KEY`. OSS mode requires
+`MEM0_MODE=oss`, `MEM0_OSS_CONFIG_PATH`, and working local/self-hosted LLM,
+embedder and vector-store providers. The default benchmark still has no Mem0
+dependency. Non-strict `--include-mem0` skips missing setup clearly;
+`--strict-optional` fails clearly. Fake-client tests use existing benchmark
+scenarios and verify result normalization without touching real PII or real
+transcripts. `mem0-env-check` and `docs/mem0_live_setup.md` now document the
+remaining setup path, but they do not create live benchmark evidence.
 
 ## Architecture Diagram
 
@@ -231,8 +235,8 @@ SleepCycle / Reflection Stub
 Mem0 is the first external comparison because it is the strongest practical
 counterhypothesis: a token-efficient external memory layer may outperform a
 more complex graph/controller stack in real deployments. Any Mem0 result must
-state whether it came from a live configured Mem0 run or the fake local test
-path.
+state whether it came from a live configured Mem0 Platform run, a live
+configured Mem0 OSS run, or the fake local test path.
 
 ## External Validation Methodology
 

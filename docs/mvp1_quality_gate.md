@@ -36,7 +36,11 @@ not evidence from real external datasets.
 MVP 2.0 starts with an optional Mem0 baseline gate: default tests and
 `quality-gate` must still run without Mem0, `--include-mem0` must skip missing
 setup clearly, and `--include-mem0 --strict-optional` must fail clearly when
-Mem0 is unavailable or unconfigured.
+Mem0 is unavailable or unconfigured. A live Mem0 result is only valid when
+either Mem0 Platform is configured with `MEM0_API_KEY` or Mem0 OSS is configured
+with `MEM0_MODE=oss`, `MEM0_OSS_CONFIG_PATH`, and working local/self-hosted
+providers. `mem0-env-check` is a setup preflight only; it is not benchmark
+evidence.
 
 ## Safety Metric Gate
 
@@ -92,6 +96,8 @@ Pass criteria:
 - Optional Mem0 baseline execution cannot read expected outputs and must mark
   unavailable Mem0 fields as unavailable instead of treating them as successful
   evidence.
+- Mem0 Platform and Mem0 OSS setup failures must be reported as setup failures,
+  not benchmark results.
 
 Fail criteria:
 

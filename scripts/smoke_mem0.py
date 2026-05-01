@@ -18,7 +18,8 @@ def main() -> int:
         return 2
     except AdapterConfigurationError as exc:
         print("Mem0 is not configured: %s" % exc)
-        print("Set MEM0_API_KEY before running this smoke test.")
+        print("Platform mode: set MEM0_API_KEY.")
+        print("OSS mode: set MEM0_MODE=oss and MEM0_OSS_CONFIG_PATH.")
         return 2
 
     episode = Episode("FACT user|work_mode|hybrid")

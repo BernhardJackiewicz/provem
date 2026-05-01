@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib
+import json
 import os
 from typing import Any, Callable, Dict, List, Optional
 
@@ -22,35 +23,56 @@ class Mem0Backend:
         client: Optional[object] = None,
         api_key: Optional[str] = None,
         client_factory: Optional[Callable[[str], object]] = None,
+        mode: Optional[str] = None,
+        oss_config: Optional[Dict[str, Any]] = None,
+        oss_config_path: Optional[str] = None,
         project_filtering: bool = True,
     ) -> None:
-        if client is not None and (api_key or client_factory is not None):
+        sdk_config_provided = (
+            api_key
+            or client_factory is not None
+            or mode is not None
+            or oss_config is not None
+            or oss_config_path is not None
+        )
+        if client is not None and sdk_config_provided:
             raise AdapterConfigurationError("Mem0Backend accepts either an injected client or SDK configuration, not both.")
 
         self.project_filtering = project_filtering
+        self.mode = "injected"
         if client is not None:
             self.client = client
             return
 
+        self.mode = self._resolve_mode(mode)
         if client_factory is not None:
+            if self.mode != "platform":
+                raise AdapterConfigurationError("Mem0Backend client_factory is only supported for platform mode.")
             resolved_key = api_key or os.getenv("MEM0_API_KEY")
             if not resolved_key:
                 raise AdapterConfigurationError("Mem0Backend requires api_key or MEM0_API_KEY when using a client factory.")
             self.client = client_factory(resolved_key)
             return
 
+        if self.mode == "oss":
+            self.client = self._build_oss_memory(oss_config, oss_config_path)
+            return
+
+        if self.mode != "platform":
+            raise AdapterConfigurationError("Mem0Backend mode must be 'platform' or 'oss'.")
+
         try:
             MemoryClient = self._load_memory_client()
         except ImportError as exc:
             raise OptionalDependencyNotInstalled(
                 "Mem0Backend requires the optional 'mem0' extra. "
-                "Install with `pip install -e .[mem0]` and set MEM0_API_KEY, "
-                "or inject a test client."
+                "Install with `pip install -e .[mem0]` and configure MEM0_API_KEY "
+                "for platform mode or MEM0_MODE=oss plus MEM0_OSS_CONFIG_PATH for OSS mode."
             ) from exc
 
         resolved_key = api_key or os.getenv("MEM0_API_KEY")
         if not resolved_key:
-            raise AdapterConfigurationError("Mem0Backend requires api_key or MEM0_API_KEY.")
+            raise AdapterConfigurationError("Mem0Backend platform mode requires api_key or MEM0_API_KEY.")
         self.client = MemoryClient(api_key=resolved_key)
 
     def ingest(self, episode: Episode) -> None:
@@ -99,6 +121,7 @@ class Mem0Backend:
             retrieval_trace="mem0 selected=%s" % (",".join(memory.id for memory in selected) or "none"),
             metadata={
                 "backend": "mem0",
+                "mode": self.mode,
                 "selected_memories_available": True,
                 "provenance_available": provenance_available if selected else None,
                 "abstention_available": False,
@@ -121,6 +144,53 @@ class Mem0Backend:
         if last_import_error is not None:
             raise last_import_error
         raise OptionalDependencyNotInstalled("Installed mem0 package does not expose MemoryClient.")
+
+    def _load_memory_class(self) -> object:
+        last_import_error: Optional[ImportError] = None
+        for module_name in ("mem0", "mem0ai"):
+            try:
+                module = importlib.import_module(module_name)
+            except ImportError as exc:
+                last_import_error = exc
+                continue
+            try:
+                return getattr(module, "Memory")
+            except AttributeError:
+                continue
+        if last_import_error is not None:
+            raise last_import_error
+        raise OptionalDependencyNotInstalled("Installed mem0 package does not expose Memory.")
+
+    def _resolve_mode(self, mode: Optional[str]) -> str:
+        resolved = (mode or os.getenv("MEM0_MODE") or "").strip().lower()
+        if resolved:
+            return resolved
+        if os.getenv("MEM0_OSS_CONFIG_PATH"):
+            return "oss"
+        return "platform"
+
+    def _build_oss_memory(self, oss_config: Optional[Dict[str, Any]], oss_config_path: Optional[str]) -> object:
+        config_path = oss_config_path or os.getenv("MEM0_OSS_CONFIG_PATH")
+        if oss_config is not None and config_path:
+            raise AdapterConfigurationError(
+                "Mem0Backend OSS mode accepts either oss_config or MEM0_OSS_CONFIG_PATH, not both."
+            )
+        if oss_config is None and not config_path:
+            raise AdapterConfigurationError("Mem0Backend OSS mode requires oss_config or MEM0_OSS_CONFIG_PATH.")
+        try:
+            Memory = self._load_memory_class()
+        except ImportError as exc:
+            raise OptionalDependencyNotInstalled(
+                "Mem0Backend OSS mode requires the optional 'mem0' extra. "
+                "Install with `pip install -e .[mem0]` and provide MEM0_OSS_CONFIG_PATH."
+            ) from exc
+        if oss_config is not None:
+            return Memory.from_config(oss_config)
+        if hasattr(Memory, "from_config_file"):
+            return Memory.from_config_file(config_path)
+        with open(str(config_path), "r", encoding="utf-8") as handle:
+            loaded_config = json.load(handle)
+        return Memory.from_config(loaded_config)
 
     def _call_search(self, request: RetrievalRequest) -> List[Any]:
         filters = {"user_id": request.user_id}
