@@ -60,6 +60,10 @@ failure modes can be exercised before integrating heavy services.
 - MVP 1.7 core reliability groundwork: invariant tests, seeded fuzz/replay
   checks, snapshot schema-version validation and a local quality-gate command
   now guard the memory core against unsafe regressions.
+- MVP 1.8 external validation readiness: a manifest-gated local external
+  transcript evaluator now maps approved JSON/JSONL datasets into the existing
+  transcript schema. It does not download data, include real PII or prove
+  external performance.
 - MVP 2: not implemented. There is no real Letta/MemFS stateful agent.
 - MVP 2 preparation: adapter contracts, mocks, optional extras, and real
   integration stubs exist. Mem0 now has a guarded optional baseline adapter,
@@ -110,6 +114,9 @@ failure modes can be exercised before integrating heavy services.
 - Transcript evaluation harness for fake or anonymized call transcripts, with
   optional labels, redacted reporting, local persistence smoke support and
   transcript-specific metrics.
+- External validation manifest runner for approved local JSON/JSONL transcript
+  datasets. It reuses the transcript evaluator, refuses unapproved or
+  under-documented datasets and keeps committed fixtures fake.
 - Core invariant catalog and deterministic invariant/fuzz tests for deletion,
   do-not-use, source conflict, prompt-injection quarantine, scope isolation,
   supersession, provenance, policy gates, replay and persistence reload safety.
@@ -134,6 +141,7 @@ PYTHONPATH=src python3 -m cognitive_memory demo
 PYTHONPATH=src python3 -m cognitive_memory export-memory --path demo.memory.jsonl --demo
 PYTHONPATH=src python3 -m cognitive_memory import-memory --path demo.memory.jsonl --query "current work mode"
 PYTHONPATH=src python3 -m cognitive_memory transcript-eval --input tests/fixtures/transcripts
+PYTHONPATH=src python3 -m cognitive_memory external-eval --manifest tests/fixtures/external/manifest.json
 PYTHONPATH=src python3 -m cognitive_memory quality-gate
 ```
 
@@ -146,6 +154,7 @@ cml demo
 cml export-memory --path demo.memory.jsonl --demo
 cml import-memory --path demo.memory.jsonl --query "current work mode"
 cml transcript-eval --input tests/fixtures/transcripts
+cml external-eval --manifest tests/fixtures/external/manifest.json
 cml quality-gate
 ```
 
@@ -155,7 +164,8 @@ dependency-free, but it is not encrypted, concurrent, migrated or production
 safe.
 
 Local transcript datasets are also ignored through `data/` and `transcripts/`.
-Only fake fixtures under `tests/fixtures/transcripts/` should be committed.
+Only fake fixtures under `tests/fixtures/transcripts/` and
+`tests/fixtures/external/` should be committed.
 
 ## Structured Episode Markup
 
@@ -222,6 +232,20 @@ contexts. Mutations include renames, reordering, distractors, template
 paraphrases, outdated conflicts and irrelevant sensitive facts. This suite is
 expected to expose failures; a perfect score would be a warning that the suite
 is not hard enough.
+
+External validation readiness is separate from the synthetic benchmark. The
+`external-eval` command accepts a local validation manifest, refuses unapproved
+or missing-license datasets and maps approved JSON/JSONL records into the same
+transcript schema used by `transcript-eval`:
+
+```bash
+PYTHONPATH=src python3 -m cognitive_memory external-eval --manifest tests/fixtures/external/manifest.json
+```
+
+The committed external fixtures are tiny fake data. Real public or anonymized
+datasets must remain outside git, usually under ignored `data/` or
+`transcripts/`, and must be reviewed for license and PII status before
+`approved_for_eval` is set.
 
 The structured suite contains 34 synthetic multi-session scenarios
 covering current facts, historical facts, updated preferences, contradictions,

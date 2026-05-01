@@ -1,6 +1,13 @@
 """Engram: a hippocampal memory layer research prototype for AI."""
 
 from .controller import MemoryController
+from .external_eval import (
+    ExternalDatasetConfig,
+    ExternalValidationError,
+    ValidationManifest,
+    evaluate_external_manifest,
+    load_validation_manifest,
+)
 from .models import (
     Episode,
     EventContext,
@@ -22,6 +29,8 @@ from .transcript_eval import Transcript, TranscriptLabels, evaluate_transcripts,
 
 __all__ = [
     "Episode",
+    "ExternalDatasetConfig",
+    "ExternalValidationError",
     "EventContext",
     "EventParticipant",
     "EventRelation",
@@ -39,7 +48,10 @@ __all__ = [
     "TemporalFact",
     "Transcript",
     "TranscriptLabels",
+    "ValidationManifest",
+    "evaluate_external_manifest",
     "evaluate_transcripts",
+    "load_validation_manifest",
     "load_snapshot",
     "load_transcripts",
     "retrieval_trace_record",

@@ -1,0 +1,30 @@
+{
+  "datasets": [
+    {
+      "dataset_name": "fake_external_recruiting_jsonl",
+      "source": "local fake fixture",
+      "license": "CC0-1.0 test fixture",
+      "language": "en",
+      "domain": "recruiting",
+      "real_vs_synthetic": "synthetic",
+      "pii_status": "fake",
+      "local_path": "approved_transcripts.jsonl",
+      "approved_for_eval": true,
+      "expected_schema": "generic_transcript_jsonl",
+      "notes": "Tiny fake fixture for manifest-gated external evaluation tests."
+    },
+    {
+      "dataset_name": "fake_external_generic_json",
+      "source": "local fake fixture",
+      "license": "CC0-1.0 test fixture",
+      "language": "en",
+      "domain": "generic",
+      "real_vs_synthetic": "synthetic",
+      "pii_status": "fake",
+      "local_path": "approved_transcripts.json",
+      "approved_for_eval": true,
+      "expected_schema": "generic_transcript_json",
+      "notes": "Tiny fake JSON fixture that exercises generic external record mapping."
+    }
+  ]
+}

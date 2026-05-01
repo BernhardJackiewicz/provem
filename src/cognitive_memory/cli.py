@@ -8,6 +8,7 @@ import tempfile
 from .adapters.base import AdapterConfigurationError, OptionalDependencyNotInstalled
 from .benchmark import BenchmarkRunner, dumps_report
 from .controller import MemoryController
+from .external_eval import ExternalValidationError, dumps_external_report, evaluate_external_manifest
 from .models import Episode, RetrievalRequest
 from .persistence import load_snapshot, retrieval_trace_record, save_snapshot
 from .reflection import SleepCycle
@@ -98,6 +99,23 @@ def run_transcript_eval(args: argparse.Namespace) -> int:
             report,
             as_json=args.json,
             redaction_terms=redaction_terms,
+            redact_salaries=args.redact_salaries,
+            redact_companies=args.redact_companies,
+        )
+    )
+    return 0
+
+
+def run_external_eval(args: argparse.Namespace) -> int:
+    try:
+        report = evaluate_external_manifest(args.manifest)
+    except ExternalValidationError as exc:
+        print("External validation setup failed: %s" % exc, file=sys.stderr)
+        return 2
+    print(
+        dumps_external_report(
+            report,
+            as_json=args.json,
             redact_salaries=args.redact_salaries,
             redact_companies=args.redact_companies,
         )
@@ -234,6 +252,13 @@ def build_parser() -> argparse.ArgumentParser:
     transcript_eval.add_argument("--redact-salaries", action="store_true", help="Mask salary-like values in reports")
     transcript_eval.add_argument("--redact-companies", action="store_true", help="Mask simple company/client identifiers in reports")
     transcript_eval.set_defaults(func=run_transcript_eval)
+
+    external_eval = subparsers.add_parser("external-eval", help="Evaluate approved local external transcript datasets")
+    external_eval.add_argument("--manifest", required=True, help="Validation manifest JSON path")
+    external_eval.add_argument("--json", action="store_true", help="Print machine-readable JSON")
+    external_eval.add_argument("--redact-salaries", action="store_true", help="Mask salary-like values in reports")
+    external_eval.add_argument("--redact-companies", action="store_true", help="Mask simple company/client identifiers in reports")
+    external_eval.set_defaults(func=run_external_eval)
 
     quality_gate = subparsers.add_parser("quality-gate", help="Run local benchmark, transcript, and persistence reliability checks")
     quality_gate.add_argument("--json", action="store_true", help="Print machine-readable JSON")

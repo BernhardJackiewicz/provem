@@ -263,7 +263,17 @@ def evaluate_transcripts(
     persist_path: str = "",
 ) -> Dict[str, Any]:
     transcripts = load_transcripts(input_path)
-    results = [evaluate_transcript(transcript, persist_path=persist_path if len(transcripts) == 1 else "") for transcript in transcripts]
+    return evaluate_transcript_collection(transcripts, persist_path=persist_path)
+
+
+def evaluate_transcript_collection(
+    transcripts: Sequence[Transcript],
+    persist_path: str = "",
+) -> Dict[str, Any]:
+    results = [
+        evaluate_transcript(transcript, persist_path=persist_path if len(transcripts) == 1 else "")
+        for transcript in transcripts
+    ]
     summary = _aggregate_results(results)
     return {
         "transcript_count": len(transcripts),

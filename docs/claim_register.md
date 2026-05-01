@@ -23,6 +23,12 @@ deck or product narrative.
 | Quality-gate command validates benchmark, transcript fixtures and persistence smoke locally. | Local CLI command | Code/tests and command run | Yes, local only | Medium | Supported as local preflight check |
 | Quality-gate command replaces full unit tests or CI. | None | Unsupported | No | High | Rejected |
 | JSONL snapshot schema versioning is production migration support. | None | Unsupported | No | High | Rejected |
+| MVP 1.8 has a manifest-gated external validation readiness path. | Local external-eval code, fake external fixtures and tests | Code/tests | Yes, fake fixtures only | Medium | Supported as readiness harness, not external validation evidence |
+| External validation has been run on real public or anonymized datasets. | None | Unsupported | No | High | Rejected |
+| The committed external fixtures prove real-world transcript performance. | None | Unsupported | No | High | Rejected |
+| The external-eval command downloads or manages public datasets. | None | Unsupported | No | Medium | Rejected; datasets are local-only and manually reviewed |
+| External dataset manifests enforce approval, license metadata and safe PII status before evaluation. | Local external-eval code and tests | Code/tests | Yes, local only | Medium | Supported as local guardrail |
+| Basic external-eval redaction is production anonymization. | None | Unsupported | No | High | Rejected |
 | The structured benchmark result proves robust real-world memory. | None | Unsupported | No | High | Rejected |
 | A noisy natural-language benchmark suite exists. | Local benchmark code | Code/tests and local benchmark command | Yes, synthetic only | Medium | Supported as stress harness, not product evidence |
 | The noisy suite exposed at least one CML limitation before the scope/reference hardening pass. | Local noisy benchmark and failure taxonomy | Internal deterministic experiment | Yes, synthetic only | Medium | Fixed on current synthetic suite; still not product evidence |

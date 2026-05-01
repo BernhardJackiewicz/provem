@@ -45,9 +45,10 @@ biology.
 2. MVP 1: Non-autonomous memory core.
 3. MVP 1.6: Transcript evaluation layer before live integrations.
 4. MVP 1.7: Core reliability and invariant hardening.
-5. MVP 2: Stateful agent integration through Letta/MemFS-style ports.
-6. MVP 3: Sleep cycle, evidence checking, decay and review queue.
-7. MVP 4: Audit UI and domain pilot.
+5. MVP 1.8: External validation readiness for reviewed local datasets.
+6. MVP 2: Stateful agent integration through Letta/MemFS-style ports.
+7. MVP 3: Sleep cycle, evidence checking, decay and review queue.
+8. MVP 4: Audit UI and domain pilot.
 
 ## Current Prototype Scope
 
@@ -120,6 +121,12 @@ deterministic invariant tests, seeded fuzz/replay checks, snapshot
 schema-version validation and a local quality-gate command. It is a foundation
 hardening pass, not a new feature or recall-improvement pass.
 
+The current MVP 1.8 external validation readiness pass adds a manifest-gated
+path for approved local JSON/JSONL transcript datasets. It maps external
+records into the existing transcript-eval schema, refuses unapproved or
+missing-license datasets and keeps public/anonymized data outside git. This is
+readiness for external validation, not evidence from external datasets.
+
 An optional schema-constrained LLM extractor interface exists for future
 comparison. It validates proposed `MemoryCandidate` output locally and keeps the
 controller as the only durable write authority. It does not make live LLM calls
@@ -147,6 +154,12 @@ Transcript evaluation harness
   - JSON/JSONL fake or anonymized transcripts
   - optional expected labels
   - redacted diagnostics
+       ^
+       |
+External validation manifest
+  - approved local JSON/JSONL datasets only
+  - license and PII metadata gates
+  - no downloads and no real data in repo
        |
        v
 Memory Controller  (only durable write authority)
@@ -206,6 +219,26 @@ SleepCycle / Reflection Stub
 - Graphiti-only.
 - Graphiti plus controller.
 - Full Engram / Cognitive Memory Layer.
+
+## External Validation Methodology
+
+External validation must use a manifest with explicit `dataset_name`, `source`,
+`license`, `pii_status`, `local_path`, `approved_for_eval` and
+`expected_schema`. The runner fails closed when approval, license or safe PII
+status is missing. Public datasets must be downloaded and reviewed manually
+outside the repo; the CLI never downloads data.
+
+The first accepted data sources should be:
+
+- fake external fixtures, to verify the manifest and loader path
+- synthetic but human-written transcripts, to reduce extractor-shaped bias
+- reviewed public transcript/dialog datasets, if license and PII status allow
+- anonymized internal transcripts, only after privacy review and never
+  committed
+
+Any external result must be reported with dataset identity, labeling method and
+known limitations. It must not be generalized to production without broader
+validation.
 
 ## Benchmark Methodology
 

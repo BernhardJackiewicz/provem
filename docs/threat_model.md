@@ -51,6 +51,10 @@
   do-not-use, provenance, scope or source-conflict behavior.
 - Transcript dataset exposure: real call transcripts may contain phone
   numbers, emails, names, addresses, medical details, salary data or CRM notes.
+- External dataset misuse: public or local datasets may have incompatible
+  licenses, unknown PII status or unreviewed annotations.
+- Accidental dataset commit: reviewed local datasets may be placed under
+  tracked paths instead of ignored `data/` or `transcripts/` paths.
 - ASR and diarization errors: noisy transcripts can attribute statements to the
   wrong speaker or corrupt entity names.
 - Consent missed in transcripts: sensitive facts mentioned casually can be
@@ -126,6 +130,12 @@
   checks as a local preflight.
 - `data/` and `transcripts/` are ignored for local transcript datasets; only
   fake fixtures under `tests/fixtures/transcripts/` should be committed.
+- External validation manifests must mark datasets approved, include license
+  metadata and use a safe PII status before evaluation runs.
+- `external-eval` does not download datasets; it only evaluates reviewed local
+  paths and maps them into the existing transcript schema.
+- Fake external fixtures live under `tests/fixtures/external/`; real external
+  datasets must stay outside git.
 - Transcript evaluation withholds low-confidence caller content from durable
   extraction until identity is resolved.
 - Transcript reports apply basic local redaction for emails, phone numbers and
@@ -136,6 +146,10 @@
 - Real or anonymized recruiting transcripts to test whether the synthetic
   extractors and event model generalize, with strict local handling and no PII
   committed.
+- Reviewed public dataset adapters after license and PII evaluation. The
+  current public dataset loader is a stub, not an integration.
+- Human labeling guidelines and reviewer checks for external validation
+  datasets.
 - Production-grade anonymization/redaction before any real transcript sharing.
 - Diarization confidence handling and speaker-attribution checks beyond the
   current fixture metadata.

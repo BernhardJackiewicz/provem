@@ -81,6 +81,19 @@ PYTHONPATH=src python3 -m cognitive_memory quality-gate
 The quality gate checks transcript leakage and minimum fixture recall, but it
 does not replace the full unittest suite.
 
+MVP 1.8 adds a separate manifest-gated external validation wrapper around this
+same evaluator:
+
+```bash
+PYTHONPATH=src python3 -m cognitive_memory external-eval --manifest tests/fixtures/external/manifest.json
+```
+
+External validation does not define a second transcript schema. Approved
+external JSON/JSONL records are mapped into the schema above, then evaluated
+through the same controller, policy, retrieval and redacted reporting path.
+The committed external fixtures are fake; real or anonymized datasets must stay
+outside git and require license plus PII review before evaluation.
+
 ## Current Fixture Result
 
 The first fixture run intentionally includes a failure:
@@ -119,6 +132,8 @@ rules stop working.
 ## Limitations
 
 - The fixtures are fake, not anonymized real data.
+- The external validation fixtures are also fake; no public or internal real
+  transcript dataset has been validated yet.
 - The extractor is still deterministic and benchmark-shaped.
 - ASR noise handling is minimal.
 - Diarization errors are not modeled beyond speaker roles and confidence.

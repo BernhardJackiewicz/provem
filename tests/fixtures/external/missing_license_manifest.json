@@ -1,0 +1,13 @@
+{
+  "dataset_name": "missing_license_external_fixture",
+  "source": "local fake fixture",
+  "license": "",
+  "language": "en",
+  "domain": "generic",
+  "real_vs_synthetic": "synthetic",
+  "pii_status": "fake",
+  "local_path": "approved_transcripts.jsonl",
+  "approved_for_eval": true,
+  "expected_schema": "generic_transcript_jsonl",
+  "notes": "This manifest must fail safely because license metadata is missing."
+}

@@ -1,0 +1,13 @@
+{
+  "dataset_name": "unapproved_external_fixture",
+  "source": "local fake fixture",
+  "license": "CC0-1.0 test fixture",
+  "language": "en",
+  "domain": "generic",
+  "real_vs_synthetic": "synthetic",
+  "pii_status": "fake",
+  "local_path": "approved_transcripts.jsonl",
+  "approved_for_eval": false,
+  "expected_schema": "generic_transcript_jsonl",
+  "notes": "This manifest must refuse evaluation."
+}

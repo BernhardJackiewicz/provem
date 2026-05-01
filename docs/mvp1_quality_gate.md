@@ -28,6 +28,11 @@ and keeps leakage metrics at 0 while documenting any extraction misses.
 MVP 1.7 adds a core reliability gate: invariant tests and seeded fuzz/replay
 checks must pass before any MVP 2 adapter work starts.
 
+MVP 1.8 adds an external validation readiness gate: `external-eval` must run on
+the committed fake external manifest, while unapproved or missing-license
+manifests must fail closed. This confirms the loader/manifest path only; it is
+not evidence from real external datasets.
+
 ## Safety Metric Gate
 
 For Engram / the Cognitive Memory Layer on the current synthetic benchmark:
@@ -71,6 +76,11 @@ Pass criteria:
 - Transcript-derived memories use the same controller, policy and retrieval
   path as benchmark episodes.
 - Low-confidence transcript identity does not become durable extracted memory.
+- External validation records are mapped into the existing transcript schema
+  and cannot bypass transcript evaluation, controller policy or redacted
+  reporting.
+- External dataset manifests require approval, license metadata and a safe PII
+  status before evaluation.
 - Adapter mocks and stubs are documented as mocks/stubs.
 - Default tests and benchmarks require no external services, API keys or heavy
   dependencies.
@@ -101,6 +111,8 @@ Required documents:
 - `docs/event_model.md`: local event model and Graphiti mapping notes
 - `docs/transcript_evaluation.md`: transcript schema, command and redaction
   limits
+- `docs/external_validation.md`: manifest-gated external validation workflow
+- `docs/public_datasets.md`: public/anonymized dataset candidate registry
 - `docs/core_invariants.md`: non-negotiable memory-core invariants and test
   coverage
 - `docs/architecture_review.md`: current architecture and fragile invariants
@@ -111,6 +123,8 @@ Required documents:
 - All evidence is synthetic.
 - Transcript fixtures are fake. They are more realistic than scenario strings
   but still not real-world validation.
+- External validation readiness currently uses fake external fixtures only; no
+  public or anonymized dataset result exists.
 - Extractors are deterministic and benchmark-shaped.
 - Recruiting usefulness is plausible but unvalidated on real transcripts.
 - Project switching inside one paragraph is still brittle.
