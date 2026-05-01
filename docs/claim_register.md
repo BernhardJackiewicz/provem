@@ -66,11 +66,16 @@ deck or product narrative.
 | A Mem0 live environment checker exists. | `mem0-env-check` CLI and `scripts/check_mem0_env.py` | Code/tests; no live Mem0 package required | Yes, local setup check only | Low | Supported as readiness tooling, not benchmark evidence |
 | Mem0 normalized benchmark records expose selected memories/provenance/abstention availability where available. | Local benchmark normalization code and tests | Code/tests | Yes, fake client only | Medium | Supported as local normalization behavior |
 | Mem0 was evaluated live on this repo's benchmark. | None unless `--include-mem0 --strict-optional` succeeds with configured service | Unsupported in current environment | No | High | Rejected until live run succeeds |
+| Mem0 live comparison is currently blocked/deferred in this environment. | `mem0-env-check`, local setup inspection and docs | Setup readiness check; no live Mem0 run | Yes | Medium | Supported as current project status |
 | Graphiti is suitable for temporal facts and provenance. | Project docs/papers and planned integration | Adapter evaluation required | No | Medium | Candidate |
 | Graphiti adapter contract exists; real Graphiti integration is not implemented. | Local adapter package | Code/interface inspection | Yes | Low | Supported |
+| A Graphiti mapping contract exists for episodes, temporal facts, memory events, participants, relations, provenance and policy metadata. | `docs/graphiti_mapping.md` and local mapping helpers | Docs/code/tests | Yes, local only | Medium | Supported as scaffold, not live integration evidence |
+| A local Graphiti-parity backend exists. | `LocalGraphitiParityBackend` and parity tests | Code/tests using local store | Yes, local only | Medium | Supported as semantic parity harness |
+| Graphiti environment readiness can be checked without printing secrets. | `graphiti-env-check` CLI and tests | Code/tests | Yes, local setup check only | Low | Supported as readiness tooling, not live validation |
 | Mem0 adapter contract exists and guarded optional Mem0 baseline code is present. | Local adapter package | Code/interface inspection and fake-client tests | Yes, without live service | Medium | Supported as integration path, not benchmark evidence |
 | Letta adapter contract exists; real Letta integration is not implemented. | Local adapter package | Code/interface inspection | Yes | Low | Supported |
 | Graphiti integration works. | None | Unsupported | No | High | Rejected |
+| Graphiti benchmark results exist for this repo. | None | Unsupported unless a real configured Graphiti run succeeds | No | High | Rejected |
 | Mem0 live benchmark results exist for this repo. | None | Unsupported unless `--include-mem0 --strict-optional` succeeds with configured service | No | High | Rejected |
 | Letta integration works. | None | Unsupported | No | High | Rejected |
 | Reflection can improve long-range personalization. | Generative-agents-style hypothesis | Needs ablation and hallucination metric | No | High | Hypothesis |

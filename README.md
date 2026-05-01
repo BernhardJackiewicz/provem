@@ -67,11 +67,16 @@ failure modes can be exercised before integrating heavy services.
 - MVP 2.0 start: Mem0 is the first optional external baseline path. The default
   repo still runs without Mem0. `--include-mem0` skips clearly when Mem0 is not
   installed or configured, and `--strict-optional` fails clearly.
+- MVP 2.1 start: Graphiti mapping and local parity scaffolding now exist. A
+  dependency-free `LocalGraphitiParityBackend` exercises the Graphiti-like
+  contract against the current local store and policy gate. This is not a live
+  Graphiti integration.
 - MVP 2: not implemented. There is no real Letta/MemFS stateful agent.
 - MVP 2 preparation: adapter contracts, mocks, optional extras, and real
   integration stubs exist. Mem0 now has a guarded optional baseline adapter,
   but it is not part of default execution and has not been validated against a
-  configured Mem0 service in this environment.
+  configured Mem0 service in this environment. Mem0 live comparison is deferred
+  until a Python 3.10+ runtime and Mem0 Platform or OSS setup are available.
 - MVP 3: only a guarded stub. The sleep cycle can create simple
   evidence-backed reflections, but it is not used in the MVP 1 benchmark and is
   not a full consolidation system.
@@ -128,6 +133,9 @@ failure modes can be exercised before integrating heavy services.
 - Adapter contracts for Graphiti-like, Mem0-like, and Letta-like systems, with
   local mocks, explicit Graphiti/Letta stubs, and a guarded optional Mem0
   backend.
+- Local Graphiti-parity backend and mapping helpers for episodes, temporal
+  facts, memory events, participants, relations, provenance, policy metadata
+  and scope metadata. These are contract tests, not live Graphiti behavior.
 - Mem0 baseline normalization for answer text, selected memories when exposed,
   provenance when exposed, derived abstention behavior and latency. Missing
   Mem0 fields are marked unavailable rather than treated as successful evidence.
@@ -150,6 +158,7 @@ PYTHONPATH=src python3 -m cognitive_memory import-memory --path demo.memory.json
 PYTHONPATH=src python3 -m cognitive_memory transcript-eval --input tests/fixtures/transcripts
 PYTHONPATH=src python3 -m cognitive_memory external-eval --manifest tests/fixtures/external/manifest.json
 PYTHONPATH=src python3 -m cognitive_memory mem0-env-check
+PYTHONPATH=src python3 -m cognitive_memory graphiti-env-check
 PYTHONPATH=src python3 -m cognitive_memory quality-gate
 ```
 
@@ -165,6 +174,7 @@ cml import-memory --path demo.memory.jsonl --query "current work mode"
 cml transcript-eval --input tests/fixtures/transcripts
 cml external-eval --manifest tests/fixtures/external/manifest.json
 cml mem0-env-check
+cml graphiti-env-check
 cml quality-gate
 ```
 
@@ -279,6 +289,16 @@ Two Mem0 execution modes are recognized:
   a configured vector store. Skipped or failed setup is not benchmark evidence.
 
 Detailed setup is documented in `docs/mem0_live_setup.md`.
+
+Graphiti readiness is currently mapping/parity only:
+
+```bash
+PYTHONPATH=src python3 -m cognitive_memory graphiti-env-check
+```
+
+If Graphiti or Neo4j configuration is unavailable, the command reports setup
+failure without printing secret values. The default benchmark and quality gate
+do not require Graphiti. Mapping notes live in `docs/graphiti_mapping.md`.
 
 The structured suite contains 34 synthetic multi-session scenarios
 covering current facts, historical facts, updated preferences, contradictions,
@@ -416,6 +436,7 @@ Memory Controller
       v
 TemporalGraphBackend
       +-- LocalTemporalGraphBackend      default, dependency-free
+      +-- LocalGraphitiParityBackend     local Graphiti contract parity
       +-- MockGraphitiBackend            test mock, not Graphiti
       +-- GraphitiBackend                stub, not implemented
 
@@ -482,6 +503,17 @@ Optional smoke test:
 PYTHONPATH=src python3 scripts/smoke_mem0.py
 ```
 
+Run the optional Graphiti setup check:
+
+```bash
+PYTHONPATH=src python3 -m cognitive_memory graphiti-env-check
+```
+
+The Graphiti path currently validates mapping and local parity only. A skipped
+or failed setup check is not Graphiti benchmark evidence, and a passing setup
+check would still only mean the environment appears ready for future adapter
+work.
+
 ## Known Limitations
 
 - Extraction is deterministic and schema-driven; it does not test real LLM
@@ -510,9 +542,15 @@ PYTHONPATH=src python3 scripts/smoke_mem0.py
   production RAG systems.
 - The optional Mem0 baseline maps synthetic benchmark episodes into Mem0
   messages; this is a first comparison path, not a tuned Mem0 evaluation.
+- Mem0 live comparison is currently deferred in this environment because the
+  configured Python/Mem0 runtime requirements are not met. Fake-client tests are
+  not performance evidence.
 - Adapter mocks are contract tests only; they are not performance or feature
   substitutes for the external projects.
 - Graphiti and Letta stubs are intentionally unused by the default benchmark.
+- The local Graphiti-parity backend validates mapping semantics against the
+  in-memory store. It does not validate the Graphiti API, Neo4j, latency,
+  scale, delete propagation or production graph operations.
 - All benchmark suites are synthetic and can overfit implementation choices.
 - Current synthetic benchmark accuracy is high enough that more adversarial
   failure cases are needed before making further research claims.
@@ -537,6 +575,8 @@ PYTHONPATH=src python3 scripts/smoke_mem0.py
 - Replace the in-memory temporal fact store with Graphiti/Neo4j.
 - Map local `MemoryEvent`, `EventParticipant` and `EventRelation` objects to a
   real temporal graph backend.
+- Add real Graphiti service tests only after `docs/graphiti_mapping.md` parity
+  expectations continue to pass locally.
 - Compare the deterministic recruiting extractor with an optional
   schema-constrained LLM extractor on the same recruiting scenarios.
 - Connect Letta/MemFS as the active state and procedural-memory layer.

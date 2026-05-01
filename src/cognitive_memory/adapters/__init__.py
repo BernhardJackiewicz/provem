@@ -13,6 +13,7 @@ from .base import (
     StatefulAgentBackend,
     TemporalGraphBackend,
 )
+from .graphiti import LocalGraphitiParityBackend
 from .local import LocalTemporalGraphBackend
 from .mocks import MockGraphitiBackend, MockLettaBackend, MockMem0Backend
 
@@ -25,6 +26,7 @@ __all__ = [
     "ExtractorPort",
     "ExternalMemoryBackend",
     "LLMExtractorPort",
+    "LocalGraphitiParityBackend",
     "LocalTemporalGraphBackend",
     "MockGraphitiBackend",
     "MockLettaBackend",

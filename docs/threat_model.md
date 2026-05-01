@@ -128,6 +128,10 @@
   contract.
 - `quality-gate` runs benchmark, transcript fixture and persistence smoke
   checks as a local preflight.
+- `LocalGraphitiParityBackend` exercises the Graphiti-like mapping contract
+  through the same local policy gate before real Graphiti work starts.
+- `graphiti-env-check` reports Graphiti package and Neo4j config readiness
+  without printing secret values; it is not live validation.
 - `data/` and `transcripts/` are ignored for local transcript datasets; only
   fake fixtures under `tests/fixtures/transcripts/` should be committed.
 - External validation manifests must mark datasets approved, include license
@@ -163,6 +167,9 @@
   conventions and relation keywords.
 - A real temporal relationship graph. The local event model is Graphiti
   groundwork, not production graph storage or graph reasoning.
+- Real Graphiti/Neo4j integration tests that prove local parity semantics
+  survive service persistence, graph queries, deletion/do-not-use metadata and
+  provenance mapping.
 - Recruiting-specific human approval for high-impact actions such as pitch
   eligibility, do-not-contact changes and confidentiality overrides.
 - Domain consent rules for candidate, client, role and project memory.
@@ -178,6 +185,8 @@
   matching.
 - Stronger mutation and paraphrase evaluation against non-handwritten traces.
 - Adapter tests against real Graphiti, Letta and Mem0 deployments.
+- Mem0 live comparison in a Python 3.10+ environment with Mem0 Platform or OSS
+  runtime. Current Mem0 work is readiness only, not live benchmark evidence.
 - Production persistence-layer deletion tests, encryption, migration strategy,
   access control and retention enforcement. Current JSONL snapshots only cover
   local research reload behavior.

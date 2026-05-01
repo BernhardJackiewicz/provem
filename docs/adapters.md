@@ -12,6 +12,10 @@ This repo prepares MVP 2 without making external systems mandatory.
 ## Implementations
 
 - `LocalTemporalGraphBackend`: default in-memory backend used by the controller.
+- `LocalGraphitiParityBackend`: dependency-free Graphiti-contract parity
+  backend. It uses the same local store and policy gate as
+  `LocalTemporalGraphBackend`, but exposes Graphiti-like capability flags and
+  query/write method names for semantic parity tests.
 - `MockGraphitiBackend`: contract mock only; not Graphiti.
 - `MockMem0Backend`: deterministic lexical mock only; not Mem0.
 - `MockLettaBackend`: deterministic orchestration mock only; not Letta.
@@ -62,8 +66,9 @@ For local tests, the Mem0 path uses injected fake clients and existing
 structured/noisy/recruiting/adversarial scenarios. No real transcripts or PII
 are used in the fake path.
 
-Graphiti and Letta remain stubs. They still need real adapter code,
-configuration, service tests and deletion-policy tests.
+Graphiti and Letta remain stubs. Graphiti now has mapping/parity scaffolding,
+but it still needs real adapter code, configuration, service tests and
+deletion-policy tests.
 
 ## MVP 2 Rule
 
@@ -73,8 +78,43 @@ policy filtering, provenance checks, deletion, do-not-use, or project scoping.
 
 The local backend now also stores `MemoryEvent` objects. A future Graphiti
 adapter should map those events to graph event nodes, participants to entity
-nodes and event relations to temporal edges. That mapping is documented in
-`docs/event_model.md`; it is not implemented as a live integration.
+nodes and event relations to temporal edges. The detailed mapping contract is
+documented in `docs/graphiti_mapping.md`; it is not implemented as a live
+integration.
+
+## Graphiti Parity Scaffold
+
+`LocalGraphitiParityBackend` exists so future Graphiti work can be tested
+against a stable local semantic contract before any Neo4j service is trusted.
+It exposes these capability flags:
+
+- `supports_temporal_facts`
+- `supports_events`
+- `supports_policy_metadata`
+- `supports_provenance`
+
+It also exposes Graphiti-like method names:
+
+- `write_episode`
+- `write_temporal_fact`
+- `write_memory_event`
+- `query_current_facts`
+- `query_historical_facts`
+- `query_relationships`
+
+These methods are local wrappers around the existing store and retrieval
+planner. They are useful for parity tests only. They do not prove Graphiti API
+compatibility, latency, scale, deletion propagation or Neo4j operations.
+
+Run the optional Graphiti setup check:
+
+```bash
+PYTHONPATH=src python3 -m cognitive_memory graphiti-env-check
+```
+
+The checker reports Python version, Graphiti package importability and Neo4j
+environment-variable presence without printing secret values. It is a readiness
+check only, not live validation.
 
 ## Mem0 Baseline Limits
 
@@ -84,8 +124,10 @@ real configured Mem0 backend actually runs; skipped optional runs are not
 benchmark evidence.
 
 The current environment used for this checkpoint did not produce a live Mem0
-result: `mem0ai` was not installed, no `MEM0_API_KEY` or `OPENAI_API_KEY` was
-available, and a complete local OSS provider stack was not configured.
+result: the runtime is Python 3.9.6, `mem0ai` is not installed and a complete
+Mem0 Platform or OSS provider stack has not been validated. Mem0 live
+comparison is deferred until a Python 3.10+ environment and Mem0 runtime are
+available.
 
 Normalized Mem0 benchmark records expose:
 

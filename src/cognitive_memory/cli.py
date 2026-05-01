@@ -9,6 +9,7 @@ from .adapters.base import AdapterConfigurationError, OptionalDependencyNotInsta
 from .benchmark import BenchmarkRunner, dumps_report
 from .controller import MemoryController
 from .external_eval import ExternalValidationError, dumps_external_report, evaluate_external_manifest
+from .graphiti_env import check_graphiti_environment, dumps_graphiti_env_report
 from .mem0_env import check_mem0_environment, dumps_mem0_env_report
 from .models import Episode, RetrievalRequest
 from .persistence import load_snapshot, retrieval_trace_record, save_snapshot
@@ -130,6 +131,12 @@ def run_mem0_env_check(args: argparse.Namespace) -> int:
     return 0 if report["ready"] else 2
 
 
+def run_graphiti_env_check(args: argparse.Namespace) -> int:
+    report = check_graphiti_environment()
+    print(dumps_graphiti_env_report(report, as_json=args.json))
+    return 0 if report["ready"] else 2
+
+
 def run_quality_gate(args: argparse.Namespace) -> int:
     report = {
         "passed": True,
@@ -179,6 +186,12 @@ def run_quality_gate(args: argparse.Namespace) -> int:
 
     persistence_passed = _quality_gate_persistence_smoke()
     report["checks"]["persistence_smoke"] = {"passed": persistence_passed}
+    graphiti_report = check_graphiti_environment()
+    report["checks"]["graphiti_status"] = {
+        "passed": True,
+        "status": graphiti_report["status"],
+        "ready": graphiti_report["ready"],
+    }
 
     report["passed"] = all(check["passed"] for check in report["checks"].values())
     if args.json:
@@ -270,6 +283,10 @@ def build_parser() -> argparse.ArgumentParser:
     mem0_env_check = subparsers.add_parser("mem0-env-check", help="Check optional Mem0 live-evaluation setup")
     mem0_env_check.add_argument("--json", action="store_true", help="Print machine-readable JSON")
     mem0_env_check.set_defaults(func=run_mem0_env_check)
+
+    graphiti_env_check = subparsers.add_parser("graphiti-env-check", help="Check optional Graphiti live-integration setup")
+    graphiti_env_check.add_argument("--json", action="store_true", help="Print machine-readable JSON")
+    graphiti_env_check.set_defaults(func=run_graphiti_env_check)
 
     quality_gate = subparsers.add_parser("quality-gate", help="Run local benchmark, transcript, and persistence reliability checks")
     quality_gate.add_argument("--json", action="store_true", help="Print machine-readable JSON")

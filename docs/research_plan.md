@@ -47,9 +47,10 @@ biology.
 4. MVP 1.7: Core reliability and invariant hardening.
 5. MVP 1.8: External validation readiness for reviewed local datasets.
 6. MVP 2.0: Optional Mem0 external baseline comparison on synthetic/fake data.
-7. MVP 2: Stateful agent integration through Letta/MemFS-style ports.
-8. MVP 3: Sleep cycle, evidence checking, decay and review queue.
-9. MVP 4: Audit UI and domain pilot.
+7. MVP 2.1: Graphiti mapping and backend parity scaffold.
+8. MVP 2: Stateful agent integration through Letta/MemFS-style ports.
+9. MVP 3: Sleep cycle, evidence checking, decay and review queue.
+10. MVP 4: Audit UI and domain pilot.
 
 ## Current Prototype Scope
 
@@ -151,7 +152,18 @@ dependency. Non-strict `--include-mem0` skips missing setup clearly;
 `--strict-optional` fails clearly. Fake-client tests use existing benchmark
 scenarios and verify result normalization without touching real PII or real
 transcripts. `mem0-env-check` and `docs/mem0_live_setup.md` now document the
-remaining setup path, but they do not create live benchmark evidence.
+remaining setup path, but they do not create live benchmark evidence. In the
+current environment the live Mem0 comparison is deferred because Python 3.10+
+and a working Mem0 Platform or OSS runtime are not available.
+
+The current MVP 2.1 start adds Graphiti mapping and local parity scaffolding.
+`LocalGraphitiParityBackend` uses the existing local store and policy gate while
+exposing Graphiti-like capability flags and method names. This lets tests prove
+semantic parity for current truth, historical truth, supersession, policy
+metadata, relationship events, scope filtering, source conflict abstention and
+provenance before a real Graphiti/Neo4j adapter is attempted. `GraphitiBackend`
+remains a lazy optional stub and no benchmark result uses live Graphiti.
+`graphiti-env-check` reports package/config readiness only.
 
 ## Architecture Diagram
 
@@ -201,7 +213,7 @@ Retrieval Planner
 
 MVP 2 Adapter Preparation
        |
-       +-- TemporalGraphBackend: LocalTemporalGraphBackend, MockGraphitiBackend, GraphitiBackend stub
+       +-- TemporalGraphBackend: LocalTemporalGraphBackend, LocalGraphitiParityBackend, MockGraphitiBackend, GraphitiBackend stub
        +-- ExternalMemoryBackend: MockMem0Backend, optional Mem0Backend baseline
        +-- StatefulAgentBackend: MockLettaBackend, LettaBackend stub
 
@@ -237,6 +249,9 @@ counterhypothesis: a token-efficient external memory layer may outperform a
 more complex graph/controller stack in real deployments. Any Mem0 result must
 state whether it came from a live configured Mem0 Platform run, a live
 configured Mem0 OSS run, or the fake local test path.
+
+At this checkpoint Mem0 live comparison is blocked/deferred, not completed. A
+skipped `--include-mem0` run and fake-client tests are readiness evidence only.
 
 ## External Validation Methodology
 
@@ -419,7 +434,11 @@ This is still synthetic evidence only.
   prompt injection.
 - The graph-like baseline is only an in-memory approximation, not Graphiti.
 - Mem0 has an optional baseline path, but skipped runs are not evidence.
-- Graphiti and Letta adapter stubs are not real integrations.
+- Graphiti mapping/parity scaffolding exists, but `GraphitiBackend` and Letta
+  adapter stubs are not real integrations.
+- `LocalGraphitiParityBackend` proves local semantic compatibility only; it
+  does not validate Graphiti API compatibility, Neo4j persistence, graph query
+  correctness under load, or deletion propagation through a real service.
 - Mock adapters validate contracts only; they do not validate external service
   behavior, latency, API compatibility or deletion semantics.
 - Latency is local Python latency, not deployment latency.
@@ -449,9 +468,11 @@ This is still synthetic evidence only.
   failures before adding product features.
 - Use adversarial and mutation failures to decide the next architecture-level
   fixes; do not patch individual strings to chase 100% adversarial accuracy.
-- Run the Mem0 baseline with a real configured service and compare on noisy
-  natural-language and recruiting data.
-- Add Graphiti/Neo4j adapter tests and compare against the graph-like baseline.
+- Revisit Mem0 baseline execution in a Python 3.10+ environment with either
+  Mem0 Platform credentials or a complete Mem0 OSS stack; do not treat skipped
+  setup as evidence.
+- Keep Graphiti parity tests passing, then add real Graphiti/Neo4j service tests
+  and compare against the graph-like baseline.
 - Add Letta client integration only after controller write authority and policy
   boundaries are preserved in contract tests.
 - Add persistent Postgres storage for episodes and audit logs.

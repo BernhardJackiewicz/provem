@@ -23,7 +23,9 @@ Invariant tests = core safety regression guard
 
 The default system has no real Graphiti, Letta, Mem0, production database, UI
 or live LLM integration. Adapter contracts and stubs exist for later MVP 2 work,
-but the benchmark runs locally with standard Python.
+but the benchmark runs locally with standard Python. MVP 2.1 adds a local
+Graphiti-parity backend that shares the same store and policy gate; it validates
+mapping semantics only, not Graphiti/Neo4j service behavior.
 
 ## Data Flow
 
@@ -164,6 +166,18 @@ This is Graphiti groundwork only. Event creation is still deterministic and
 derived from accepted facts. It does not solve broad coreference, paragraph
 splitting, entity linking or ontology design.
 
+## Graphiti Parity Path
+
+`LocalGraphitiParityBackend` exposes Graphiti-like capability flags and method
+names while using the same `InMemoryStore`, `PolicyStore` and retrieval planner
+as the local backend. Parity tests compare current truth, historical truth,
+supersession, deletion/do-not-use exclusion, wrong-scope exclusion, event
+relationship queries, source-conflict abstention and provenance.
+
+This path is deliberately not live Graphiti. It exists so a future adapter has
+a concrete semantic contract before service-level tests are added. The mapping
+contract is documented in `docs/graphiti_mapping.md`.
+
 ## Audit Findings
 
 - No obvious dead top-level modules were found during this pass.
@@ -189,6 +203,8 @@ splitting, entity linking or ontology design.
   production anonymization.
 - The quality-gate CLI is a local preflight check. It does not replace full
   unit tests, CI, production monitoring or external baseline validation.
+- Graphiti parity tests reduce adapter-boundary ambiguity, but they do not
+  prove Graphiti API compatibility, Neo4j persistence or graph query latency.
 
 ## Do Not Change Casually
 
@@ -204,6 +220,7 @@ splitting, entity linking or ontology design.
 - Invariant tests should fail loudly rather than silently weakening safety for
   better recall.
 - The distinction between adapter mocks/stubs and real integrations.
+- The distinction between local Graphiti parity and live Graphiti integration.
 
 ## MVP 2 Readiness
 

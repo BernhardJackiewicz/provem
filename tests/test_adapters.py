@@ -171,12 +171,12 @@ class AdapterTests(unittest.TestCase):
 
     def test_real_adapter_stubs_fail_clearly_without_optional_setup(self):
         cases = [
-            (GraphitiBackend, "graphiti", "GraphitiBackend"),
-            (LettaBackend, "letta_client", "LettaBackend"),
+            (GraphitiBackend, ("graphiti", "graphiti_core"), "GraphitiBackend"),
+            (LettaBackend, ("letta_client",), "LettaBackend"),
         ]
-        for adapter_cls, package_name, adapter_name in cases:
+        for adapter_cls, package_names, adapter_name in cases:
             with self.subTest(adapter=adapter_name):
-                if importlib.util.find_spec(package_name) is None:
+                if all(importlib.util.find_spec(package_name) is None for package_name in package_names):
                     with self.assertRaises(OptionalDependencyNotInstalled) as context:
                         adapter_cls()
                     self.assertIn(adapter_name, str(context.exception))

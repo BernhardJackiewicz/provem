@@ -59,8 +59,11 @@ Future Graphiti mapping should be straightforward:
   source trust and validity time.
 - `evidence_episode_ids` maps to source episode provenance.
 
+The detailed mapping/parity contract lives in `docs/graphiti_mapping.md`.
 No Graphiti integration exists yet. These models define the local contract that
-a future backend can implement and compare against.
+a future backend can implement and compare against. The current
+`LocalGraphitiParityBackend` uses the local store and policy gate; it is not a
+Graphiti client.
 
 ## Known Limitations
 

@@ -42,6 +42,13 @@ with `MEM0_MODE=oss`, `MEM0_OSS_CONFIG_PATH`, and working local/self-hosted
 providers. `mem0-env-check` is a setup preflight only; it is not benchmark
 evidence.
 
+MVP 2.1 starts with an optional Graphiti parity gate: default tests and
+`quality-gate` must still run without Graphiti. `LocalGraphitiParityBackend`
+must preserve local semantic behavior for current/historical facts, event
+relationships, policy metadata, source conflicts, scope filtering and
+provenance. `graphiti-env-check` is a setup preflight only; it is not live
+Graphiti validation.
+
 ## Safety Metric Gate
 
 For Engram / the Cognitive Memory Layer on the current synthetic benchmark:
@@ -98,6 +105,9 @@ Pass criteria:
   evidence.
 - Mem0 Platform and Mem0 OSS setup failures must be reported as setup failures,
   not benchmark results.
+- Graphiti parity tests must not bypass the controller or central policy gate.
+- Graphiti setup failures must be reported as setup failures, not benchmark
+  results.
 
 Fail criteria:
 
@@ -123,6 +133,7 @@ Required documents:
 - `docs/failure_taxonomy.md`: fixed and remaining failure classes
 - `docs/adversarial_evaluation.md`: adversarial result interpretation
 - `docs/event_model.md`: local event model and Graphiti mapping notes
+- `docs/graphiti_mapping.md`: explicit Graphiti mapping/parity contract
 - `docs/transcript_evaluation.md`: transcript schema, command and redaction
   limits
 - `docs/external_validation.md`: manifest-gated external validation workflow
@@ -148,6 +159,10 @@ Required documents:
 - Mem0, Graphiti and Letta performance is untested.
 - Mem0 fake-client tests exercise the optional path, but no live Mem0 result is
   validated unless a configured Mem0 run succeeds.
+- Mem0 live comparison is deferred until Python 3.10+ and Mem0 Platform or OSS
+  runtime setup are available.
+- Graphiti parity tests exercise local semantics only; no Graphiti/Neo4j
+  service behavior is validated.
 - Local JSONL snapshot persistence exists, but no production database,
   migrations, encryption, access control, UI or production privacy workflow
   exists.

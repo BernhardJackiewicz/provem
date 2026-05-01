@@ -95,11 +95,15 @@ PYTHONPATH=src python3 -m cognitive_memory benchmark --suite all --include-mem0 
 
 ## Current Status
 
-At this checkpoint, Mem0 live comparison is not complete. The repo has:
+At this checkpoint, Mem0 live comparison is blocked/deferred, not complete. The
+repo has:
 
 - a guarded adapter path,
 - fake-client tests,
 - setup checking,
 - documentation for platform and OSS modes.
 
-It does not yet have a successful live Mem0 benchmark result.
+It does not yet have a successful live Mem0 benchmark result. The current
+environment is not sufficient for live comparison because it does not provide a
+validated Python 3.10+ Mem0 runtime and a complete Mem0 Platform or OSS setup.
+Skipped runs and fake-client tests remain readiness checks only.
