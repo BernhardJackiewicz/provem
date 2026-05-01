@@ -1,4 +1,8 @@
-# Cognitive Memory Layer Research Plan
+# Engram Research Plan
+
+Engram is framed as **a hippocampal memory layer for AI**: a functional
+analogy for episodic encoding, temporal context, controlled consolidation,
+retrieval gating and forgetting. It does not claim biological fidelity.
 
 ## Hypothesis
 
@@ -174,7 +178,7 @@ SleepCycle / Reflection Stub
 - Mem0.
 - Graphiti-only.
 - Graphiti plus controller.
-- Full Cognitive Memory Layer.
+- Full Engram / Cognitive Memory Layer.
 
 ## Benchmark Methodology
 

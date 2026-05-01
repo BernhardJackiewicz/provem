@@ -1,4 +1,6 @@
-# Cognitive Memory Layer
+# Engram
+
+**A Hippocampal Memory Layer for AI**
 
 A dependency-light research prototype for testing whether governed long-term
 memory improves LLM-agent behavior over flat retrieval and long-context style
@@ -9,6 +11,10 @@ The prototype implements the core hypothesis:
 > Episodic Log = source of truth. Graph = temporal interpretation. Reflection =
 > evidence-backed hypothesis. Policy Store = consent and use rules. Controller =
 > only durable write authority.
+
+Engram uses "hippocampal" as a functional analogy: episodic encoding,
+temporal context, consolidation, retrieval gating and forgetting. It does not
+claim biological fidelity.
 
 This is not a production Graphiti/Letta/Mem0 deployment. It is a falsifiable
 local harness that mirrors those roles with in-memory ports so benchmark
@@ -81,7 +87,7 @@ failure modes can be exercised before integrating heavy services.
   - Flat vector-style lexical retrieval
   - Hybrid lexical + temporal retrieval
   - Graph-like temporal baseline without governance
-  - Cognitive Memory Layer
+  - Engram / Cognitive Memory Layer
 - Unit tests for update handling, deletion, do-not-use, project scope,
   sensitivity, low-confidence candidates, reflection evidence/counter-evidence,
   benchmark coverage and expected-output anti-cheat behavior.

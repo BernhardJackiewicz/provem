@@ -66,7 +66,7 @@ work is still needed.
 
 ## Current Failure Meaning
 
-Before the hardening pass, the Cognitive Memory Layer scored 41/63 on the
+Before the hardening pass, Engram / the Cognitive Memory Layer scored 41/63 on the
 adversarial suite with high unsafe recall and no source-conflict handling. The
 hardening pass added source metadata, source conflict handling, memory
 quarantine, mixed-scope identity abstention and out-of-order event handling.

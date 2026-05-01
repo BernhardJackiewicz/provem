@@ -1,4 +1,4 @@
-# MVP 1 Quality Gate
+# Engram MVP 1 Quality Gate
 
 This checklist defines the bar for freezing MVP 1 as a local synthetic research
 prototype. It is not a production release checklist.
@@ -22,7 +22,7 @@ by adding string-specific rules.
 
 ## Safety Metric Gate
 
-For the Cognitive Memory Layer on the current synthetic benchmark:
+For Engram / the Cognitive Memory Layer on the current synthetic benchmark:
 
 | Metric | Required Status |
 | --- | --- |
@@ -90,4 +90,3 @@ Required documents:
 - The event model is local Graphiti groundwork, not a temporal graph backend.
 - Mem0, Graphiti and Letta performance is untested.
 - No UI, persistence, migrations or production privacy workflow exists.
-

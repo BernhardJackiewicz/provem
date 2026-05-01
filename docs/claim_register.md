@@ -17,7 +17,7 @@ deck or product narrative.
 | A recruiting benchmark suite exists. | Local benchmark code | Code/tests and local benchmark command | Yes, synthetic only | Medium | Supported as domain stress harness, not product evidence |
 | The recruiting benchmark proves production recruiter readiness. | None | Unsupported | No | High | Rejected |
 | The recruiting suite exposed candidate/client scope and anaphora weaknesses before the scope/reference hardening pass. | Local recruiting benchmark and failure taxonomy | Internal deterministic experiment | Yes, synthetic only | Medium | Fixed on current synthetic suite; still useful as failure evidence |
-| The Cognitive Memory Layer outperforms local baselines on the synthetic recruiting suite. | Local recruiting benchmark | Internal deterministic experiment | Yes, synthetic only | High | Internally supported, not domain-proven |
+| Engram / the Cognitive Memory Layer outperforms local baselines on the synthetic recruiting suite. | Local recruiting benchmark | Internal deterministic experiment | Yes, synthetic only | High | Internally supported, not domain-proven |
 | The current synthetic benchmark score proves real-world scope or coreference safety. | None | Unsupported | No | High | Rejected |
 | An adversarial benchmark suite exists. | Local benchmark code | Code/tests and local benchmark command | Yes, synthetic only | Medium | Supported as failure-discovery harness, not product evidence |
 | The adversarial suite proves production robustness. | None | Unsupported | No | High | Rejected |

@@ -1,11 +1,12 @@
-# MVP 1 Architecture Review
+# Engram MVP 1 Architecture Review
 
 This review documents the current local architecture before an MVP 1 freeze. It
 is an engineering audit, not a production-readiness claim.
 
 ## Current Architecture
 
-The repository implements a dependency-light, in-memory Cognitive Memory Layer.
+The repository implements Engram, a dependency-light, in-memory Cognitive
+Memory Layer.
 The important invariant is:
 
 ```text
@@ -141,4 +142,3 @@ contracts in tests:
   without being filtered
 - adapter results must expose provenance and exclusion/abstention reasons
 - local benchmark results must remain reproducible without optional services
-

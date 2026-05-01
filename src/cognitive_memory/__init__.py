@@ -1,4 +1,4 @@
-"""Cognitive Memory Layer research prototype."""
+"""Engram: a hippocampal memory layer research prototype for AI."""
 
 from .controller import MemoryController
 from .models import (

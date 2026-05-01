@@ -45,7 +45,7 @@ def run_demo(args: argparse.Namespace) -> int:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(prog="cml", description="Cognitive Memory Layer prototype")
+    parser = argparse.ArgumentParser(prog="cml", description="Engram hippocampal memory layer prototype")
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     benchmark = subparsers.add_parser("benchmark", help="Run synthetic benchmark baselines")
