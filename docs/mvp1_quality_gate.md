@@ -40,7 +40,9 @@ Mem0 is unavailable or unconfigured. A live Mem0 result is only valid when
 either Mem0 Platform is configured with `MEM0_API_KEY` or Mem0 OSS is configured
 with `MEM0_MODE=oss`, `MEM0_OSS_CONFIG_PATH`, and working local/self-hosted
 providers. `mem0-env-check` is a setup preflight only; it is not benchmark
-evidence.
+evidence. When Mem0 is configured, `mem0-sanity --strict-optional` must be run
+before making governance comparisons; the current live audit shows partial
+simple-memory retrieval and material adapter/query mismatch.
 
 MVP 2.1 starts with an optional Graphiti parity gate: default tests and
 `quality-gate` must still run without Graphiti. `LocalGraphitiParityBackend`
@@ -170,11 +172,12 @@ Required documents:
 - General paraphrase and coreference handling are not solved.
 - Source trust is local metadata, not a verification workflow.
 - The event model is local Graphiti groundwork, not a temporal graph backend.
-- Mem0, Graphiti and Letta performance is untested.
-- Mem0 fake-client tests exercise the optional path, but no live Mem0 result is
-  validated unless a configured Mem0 run succeeds.
-- Mem0 live comparison is deferred until Python 3.10+ and Mem0 Platform or OSS
-  runtime setup are available.
+- Graphiti and Letta performance is untested.
+- Mem0 fake-client tests exercise the optional path, and one live Mem0 Platform
+  result exists for the synthetic all-suite benchmark. This does not validate
+  real data or production behavior.
+- Mem0 live comparison currently requires an explicit Python 3.10+ Mem0
+  environment; the default system Python path remains dependency-free.
 - Graphiti parity tests exercise local semantics only; no Graphiti/Neo4j
   service behavior is validated.
 - Graphiti live smoke is readiness-only until a real adapter implementation

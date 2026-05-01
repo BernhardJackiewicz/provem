@@ -180,9 +180,9 @@ and counter-evidence tracking, but it is not used as the main benchmarked memory
 behavior.
 
 External Graphiti and Letta integrations are not implemented. Mem0 now has a
-guarded optional baseline adapter behind the `mem0` extra, but the current
-environment does not have Mem0 installed or fully configured, so no live Mem0
-result has been validated here.
+guarded optional baseline adapter behind the `mem0` extra, and one live Mem0
+Platform comparison has completed against the synthetic benchmark from a
+temporary Python 3.11 environment.
 
 The current MVP 2.0 start makes the optional Mem0 baseline path practically
 runnable when `mem0ai` is installed and either Mem0 Platform or Mem0 OSS is
@@ -192,10 +192,18 @@ embedder and vector-store providers. The default benchmark still has no Mem0
 dependency. Non-strict `--include-mem0` skips missing setup clearly;
 `--strict-optional` fails clearly. Fake-client tests use existing benchmark
 scenarios and verify result normalization without touching real PII or real
-transcripts. `mem0-env-check` and `docs/mem0_live_setup.md` now document the
-remaining setup path, but they do not create live benchmark evidence. In the
-current environment the live Mem0 comparison is deferred because Python 3.10+
-and a working Mem0 Platform or OSS runtime are not available.
+transcripts. `mem0-env-check` and `docs/mem0_live_setup.md` document the setup
+path. The system `python3` remains Python 3.9.6 and does not have Mem0
+installed, so live Mem0 execution still requires an explicit Python 3.10+
+environment. The latest no-PII comparison is documented in
+`docs/mem0_comparison.md`: CML `216/221`, Mem0 external `81/221` on the
+synthetic all-suite benchmark. The fairness audit then found that Mem0 Platform
+writes can be queued and that simple memory sanity performance is only partial
+with the generic adapter: Mem0 `6/12` on simple sanity and `8/34` on structured
+governance after write settling. No secret value is printed or committed. This
+is synthetic baseline evidence only, not a real-world superiority claim. An
+audited full all-suite rerun after write settling is still incomplete because
+the Mem0 Platform account reached its monthly search quota during the run.
 
 The current MVP 2.1 start adds Graphiti mapping and local parity scaffolding.
 `LocalGraphitiParityBackend` uses the existing local store and policy gate while
@@ -297,8 +305,10 @@ more complex graph/controller stack in real deployments. Any Mem0 result must
 state whether it came from a live configured Mem0 Platform run, a live
 configured Mem0 OSS run, or the fake local test path.
 
-At this checkpoint Mem0 live comparison is blocked/deferred, not completed. A
-skipped `--include-mem0` run and fake-client tests are readiness evidence only.
+At this checkpoint a live Mem0 Platform run has completed on the synthetic
+all-suite benchmark. The comparison remains preliminary because the benchmark is
+governance-shaped, Mem0 is not tuned for the domain, and no external/anonymized
+validation dataset has been used.
 
 ## External Validation Methodology
 
@@ -515,9 +525,9 @@ This is still synthetic evidence only.
   failures before adding product features.
 - Use adversarial and mutation failures to decide the next architecture-level
   fixes; do not patch individual strings to chase 100% adversarial accuracy.
-- Revisit Mem0 baseline execution in a Python 3.10+ environment with either
-  Mem0 Platform credentials or a complete Mem0 OSS stack; do not treat skipped
-  setup as evidence.
+- Decide whether to tune the Mem0 baseline schema/prompt before using the live
+  synthetic Mem0 result in any comparison narrative; current sanity results show
+  material adapter/query mismatch.
 - Keep Graphiti parity tests passing, then add real Graphiti/Neo4j service tests
   and compare against the graph-like baseline.
 - Use `docs/graphiti_live_setup.md` to reproduce local setup before attempting

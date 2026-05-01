@@ -3,6 +3,7 @@ from __future__ import annotations
 import importlib
 import json
 import os
+import time
 from typing import Any, Callable, Dict, List, Optional
 
 from ..models import Episode, RetrievalRequest, RetrievalResult, SelectedMemory, clamp
@@ -27,6 +28,7 @@ class Mem0Backend:
         oss_config: Optional[Dict[str, Any]] = None,
         oss_config_path: Optional[str] = None,
         project_filtering: bool = True,
+        write_settle_seconds: Optional[float] = None,
     ) -> None:
         sdk_config_provided = (
             api_key
@@ -39,6 +41,8 @@ class Mem0Backend:
             raise AdapterConfigurationError("Mem0Backend accepts either an injected client or SDK configuration, not both.")
 
         self.project_filtering = project_filtering
+        self.write_settle_seconds = self._resolve_write_settle_seconds(write_settle_seconds, client is not None)
+        self._pending_write_count = 0
         self.mode = "injected"
         if client is not None:
             self.client = client
@@ -84,9 +88,15 @@ class Mem0Backend:
             "timestamp": episode.timestamp.isoformat(),
             "source": episode.source,
         }
-        self.client.add(messages, user_id=episode.user_id, metadata=metadata)
+        try:
+            result = self.client.add(messages, user_id=episode.user_id, metadata=metadata, async_mode=False)
+        except TypeError:
+            result = self.client.add(messages, user_id=episode.user_id, metadata=metadata)
+        if self._is_pending_add(result):
+            self._pending_write_count += 1
 
     def search(self, request: RetrievalRequest) -> RetrievalResult:
+        self._settle_pending_writes()
         raw_results = self._call_search(request)
         selected: List[SelectedMemory] = []
         provenance_available = True
@@ -128,6 +138,44 @@ class Mem0Backend:
                 "abstention_semantics": "derived_from_empty_search_results",
             },
         )
+
+    def delete_all(self, user_id: str) -> bool:
+        delete = getattr(self.client, "delete_all", None)
+        if delete is None:
+            return False
+        try:
+            delete(user_id=user_id)
+        except Exception:
+            try:
+                delete(filters={"user_id": user_id})
+            except Exception:
+                return False
+        return True
+
+    def _resolve_write_settle_seconds(self, configured: Optional[float], injected_client: bool) -> float:
+        if configured is not None:
+            return max(0.0, float(configured))
+        env_value = os.getenv("MEM0_WRITE_SETTLE_SECONDS")
+        if env_value:
+            try:
+                return max(0.0, float(env_value))
+            except ValueError:
+                raise AdapterConfigurationError("MEM0_WRITE_SETTLE_SECONDS must be a non-negative number.")
+        return 0.0 if injected_client else 2.0
+
+    def _is_pending_add(self, result: object) -> bool:
+        if not isinstance(result, dict):
+            return False
+        status = str(result.get("status") or "").strip().upper()
+        message = str(result.get("message") or "").lower()
+        return status == "PENDING" or "queued" in message or "background" in message
+
+    def _settle_pending_writes(self) -> None:
+        if self._pending_write_count <= 0:
+            return
+        if self.write_settle_seconds > 0:
+            time.sleep(self.write_settle_seconds)
+        self._pending_write_count = 0
 
     def _load_memory_client(self) -> object:
         last_import_error: Optional[ImportError] = None

@@ -64,7 +64,9 @@ a clear message. Use `--strict-optional` to fail instead of skipping.
 
 For local tests, the Mem0 path uses injected fake clients and existing
 structured/noisy/recruiting/adversarial scenarios. No real transcripts or PII
-are used in the fake path.
+are used in the fake path. A live Mem0 Platform run has also completed on the
+same synthetic suites from a temporary Python 3.11 environment; see
+`docs/mem0_comparison.md`.
 
 Graphiti and Letta remain stubs. Graphiti now has mapping/parity scaffolding,
 but it still needs real adapter code, configuration, service tests and
@@ -130,11 +132,18 @@ baselines. It does not receive expected outputs. Results are only valid when a
 real configured Mem0 backend actually runs; skipped optional runs are not
 benchmark evidence.
 
-The current environment used for this checkpoint did not produce a live Mem0
-result: the runtime is Python 3.9.6, `mem0ai` is not installed and a complete
-Mem0 Platform or OSS provider stack has not been validated. Mem0 live
-comparison is deferred until a Python 3.10+ environment and Mem0 runtime are
-available.
+The default system environment still cannot run live Mem0 directly: the system
+runtime is Python 3.9.6 and `mem0ai` is not installed there. A live Platform
+comparison did run from a temporary Python 3.11 environment outside the repo
+with a local ignored API key. The all-suite synthetic result was CML `216/221`
+and Mem0 external `81/221`.
+
+Mem0 calls are isolated with synthetic per-run/per-scenario namespaces so remote
+Mem0 memory from one scenario cannot contaminate another. The adapter also
+requests synchronous writes when supported, waits briefly after queued writes,
+and attempts best-effort namespace cleanup after each scenario. The latest
+no-PII comparison and fairness audit are recorded in
+`docs/mem0_comparison.md`.
 
 Normalized Mem0 benchmark records expose:
 

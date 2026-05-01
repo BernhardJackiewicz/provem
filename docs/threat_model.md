@@ -223,9 +223,10 @@
 - Robust memory-injection red-team coverage beyond simple local pattern
   matching.
 - Stronger mutation and paraphrase evaluation against non-handwritten traces.
-- Adapter tests against real Graphiti, Letta and Mem0 deployments.
-- Mem0 live comparison in a Python 3.10+ environment with Mem0 Platform or OSS
-  runtime. Current Mem0 work is readiness only, not live benchmark evidence.
+- Adapter tests against real Graphiti and Letta deployments.
+- Broader Mem0 comparison beyond the first no-PII synthetic Platform run,
+  including cleanup of remote test namespaces, optional baseline tuning and
+  external/anonymized validation data.
 - Production persistence-layer deletion tests, encryption, migration strategy,
   access control and retention enforcement. Current JSONL snapshots only cover
   local research reload behavior.

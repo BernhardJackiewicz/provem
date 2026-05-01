@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import replace
 from typing import Dict, List, Optional, Tuple
 
 from .adapters.base import ExternalMemoryBackend
@@ -210,14 +211,15 @@ class Mem0ExternalMemoryBaseline:
 
     name = "mem0_external"
 
-    def __init__(self, backend: ExternalMemoryBackend) -> None:
+    def __init__(self, backend: ExternalMemoryBackend, namespace: str = "") -> None:
         self.backend = backend
+        self.namespace = namespace
 
     def ingest(self, episode: Episode) -> None:
-        self.backend.ingest(episode)
+        self.backend.ingest(self._scoped_episode(episode))
 
     def answer(self, request: RetrievalRequest) -> BaselineResult:
-        result = self.backend.search(request)
+        result = self.backend.search(self._scoped_request(request))
         return BaselineResult(
             result.answer_text(),
             result.retrieval_trace,
@@ -226,3 +228,22 @@ class Mem0ExternalMemoryBaseline:
             selected_memories=[memory.to_dict() for memory in result.selected_memories],
             normalized_fields=dict(result.metadata),
         )
+
+    def cleanup(self, request: RetrievalRequest) -> None:
+        delete_all = getattr(self.backend, "delete_all", None)
+        if delete_all is None:
+            return
+        delete_all(self._scoped_user_id(request.user_id) if self.namespace else request.user_id)
+
+    def _scoped_episode(self, episode: Episode) -> Episode:
+        if not self.namespace:
+            return episode
+        return replace(episode, user_id=self._scoped_user_id(episode.user_id))
+
+    def _scoped_request(self, request: RetrievalRequest) -> RetrievalRequest:
+        if not self.namespace:
+            return request
+        return replace(request, user_id=self._scoped_user_id(request.user_id))
+
+    def _scoped_user_id(self, user_id: str) -> str:
+        return "%s:%s" % (self.namespace, user_id)

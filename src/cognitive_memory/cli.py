@@ -12,6 +12,7 @@ from .controller import MemoryController
 from .external_eval import ExternalValidationError, dumps_external_report, evaluate_external_manifest
 from .graphiti_env import check_graphiti_environment, dumps_graphiti_env_report
 from .mem0_env import check_mem0_environment, dumps_mem0_env_report
+from .mem0_audit import dumps_mem0_audit_report, evaluate_mem0_audit
 from .models import Episode, RetrievalRequest, TemporalFact
 from .persistence import load_snapshot, retrieval_trace_record, save_snapshot
 from .reflection import SleepCycle
@@ -217,6 +218,19 @@ def run_mem0_env_check(args: argparse.Namespace) -> int:
     report = check_mem0_environment()
     print(dumps_mem0_env_report(report, as_json=args.json))
     return 0 if report["ready"] else 2
+
+
+def run_mem0_sanity(args: argparse.Namespace) -> int:
+    try:
+        report = evaluate_mem0_audit(
+            strict_optional=args.strict_optional,
+            governance_suite=args.governance_suite,
+        )
+    except (OptionalDependencyNotInstalled, AdapterConfigurationError) as exc:
+        print("Mem0 sanity setup failed: %s" % exc, file=sys.stderr)
+        return 2
+    print(dumps_mem0_audit_report(report, as_json=args.json))
+    return 0 if report["status"] == "complete" or not args.strict_optional else 2
 
 
 def run_graphiti_env_check(args: argparse.Namespace) -> int:
@@ -483,6 +497,17 @@ def build_parser() -> argparse.ArgumentParser:
     mem0_env_check = subparsers.add_parser("mem0-env-check", help="Check optional Mem0 live-evaluation setup")
     mem0_env_check.add_argument("--json", action="store_true", help="Print machine-readable JSON")
     mem0_env_check.set_defaults(func=run_mem0_env_check)
+
+    mem0_sanity = subparsers.add_parser("mem0-sanity", help="Run a Mem0 simple-memory and governance fairness audit")
+    mem0_sanity.add_argument("--json", action="store_true", help="Print machine-readable JSON")
+    mem0_sanity.add_argument("--strict-optional", action="store_true", help="Fail instead of skipping unavailable Mem0")
+    mem0_sanity.add_argument(
+        "--governance-suite",
+        choices=("structured", "noisy", "recruiting", "adversarial", "all"),
+        default="structured",
+        help="Governance suite to compare after the simple sanity suite",
+    )
+    mem0_sanity.set_defaults(func=run_mem0_sanity)
 
     graphiti_env_check = subparsers.add_parser("graphiti-env-check", help="Check optional Graphiti live-integration setup")
     graphiti_env_check.add_argument("--json", action="store_true", help="Print machine-readable JSON")

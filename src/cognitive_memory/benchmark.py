@@ -3,8 +3,10 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from copy import deepcopy
+import hashlib
 import json
 import time
+import uuid
 from typing import Callable, Dict, List, Optional, Sequence
 
 from .baselines import (
@@ -2560,13 +2562,14 @@ class BenchmarkRunner:
         self.include_mem0 = include_mem0
         self.mem0_backend_factory = mem0_backend_factory
         self.skip_optional = skip_optional
+        self.optional_run_id = "run_%s" % uuid.uuid4().hex[:12]
 
     def run(self) -> Dict[str, object]:
         scores: List[ScenarioScore] = []
         skipped_optional: Dict[str, str] = {}
-        optional_systems = self._optional_systems(skipped_optional)
         for scenario in self.scenarios:
             systems = self._system_factories(scenario)
+            optional_systems = self._optional_systems(skipped_optional, scenario)
             for system_factory in systems + optional_systems:
                 system = system_factory()
                 for episode in scenario.episodes:
@@ -2585,6 +2588,9 @@ class BenchmarkRunner:
                 result = system.answer(request)
                 latency_ms = (time.perf_counter() - started) * 1000.0
                 scores.append(self._score_result(system.name, scenario, result, latency_ms))
+                cleanup = getattr(system, "cleanup", None)
+                if cleanup is not None:
+                    cleanup(request)
         return self._summarize(scores, skipped_optional)
 
     def _system_factories(self, scenario: Scenario) -> List[Callable[[], object]]:
@@ -2605,22 +2611,29 @@ class BenchmarkRunner:
             return NoisyRuleBasedExtractor()
         return DeterministicExtractor()
 
-    def _optional_systems(self, skipped_optional: Dict[str, str]) -> List[object]:
+    def _optional_systems(self, skipped_optional: Dict[str, str], scenario: Scenario) -> List[object]:
         if not self.include_mem0:
             return []
+        if "mem0_external" in skipped_optional:
+            return []
         try:
-            self._build_mem0_backend()
+            backend = self._build_mem0_backend()
         except (OptionalDependencyNotInstalled, AdapterConfigurationError) as exc:
             if not self.skip_optional:
                 raise
             skipped_optional["mem0_external"] = str(exc)
             return []
-        return [lambda: Mem0ExternalMemoryBaseline(self._build_mem0_backend())]
+        namespace = self._mem0_namespace(scenario)
+        return [lambda: Mem0ExternalMemoryBaseline(backend, namespace=namespace)]
 
     def _build_mem0_backend(self):
         if self.mem0_backend_factory is not None:
             return self.mem0_backend_factory()
         return Mem0Backend()
+
+    def _mem0_namespace(self, scenario: Scenario) -> str:
+        digest = hashlib.sha256(("%s:%s:%s" % (self.optional_run_id, self.suite, scenario.name)).encode("utf-8")).hexdigest()
+        return "engram_mem0_%s_%s" % (self.suite, digest[:12])
 
     def _score_result(
         self,

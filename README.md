@@ -64,19 +64,23 @@ failure modes can be exercised before integrating heavy services.
   transcript evaluator now maps approved JSON/JSONL datasets into the existing
   transcript schema. It does not download data, include real PII or prove
   external performance.
-- MVP 2.0 start: Mem0 is the first optional external baseline path. The default
-  repo still runs without Mem0. `--include-mem0` skips clearly when Mem0 is not
-  installed or configured, and `--strict-optional` fails clearly.
+- MVP 2.0 Mem0 comparison: Mem0 is the first optional external baseline path.
+  The default repo still runs without Mem0. `--include-mem0` skips clearly when
+  Mem0 is not installed or configured, and `--strict-optional` fails clearly.
+  A live no-PII Mem0 Platform run has now completed in a temporary Python 3.11
+  environment on the synthetic all-suite benchmark: CML `216/221`, Mem0
+  external `81/221`. This is synthetic benchmark evidence only, not a
+  real-world superiority or production claim.
 - MVP 2.1 start: Graphiti mapping and local parity scaffolding now exist. A
   dependency-free `LocalGraphitiParityBackend` exercises the Graphiti-like
   contract against the current local store and policy gate. This is not a live
   Graphiti integration.
 - MVP 2: not implemented. There is no real Letta/MemFS stateful agent.
 - MVP 2 preparation: adapter contracts, mocks, optional extras, and real
-  integration stubs exist. Mem0 now has a guarded optional baseline adapter,
-  but it is not part of default execution and has not been validated against a
-  configured Mem0 service in this environment. Mem0 live comparison is deferred
-  until a Python 3.10+ runtime and Mem0 Platform or OSS setup are available.
+  integration stubs exist. Mem0 now has a guarded optional baseline adapter and
+  one live synthetic Platform comparison. The system Python remains too old for
+  Mem0, so live Mem0 runs currently require an explicit Python 3.10+ environment
+  and credentials. Graphiti and Letta remain scaffolds only.
 - MVP 3.0 local dry-run start: SleepCycle now proposes evidence-backed
   consolidation decisions and review items without applying durable writes.
   It is a local proposal/review queue, not autonomous truth creation.
@@ -180,6 +184,7 @@ PYTHONPATH=src python3 -m cognitive_memory benchmark --suite noisy
 PYTHONPATH=src python3 -m cognitive_memory benchmark --suite recruiting
 PYTHONPATH=src python3 -m cognitive_memory benchmark --suite adversarial
 PYTHONPATH=src python3 -m cognitive_memory benchmark --suite all --include-mem0
+PYTHONPATH=src python3 -m cognitive_memory mem0-sanity
 PYTHONPATH=src python3 -m cognitive_memory demo
 PYTHONPATH=src python3 -m cognitive_memory export-memory --path demo.memory.jsonl --demo
 PYTHONPATH=src python3 -m cognitive_memory import-memory --path demo.memory.jsonl --query "current work mode"
@@ -201,6 +206,7 @@ If the package is installed in editable mode:
 python3 -m pip install -e .
 cml benchmark
 cml benchmark --suite all --include-mem0
+cml mem0-sanity
 cml demo
 cml export-memory --path demo.memory.jsonl --demo
 cml import-memory --path demo.memory.jsonl --query "current work mode"
@@ -324,7 +330,15 @@ Two Mem0 execution modes are recognized:
   still needs local providers, for example Ollama LLM and embedding models plus
   a configured vector store. Skipped or failed setup is not benchmark evidence.
 
-Detailed setup is documented in `docs/mem0_live_setup.md`.
+Detailed setup is documented in `docs/mem0_live_setup.md`. The current
+comparison status is documented in `docs/mem0_comparison.md`. A live Mem0
+Platform comparison has run from a temporary Python 3.11 environment on the
+synthetic all-suite benchmark: CML `216/221`, Mem0 external `81/221`. The
+fairness audit then found write-settle and answer-format issues: after settling
+writes, Mem0 scored `6/12` on the simple sanity suite and `8/34` on structured
+governance. A full audited all-suite rerun hit the Mem0 Platform monthly quota.
+The system `python3` remains Python 3.9.6 and still skips/fails Mem0 unless an
+explicit Python 3.10+ Mem0 environment is used.
 
 Graphiti readiness is currently mapping/parity only:
 
@@ -616,10 +630,14 @@ work. `scripts/smoke_graphiti.py` is guarded: it exits clearly while
 - Baselines are lightweight approximations, not full Mem0, Graphiti or
   production RAG systems.
 - The optional Mem0 baseline maps synthetic benchmark episodes into Mem0
-  messages; this is a first comparison path, not a tuned Mem0 evaluation.
-- Mem0 live comparison is currently deferred in this environment because the
-  configured Python/Mem0 runtime requirements are not met. Fake-client tests are
-  not performance evidence.
+  messages; this is a first live synthetic comparison path, not a tuned Mem0
+  evaluation.
+- Mem0 live comparison has run only against synthetic benchmark data from a
+  temporary Python 3.11 environment. Fake-client tests are not performance
+  evidence, and the live synthetic result is not real-world validation. The
+  fairness audit shows Mem0 works partially on simple memory but the current
+  adapter/query setup is still not a clean product comparison. See
+  `docs/mem0_comparison.md`.
 - Adapter mocks are contract tests only; they are not performance or feature
   substitutes for the external projects.
 - Graphiti and Letta stubs are intentionally unused by the default benchmark.
@@ -675,6 +693,8 @@ work. `scripts/smoke_graphiti.py` is guarded: it exits clearly while
   calibration stays green: unsafe approvals must remain zero, high-risk
   autoapproval must remain zero, review coverage must stay complete and the
   demo/evaluator must approve at least one useful low-risk item.
+  The current attempt remains blocked by the local Python/Mem0 environment, so
+  no CML-over-Mem0 claim is supported.
 - Add harder scope and coreference cases before adding product features.
 - Keep the controller as the single durable write authority.
 - Keep `RetrievalResult.excluded_memories` and provenance traces; they are
