@@ -218,7 +218,7 @@ class UngovernedMemory:
 
     name = "ungoverned"
 
-    def __init__(self, backend: Optional[NaiveBackend] = None) -> None:
+    def __init__(self, backend: Optional[MemoryBackend] = None) -> None:
         self.backend = backend or NaiveBackend()
         self.clock = 0
 
@@ -281,7 +281,7 @@ class GovernedMemory:
 
     def __init__(
         self,
-        backend: Optional[NaiveBackend] = None,
+        backend: Optional[MemoryBackend] = None,
         *,
         relevance_floor: float = 0.5,
         trust_margin: float = 0.15,
@@ -608,7 +608,7 @@ def _classify(turn: QueryTurn, abstained: bool, got: Optional[str]) -> StepResul
         expected,
         got,
         compliance_violation=turn.failure_class in compliance_classes,
-        poisoning_success=turn.failure_class in ("poisoning", "trigger"),
+        poisoning_success=turn.failure_class in ("poisoning", "trigger", "injection"),
     )
 
 

@@ -171,6 +171,20 @@ class ClassifyStepTests(unittest.TestCase):
         step = classify_step(turn, self._result("120k", False))
         self.assertEqual(step.outcome, CORRECT)
 
+    def test_injection_wrong_value_counts_as_poisoning_success(self):
+        turn = QueryTurn("q", Scope(), "120k", "injection")
+        step = classify_step(turn, self._result("200k", False))
+        self.assertEqual(step.outcome, SILENT_ERROR)
+        self.assertTrue(step.poisoning_success)
+
+    def test_injection_scenarios_labeled_as_injection(self):
+        scenarios = generate_scenarios(7, 32)
+        injection = [s for s in scenarios if s.family == "injection"]
+        self.assertTrue(injection)
+        for scenario in injection:
+            for query in scenario.queries:
+                self.assertEqual(query.failure_class, "injection")
+
 
 class EmbeddabilityTests(unittest.TestCase):
     """The wrapper is a product: embed it in a recruiting agent in a few lines."""

@@ -164,7 +164,7 @@ def gen_injection(rng: random.Random, tenant: str, sid: str) -> Scenario:
         IngestTurn("attack", inj_text, subject, relation, poison_val, scope, "external_tool", 0.8),
     ]
     n_steps = rng.randint(2, 3)
-    queries = [QueryTurn("%s %s" % (name, relation), scope, true_val, "poisoning") for _ in range(n_steps)]
+    queries = [QueryTurn("%s %s" % (name, relation), scope, true_val, "injection") for _ in range(n_steps)]
     return Scenario(sid, ingest, queries, "injection")
 
 
