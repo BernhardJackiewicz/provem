@@ -15,6 +15,11 @@ External validation should test whether the same memory governance behavior
 holds under different phrasing, speaker behavior, domain assumptions, labels,
 ASR noise, transcript length and entity ambiguity.
 
+LoCoMo is handled by a separate local text-only QA runner because its labels are
+question-answer annotations with evidence dialog ids, not transcript governance
+labels. The same data-handling rules apply: local files only, no downloads, no
+real data in git and no unsupported product claims.
+
 ## What External Validation Should Prove
 
 External validation should answer narrower questions:
@@ -36,6 +41,8 @@ Acceptable sources for local evaluation:
 
 - Public transcript datasets with a reviewed license and no raw PII.
 - Public dialog datasets that can be mapped into the transcript schema.
+- Public long-term memory benchmarks such as LoCoMo, when license and local
+  handling are reviewed.
 - Synthetic but human-written transcripts that were not authored to fit the
   extractor.
 - Anonymized internal transcripts that have passed privacy review and are kept
@@ -115,6 +122,16 @@ The command refuses unapproved manifests and missing license metadata. It uses
 the existing transcript evaluator and reports the same transcript metrics where
 labels exist.
 
+LoCoMo readiness uses its own command:
+
+```bash
+PYTHONPATH=src python3 -m cognitive_memory locomo-eval --path tests/fixtures/locomo/fake_locomo.json
+PYTHONPATH=src python3 -m cognitive_memory locomo-eval --path data/external/locomo/locomo10.json
+```
+
+`locomo-eval` is text-only and ignores image fields. It reports local QA and
+evidence metrics, not official LoCoMo benchmark scores.
+
 ## Labeling Workflow
 
 For each external dataset:
@@ -130,10 +147,13 @@ For each external dataset:
 ## Limitations
 
 - The committed external fixtures are fake and tiny.
-- No public dataset has been downloaded or evaluated.
+- LoCoMo has been downloaded locally under ignored `data/` and evaluated in
+  text-only mode. No public dataset file is committed.
 - `PublicDatasetLoaderStub` is only a placeholder for future dataset-specific
   mappers.
 - The current loader only handles generic JSON/JSONL mapping into the existing
   transcript schema.
+- The LoCoMo runner supports QA only. It does not evaluate images, multimodal
+  generation or event summaries.
 - Basic report redaction is not production anonymization.
 - The deterministic extractor is still expected to fail on real transcripts.

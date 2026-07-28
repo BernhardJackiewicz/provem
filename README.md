@@ -1,24 +1,122 @@
 # Engram
 
-**A Hippocampal Memory Layer for AI**
+**A governance & reliability layer for agent memory.**
+Wrap any memory backend. Cut catastrophic, compounding agent errors to zero —
+with a reproducible benchmark, not a marketing claim.
 
-A dependency-light research prototype for testing whether governed long-term
-memory improves LLM-agent behavior over flat retrieval and long-context style
-baselines.
+Agent memory is benchmarked on *recall* (LoCoMo, LongMemEval). But recall is not
+what breaks agents. **Compounding memory errors are:** a stale, poisoned or
+forbidden fact does not fail once — it re-fires on every future step that
+retrieves it, and multi-step agents fail super-linearly. Engram governs the
+memory instead of trying to out-recall it, and is measured on *reliability*.
 
-The prototype implements the core hypothesis:
+## The result (reproducible, deterministic, no API key)
 
-> Episodic Log = source of truth. Graph = temporal interpretation. Reflection =
-> evidence-backed hypothesis. Policy Store = consent and use rules. Controller =
-> only durable write authority.
+Same recall backend, same 960 trajectories, same seeds — the only difference is
+whether the governance layer is on:
 
-Engram uses "hippocampal" as a functional analogy: episodic encoding,
-temporal context, consolidation, retrieval gating and forgetting. It does not
-claim biological fidelity.
+| Arm | Task success | Silent (compounding) errors | Memory-poisoning success | GDPR/scope violations | Benign accuracy |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| ungoverned memory | 0.375 | **72.6%** of steps | **100%** | **240** | 1.000 |
+| **+ Engram governance** | **0.893** | **0.0%** of steps | **0%** | **0** | **1.000** |
 
-This is not a production Graphiti/Letta/Mem0 deployment. It is a falsifiable
-local harness that mirrors those roles with in-memory ports so benchmark
-failure modes can be exercised before integrating heavy services.
+Paired exact **McNemar p ≈ 5e-150**; governance never loses a task the ungoverned
+arm wins. Benign accuracy stays at 1.000 — it is *calibrated*, not abstaining on
+everything (a no-memory arm scores 0.000 on the same benign steps). One bad
+memory corrupts **2.12** downstream steps ungoverned vs **0.00** governed.
+
+```bash
+PYTHONPATH=src python3 -m cognitive_memory reliability --seeds 1,2,3,4,5,6,7,8,9,10 --scenarios 96
+```
+
+Methodology: [`docs/agentic_reliability_benchmark.md`](docs/agentic_reliability_benchmark.md).
+Full results and honest limits: [`docs/reliability_results.md`](docs/reliability_results.md).
+Attack models are faithful analogs of MINJA (query-only memory injection,
+[arXiv:2503.03704](https://arxiv.org/abs/2503.03704)) and AgentPoison
+([arXiv:2407.12784](https://arxiv.org/abs/2407.12784)).
+
+### End-to-end task success (imperfect agent)
+
+The table above fixes the agent to isolate the memory effect. With a *stochastic*
+agent (intrinsic per-step skill `p`, an LLM-noise analog), agent and memory error
+compound over the whole task. Governance buys **+43 to +52 points** of end-to-end
+task success at every skill level, and end-to-end success stays close to the
+agent-only compounding baseline `p^n` — while ungoverned memory drags it far below:
+
+| Agent skill `p` | ungoverned | governed | agent-only `p^n` | governance delta |
+| ---: | ---: | ---: | ---: | ---: |
+| 0.99 | 0.371 | 0.875 | 0.980 | +0.504 |
+| 0.95 | 0.366 | 0.839 | 0.902 | +0.473 |
+| 0.90 | 0.339 | 0.770 | 0.810 | +0.431 |
+
+```bash
+PYTHONPATH=src python3 -m cognitive_memory reliability --end-to-end --seeds 1,2,3,4,5,6,7,8,9,10 --scenarios 96
+```
+
+### Honest scope (no overclaiming)
+
+The agent is a **deterministic (or noise-parametrized) policy, not an LLM** — by
+design, to isolate the memory layer's causal contribution and keep every number
+reproducible without an API key. So this is a clean proof of *what governance
+contributes to action correctness*, **not** an end-to-end LLM task-success claim.
+The `NoisyAgent` composes agent + memory error to show end-to-end behavior;
+plugging a real LLM into the same `Agent` protocol is the optional, key-gated
+extension. Attack models are simplified retrieval-and-refire analogs, not the full
+published exploits. Scenarios are synthetic (but fair: benign-dominated, with a
+competent control arm). None of this is a production-readiness claim. See the
+methodology doc for the complete limitations list.
+
+## Wrap your memory in a few lines
+
+```python
+from cognitive_memory.reliability import GovernedMemory, NaiveBackend, Scope
+
+mem = GovernedMemory(NaiveBackend())      # or an adapter over Mem0 / Zep / LangMem
+mem.remember("cand_1 salary_target 120k", subject="cand_1", relation="salary_target",
+             object="120k", tenant="acme", entity="cand_1", source="recruiter", trust=0.9)
+
+# A scraping tool tries to poison the figure to lowball a pitch:
+mem.remember("cand_1 salary_target 80k", subject="cand_1", relation="salary_target",
+             object="80k", tenant="acme", entity="cand_1", source="scraper_tool", trust=0.4)
+
+mem.forget("migraine", Scope("acme", "cand_1"))   # GDPR erasure — enforced at recall
+
+mem.recall_value("cand_1 salary_target", tenant="acme", entity="cand_1").answer
+# -> "120k"  (trusted source wins; never the poisoned, erased, or cross-tenant guess)
+```
+
+The `GovernedMemory` wrapper is backend-agnostic (`MemoryBackend` protocol) and
+embeddable in an agent or any app — see the recruiting example in
+`tests/test_reliability.py::EmbeddabilityTests`.
+
+## What the governance layer does
+
+- **Write-side:** prompt-injection quarantine, sensitive-without-consent hold,
+  provenance + source-trust tagging, and enforcement of erasure / do-not-use
+  intents expressed in natural language.
+- **Read-side:** erasure & do-not-use enforcement, entity/tenant scope isolation,
+  source-conflict resolution by provenance trust, a relevance floor, and
+  **calibrated abstention** — a recoverable "I don't know" instead of a confident
+  wrong answer that would propagate and compound.
+
+## Two evidence tracks
+
+1. **Reliability (headline, above)** — a closed-loop benchmark proving governance
+   cuts compounding agent errors, with McNemar / Wilson / bootstrap statistics in
+   dependency-free pure Python (`cognitive_memory.stats`).
+2. **Governed-memory research prototype (below)** — the original Engram MVP-1
+   work: temporal facts, deletion/do-not-use, scope isolation, provenance and
+   abstention over synthetic structured/noisy/recruiting/adversarial suites, plus
+   external-validation harnesses (transcripts, LoCoMo) and optional Mem0/Graphiti
+   baselines. It is deliberately, exhaustively honest about what is and is not
+   proven; that discipline carries over to the reliability track.
+
+Engram uses "hippocampal" as a functional analogy: episodic encoding, temporal
+context, consolidation, retrieval gating and forgetting. It does not claim
+biological fidelity. The heavy Graphiti/Letta/Mem0 integrations remain adapter
+contracts, not live deployments.
+
+The remainder of this README documents the research prototype in full.
 
 ## Honest MVP Status
 
@@ -64,6 +162,23 @@ failure modes can be exercised before integrating heavy services.
   transcript evaluator now maps approved JSON/JSONL datasets into the existing
   transcript schema. It does not download data, include real PII or prove
   external performance.
+- LoCoMo external validation readiness: a local text-only LoCoMo QA loader and
+  evaluator now exist for manually downloaded `locomo10.json` files. The repo
+  does not commit LoCoMo data and does not use images. It now includes a
+  `--stage-report` diagnostic harness for CML that separates extraction,
+  retrieval, answer synthesis and abstention failures, plus an explicit
+  `--retrieval-mode hybrid` research path for open conversational QA. A first
+  real local text-only run is documented in `docs/locomo_results.md`: raw CML
+  `446/1986`, governed `--extract` CML `25/1986`, and hybrid retrieval CML
+  `376/1986`. Hybrid reduces unsafe answering to `8.51%` but still trails raw
+  abstention. The latest extraction pass is accepted only because evidence
+  recall improved without increasing unsafe answering. An optional
+  schema-constrained LLM extractor now exists behind `--extractor llm`; it is
+  disabled by default, cached under ignored `.cache/`, label-isolated and
+  bounded by explicit subset/API-call controls. Evidence-windowed subset
+  evaluation and opt-in diagnostic answer synthesis are available for bounded
+  LoCoMo analysis, but they remain diagnostics rather than official scores.
+  This is failure evidence, not a production or LoCoMo-superiority claim.
 - MVP 2.0 Mem0 comparison: Mem0 is the first optional external baseline path.
   The default repo still runs without Mem0. `--include-mem0` skips clearly when
   Mem0 is not installed or configured, and `--strict-optional` fails clearly.
@@ -157,6 +272,9 @@ failure modes can be exercised before integrating heavy services.
 - External validation manifest runner for approved local JSON/JSONL transcript
   datasets. It reuses the transcript evaluator, refuses unapproved or
   under-documented datasets and keeps committed fixtures fake.
+- LoCoMo text-only QA runner for manually downloaded local `locomo10.json`
+  files. It maps sessions to episodes, ignores image fields and reports local
+  QA/evidence/stage diagnostics without claiming official LoCoMo scores.
 - Core invariant catalog and deterministic invariant/fuzz tests for deletion,
   do-not-use, source conflict, prompt-injection quarantine, scope isolation,
   supersession, provenance, policy gates, replay and persistence reload safety.
@@ -171,14 +289,18 @@ failure modes can be exercised before integrating heavy services.
 - Mem0 baseline normalization for answer text, selected memories when exposed,
   provenance when exposed, derived abstention behavior and latency. Missing
   Mem0 fields are marked unavailable rather than treated as successful evidence.
-- Optional schema-constrained LLM extractor scaffolding that validates candidate
-  output locally and proposes `MemoryCandidate` objects. It is disabled by
-  default and makes no live LLM calls.
+- Optional schema-constrained LLM extraction for open conversations. It is
+  disabled by default, requires an explicit provider or OpenAI Responses API
+  environment, validates source-supported JSON output and proposes
+  `MemoryCandidate` objects through the normal controller.
 
 ## Quick Start
 
 ```bash
 PYTHONPATH=src python3 -m unittest discover -s tests -v
+PYTHONPATH=src python3 -m cognitive_memory reliability
+PYTHONPATH=src python3 -m cognitive_memory reliability --seeds 1,2,3,4,5,6,7,8,9,10 --scenarios 96
+PYTHONPATH=src python3 -m cognitive_memory reliability --json
 PYTHONPATH=src python3 -m cognitive_memory benchmark
 PYTHONPATH=src python3 -m cognitive_memory benchmark --suite noisy
 PYTHONPATH=src python3 -m cognitive_memory benchmark --suite recruiting
@@ -190,6 +312,7 @@ PYTHONPATH=src python3 -m cognitive_memory export-memory --path demo.memory.json
 PYTHONPATH=src python3 -m cognitive_memory import-memory --path demo.memory.jsonl --query "current work mode"
 PYTHONPATH=src python3 -m cognitive_memory transcript-eval --input tests/fixtures/transcripts
 PYTHONPATH=src python3 -m cognitive_memory external-eval --manifest tests/fixtures/external/manifest.json
+PYTHONPATH=src python3 -m cognitive_memory locomo-eval --path tests/fixtures/locomo/fake_locomo.json
 PYTHONPATH=src python3 -m cognitive_memory mem0-env-check
 PYTHONPATH=src python3 -m cognitive_memory graphiti-env-check
 PYTHONPATH=src python3 scripts/check_graphiti_env.py
@@ -212,6 +335,7 @@ cml export-memory --path demo.memory.jsonl --demo
 cml import-memory --path demo.memory.jsonl --query "current work mode"
 cml transcript-eval --input tests/fixtures/transcripts
 cml external-eval --manifest tests/fixtures/external/manifest.json
+cml locomo-eval --path tests/fixtures/locomo/fake_locomo.json
 cml mem0-env-check
 cml graphiti-env-check
 cml sleep-cycle --demo
@@ -227,7 +351,9 @@ safe.
 
 Local transcript datasets are also ignored through `data/` and `transcripts/`.
 Only fake fixtures under `tests/fixtures/transcripts/` and
-`tests/fixtures/external/` should be committed.
+`tests/fixtures/external/` should be committed. The LoCoMo fake fixture under
+`tests/fixtures/locomo/` is also synthetic test data; real LoCoMo files belong
+under ignored `data/external/locomo/`.
 
 ## Structured Episode Markup
 
@@ -308,6 +434,33 @@ The committed external fixtures are tiny fake data. Real public or anonymized
 datasets must remain outside git, usually under ignored `data/` or
 `transcripts/`, and must be reviewed for license and PII status before
 `approved_for_eval` is set.
+
+LoCoMo can be evaluated through a separate text-only QA runner:
+
+```bash
+PYTHONPATH=src python3 -m cognitive_memory locomo-eval --path tests/fixtures/locomo/fake_locomo.json
+PYTHONPATH=src python3 -m cognitive_memory locomo-eval --path data/external/locomo/locomo10.json
+PYTHONPATH=src python3 -m cognitive_memory locomo-eval --path data/external/locomo/locomo10.json --extract --diagnostics --stage-report --retrieval-mode hybrid
+PYTHONPATH=src python3 -m cognitive_memory locomo-eval --path data/external/locomo/locomo10.json --extract --diagnostics --stage-report --retrieval-mode hybrid --qa-evidence-in-window-only --answer-mode diagnostic-synthesis
+PYTHONPATH=src python3 -m cognitive_memory locomo-eval --path data/external/locomo/locomo10.json --extract --extractor llm --max-samples 1 --dry-run-cost-estimate
+OPENAI_API_KEY=... OPENAI_LLM_EXTRACTOR_MODEL=gpt-4o-mini PYTHONPATH=src python3 -m cognitive_memory locomo-eval --path data/external/locomo/locomo10.json --extract --extractor llm --max-turns 200 --max-api-calls 200 --diagnostics --stage-report --retrieval-mode hybrid
+```
+
+The first command uses a tiny fake fixture. The second requires a manually
+downloaded local LoCoMo file under ignored `data/`. The third enables the early
+rule-based generic conversation extractor and prints diagnostics plus the CML
+stage report with the open-conversation hybrid retriever. The fourth filters
+bounded QA to questions whose evidence was ingested and tests opt-in diagnostic
+answer synthesis from selected memories. The fifth estimates
+LLM extraction cache/call cost without an API key. The sixth uses the optional
+schema-constrained LLM extractor on a bounded subset; it makes one uncached
+extraction call per selected text turn and is experimental. Governed retrieval
+remains the default and primary
+enterprise-memory path. The runner maps sessions to episodes, evaluates QA
+annotations, ignores image URLs and BLIP captions, and does not claim official
+LoCoMo scores. Evidence ids and QA answers are never provided to extraction or
+retrieval ranking. See
+`docs/locomo_benchmark.md` and the real local runs in `docs/locomo_results.md`.
 
 Mem0 can be run as an optional external baseline:
 
@@ -605,8 +758,9 @@ work. `scripts/smoke_graphiti.py` is guarded: it exits clearly while
 
 ## Known Limitations
 
-- Extraction is deterministic and schema-driven; it does not test real LLM
-  extraction errors.
+- Rule-based extraction is deterministic and schema-driven. The optional LLM
+  extractor can make live calls only when explicitly configured, and live model
+  behavior is reported separately from rule-based results.
 - The noisy extractor is a conservative rule-based stress layer, not a general
   natural-language understanding system.
 - The recruiting extractor and scenarios are deterministic and benchmark-shaped;
@@ -619,8 +773,9 @@ work. `scripts/smoke_graphiti.py` is guarded: it exits clearly while
 - The reference resolver only handles simple, singular, same-scope antecedents.
   It abstains or ignores broad unresolved references instead of suppressing
   broad memory.
-- The optional schema-constrained LLM extractor is only a local validation
-  wrapper. It does not call an LLM unless a caller injects a provider.
+- The optional schema-constrained LLM extractor rejects malformed or
+  unsupported outputs, but schema validation is not proof of factuality,
+  safety, prompt-injection resistance or real LoCoMo performance.
 - The noisy suite currently includes known failure probes, including ambiguous
   reference handling. The current probes pass after conservative fixes; do not
   treat that as real-world coverage.

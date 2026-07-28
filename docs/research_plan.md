@@ -46,16 +46,18 @@ biology.
 3. MVP 1.6: Transcript evaluation layer before live integrations.
 4. MVP 1.7: Core reliability and invariant hardening.
 5. MVP 1.8: External validation readiness for reviewed local datasets.
-6. MVP 2.0: Optional Mem0 external baseline comparison on synthetic/fake data.
-7. MVP 2.1: Graphiti mapping and backend parity scaffold.
-8. MVP 2: Stateful agent integration through Letta/MemFS-style ports.
-9. MVP 3.0: Local SleepCycle dry-run proposals, evidence checking, decay
+6. LoCoMo readiness: optional local text-only QA evaluation for manually
+   downloaded `locomo10.json` files.
+7. MVP 2.0: Optional Mem0 external baseline comparison on synthetic/fake data.
+8. MVP 2.1: Graphiti mapping and backend parity scaffold.
+9. MVP 2: Stateful agent integration through Letta/MemFS-style ports.
+10. MVP 3.0: Local SleepCycle dry-run proposals, evidence checking, decay
    metadata and review queue.
-10. MVP 3.1: Consolidation evaluation with simulated approval in an isolated
+11. MVP 3.1: Consolidation evaluation with simulated approval in an isolated
     evaluation copy.
-11. MVP 3.2: Scope-aware reflections and consolidated memories.
-12. MVP 3.3: Human review queue for consolidation proposals.
-13. MVP 4: Audit UI and domain pilot.
+12. MVP 3.2: Scope-aware reflections and consolidated memories.
+13. MVP 3.3: Human review queue for consolidation proposals.
+14. MVP 4: Audit UI and domain pilot.
 
 ## Current Prototype Scope
 
@@ -134,6 +136,47 @@ records into the existing transcript-eval schema, refuses unapproved or
 missing-license datasets and keeps public/anonymized data outside git. This is
 readiness for external validation, not evidence from external datasets.
 
+The current LoCoMo readiness pass adds a local text-only QA evaluator for
+manually downloaded LoCoMo files. It maps LoCoMo sessions to episodes, QA
+annotations to evaluation questions and evidence dialog ids to provenance
+expectations. It ignores image URLs and BLIP captions. It is useful for
+external long-term memory validation, but it does not directly evaluate
+deletion, consent, do-not-use, candidate/client scope safety or GDPR/AI-Act
+governance behavior. The first real local LoCoMo run is intentionally raw:
+CML scores `446/1986`, the same as `no_memory`, because it abstains on all
+questions. This is failure evidence for generic conversation extraction, not a
+production conclusion. The next local `--extract` pass adds a deterministic
+generic conversation extractor and improves the fake LoCoMo fixture from
+`0/3` to `3/3`, but the real text-only LoCoMo run drops to `25/1986` because
+weak extracted memories make CML answer many questions incorrectly. This shows
+that generic extraction plus policy-conservative retrieval is still not enough
+for raw long-dialogue QA. A `--stage-report` mode now treats LoCoMo as a
+diagnostic harness for raw conversational-memory gaps by separating extraction,
+retrieval, deterministic answer synthesis and abstention. Evidence dialog ids
+are used only after ingestion/retrieval for diagnostics and scoring; they do
+not influence extraction, memory writes, retrieval ranking or answer selection.
+An explicit `--retrieval-mode hybrid` path now tests open-conversation retrieval
+features without replacing the governed retrieval planner. It improves local
+LoCoMo retrieval diagnostics and lowers unsafe answering. The current
+generic location/reference/event extraction pass reaches evidence-memory recall
+`48.62%`, sample evidence-memory precision `47.03%` and CML `376/1986`, still
+below the raw abstention baseline `446/1986`. The pass is treated as acceptable
+only because unsafe answering falls to `8.51%`; if future extraction increases
+recall while increasing unsafe answers, it should be treated as a failed pass.
+An optional schema-constrained LLM extractor now exists for this open-dialogue
+path. It receives only source turns, never QA answers or evidence ids, and all
+accepted candidates still pass through the controller and policy gate. It now
+has an ignored local cache and explicit subset/API-call controls so real LoCoMo
+can be tested in bounded slices. A live fake-fixture smoke run validates the API
+path, but no full real LoCoMo LLM run has been recorded, so there is no claim
+that LLM extraction improves real LoCoMo performance. Bounded LoCoMo runs can
+now filter QA to questions whose evidence is inside the selected turn window
+and can opt into diagnostic answer synthesis from selected memories. Those
+features are evaluation tools only: evidence ids remain unavailable to
+extraction/retrieval, expected answers remain unavailable to answer generation,
+and governed retrieval stays the primary enterprise-memory path.
+This does not support production or official benchmark claims.
+
 The current MVP 3.0 start adds a local SleepCycle dry-run proposal engine. It
 returns `ConsolidationRun` records with candidates and decisions for repeated
 evidence, conflicts, stale/superseded memories and review-required cases. It
@@ -170,10 +213,14 @@ at least one useful low-risk approval, zero unsafe approvals, zero high-risk
 autoapprovals, complete review coverage and positive downstream delta before
 the project moves back to external baseline work such as Mem0.
 
-An optional schema-constrained LLM extractor interface exists for future
-comparison. It validates proposed `MemoryCandidate` output locally and keeps the
-controller as the only durable write authority. It does not make live LLM calls
-by default and has not been benchmarked against a real model.
+An optional schema-constrained LLM extractor exists for future comparison. It
+validates open-conversation memory JSON locally, rejects unsupported or
+hallucinated candidates and keeps the controller as the only durable write
+authority. It does not make live LLM calls by default. Cached bounded subset
+controls report planned calls, cache hits/misses and safety metrics before
+larger LoCoMo runs. Current evidence is limited to unit tests, mock fixtures,
+dry-run cost estimates and a live fake-fixture smoke run; it has not produced a
+full real LoCoMo result.
 
 The sleep cycle remains an MVP 3 stub. It is guarded by evidence requirements
 and counter-evidence tracking, but it is not used as the main benchmarked memory
@@ -486,9 +533,11 @@ This is still synthetic evidence only.
   not on a real identity graph or ontology.
 - The recruiting extractor is deterministic and limited to narrow patterns; it
   will miss many realistic recruiter utterances.
-- The optional schema-constrained LLM extractor validates output shape but does
-  not guarantee factuality, good extraction, safe inference or resistance to
-  prompt injection.
+- The optional schema-constrained LLM extractor validates output shape and
+  source support, but does not guarantee factuality, good extraction, safe
+  inference, production privacy behavior or resistance to prompt injection.
+- LoCoMo evidence-window filtering and diagnostic answer synthesis are local
+  evaluation tools, not official scoring and not production answer behavior.
 - The graph-like baseline is only an in-memory approximation, not Graphiti.
 - Mem0 has an optional baseline path, but skipped runs are not evidence.
 - Graphiti mapping/parity scaffolding exists, but `GraphitiBackend` and Letta
@@ -516,9 +565,10 @@ This is still synthetic evidence only.
   against the current fake fixture set before adding Graphiti/Letta/Mem0.
 - Keep the MVP 1.7 invariants passing before any adapter or live extraction
   work.
-- Compare the recruiting rule extractor with a schema-constrained LLM extractor
-  on the same recruiting scenarios, with live model calls disabled by default
-  and reported separately.
+- Compare rule-based and schema-constrained LLM extraction on bounded
+  open-dialogue subsets with cached source-turn outputs before spending on a
+  full LoCoMo extraction run. Live model calls remain disabled by default and
+  must be reported separately.
 - Add harder recruiting cases from red-team scripts or anonymized real workflow
   traces before making domain claims.
 - Expand the failure taxonomy with harder scope, relation and coreference

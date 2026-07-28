@@ -10,7 +10,9 @@ from .benchmark import BenchmarkRunner, dumps_report
 from .consolidation_eval import dumps_consolidation_eval_report, evaluate_consolidation
 from .controller import MemoryController
 from .external_eval import ExternalValidationError, dumps_external_report, evaluate_external_manifest
+from .extractor import ExtractorSchemaError
 from .graphiti_env import check_graphiti_environment, dumps_graphiti_env_report
+from .locomo_eval import LoCoMoEvaluationError, dumps_locomo_report, evaluate_locomo, locomo_path_from_manifest
 from .mem0_env import check_mem0_environment, dumps_mem0_env_report
 from .mem0_audit import dumps_mem0_audit_report, evaluate_mem0_audit
 from .models import Episode, RetrievalRequest, TemporalFact
@@ -32,6 +34,57 @@ def run_benchmark(args: argparse.Namespace) -> int:
         print("Optional benchmark setup failed: %s" % exc, file=sys.stderr)
         return 2
     print(dumps_report(report, as_json=args.json))
+    return 0
+
+
+def run_reliability(args: argparse.Namespace) -> int:
+    from .reliability_suite import (
+        format_e2e_report,
+        format_report,
+        run_end_to_end_benchmark,
+        run_reliability_benchmark,
+    )
+
+    try:
+        seeds = [int(s) for s in str(args.seeds).split(",") if s.strip() != ""]
+    except ValueError:
+        print("--seeds must be a comma-separated list of integers", file=sys.stderr)
+        return 2
+    if not seeds:
+        seeds = [1, 2, 3, 4, 5]
+
+    if args.end_to_end:
+        try:
+            skills = [float(s) for s in str(args.skills).split(",") if s.strip() != ""]
+        except ValueError:
+            print("--skills must be a comma-separated list of floats", file=sys.stderr)
+            return 2
+        if not skills:
+            skills = [0.99, 0.95, 0.90]
+        e2e = run_end_to_end_benchmark(seeds=seeds, scenarios_per_seed=args.scenarios, skills=skills)
+        if args.json:
+            payload = [
+                {
+                    "agent_skill": sk.skill,
+                    "no_memory_task_success": sk.arms["no_memory"].task_success_rate,
+                    "ungoverned_task_success": sk.arms["ungoverned"].task_success_rate,
+                    "governed_task_success": sk.arms["governed"].task_success_rate,
+                    "agent_only_baseline_p_pow_n": sk.independence_baseline,
+                    "memory_governance_delta": sk.memory_delta,
+                    "mcnemar_p": sk.mcnemar_p,
+                }
+                for sk in e2e.per_skill
+            ]
+            print(json.dumps(payload, indent=2))
+        else:
+            print(format_e2e_report(e2e))
+        return 0
+
+    result = run_reliability_benchmark(seeds=seeds, scenarios_per_seed=args.scenarios)
+    if args.json:
+        print(json.dumps(result.headline(), indent=2))
+    else:
+        print(format_report(result))
     return 0
 
 
@@ -214,6 +267,38 @@ def run_external_eval(args: argparse.Namespace) -> int:
     return 0
 
 
+def run_locomo_eval(args: argparse.Namespace) -> int:
+    try:
+        path = args.path or locomo_path_from_manifest(args.manifest)
+        report = evaluate_locomo(
+            path,
+            limit_samples=args.limit_samples,
+            max_samples=args.max_samples,
+            limit_qa=args.limit_qa,
+            max_turns=args.max_turns,
+            max_api_calls=args.max_api_calls,
+            sample_ids=_comma_separated(args.sample_ids),
+            dry_run_cost_estimate=args.dry_run_cost_estimate,
+            extract=args.extract,
+            diagnostics=args.diagnostics,
+            stage_report=args.stage_report,
+            retrieval_mode=args.retrieval_mode,
+            extractor_mode=args.extractor,
+            answer_mode=args.answer_mode,
+            qa_evidence_in_window_only=args.qa_evidence_in_window_only,
+            llm_cache_dir=args.llm_cache_dir,
+        )
+    except (ExternalValidationError, ExtractorSchemaError, LoCoMoEvaluationError) as exc:
+        print("LoCoMo evaluation setup failed: %s" % exc, file=sys.stderr)
+        return 2
+    print(dumps_locomo_report(report, as_json=args.json))
+    return 0
+
+
+def _comma_separated(value: str) -> list:
+    return [item.strip() for item in value.split(",") if item.strip()]
+
+
 def run_mem0_env_check(args: argparse.Namespace) -> int:
     report = check_mem0_environment()
     print(dumps_mem0_env_report(report, as_json=args.json))
@@ -335,6 +420,30 @@ def run_quality_gate(args: argparse.Namespace) -> int:
         "ready": graphiti_report["ready"],
     }
 
+    from .reliability_suite import run_reliability_benchmark
+
+    reliability = run_reliability_benchmark(seeds=[1, 2, 3], scenarios_per_seed=32)
+    gov = reliability.arms["governed"]
+    ung = reliability.arms["ungoverned"]
+    reliability_passed = (
+        gov.step_silent_error == 0
+        and gov.poisoning_success == 0
+        and gov.compliance_violations == 0
+        and gov.benign_accuracy == 1.0
+        and gov.catastrophic_free_rate == 1.0
+        and reliability.comparison.traj_mcnemar_c == 0
+        and reliability.comparison.traj_mcnemar_p < 0.001
+        and ung.poisoning_success > 0
+    )
+    report["checks"]["reliability"] = {
+        "passed": reliability_passed,
+        "governed_silent_errors": gov.step_silent_error,
+        "governed_poisoning_success": gov.poisoning_success,
+        "governed_compliance_violations": gov.compliance_violations,
+        "governed_benign_accuracy": gov.benign_accuracy,
+        "mcnemar_p": reliability.comparison.traj_mcnemar_p,
+    }
+
     report["passed"] = all(check["passed"] for check in report["checks"].values())
     if args.json:
         print(json.dumps(report, indent=2, sort_keys=True))
@@ -439,6 +548,25 @@ def build_parser() -> argparse.ArgumentParser:
     benchmark.add_argument("--strict-optional", action="store_true", help="Fail instead of skipping unavailable optional baselines")
     benchmark.set_defaults(func=run_benchmark)
 
+    reliability = subparsers.add_parser(
+        "reliability",
+        help="Closed-loop agentic memory reliability benchmark (governed vs ungoverned vs no-memory)",
+    )
+    reliability.add_argument("--seeds", default="1,2,3,4,5", help="Comma-separated integer seeds (default: 1,2,3,4,5)")
+    reliability.add_argument("--scenarios", type=int, default=64, help="Scenarios per seed (default: 64)")
+    reliability.add_argument(
+        "--end-to-end",
+        action="store_true",
+        help="End-to-end task success with a stochastic agent (composes agent + memory error)",
+    )
+    reliability.add_argument(
+        "--skills",
+        default="0.99,0.95,0.90",
+        help="Comma-separated agent per-step skill levels for --end-to-end (default: 0.99,0.95,0.90)",
+    )
+    reliability.add_argument("--json", action="store_true", help="Print machine-readable headline JSON")
+    reliability.set_defaults(func=run_reliability)
+
     demo = subparsers.add_parser("demo", help="Run a small governed-memory demo")
     demo.set_defaults(func=run_demo)
 
@@ -493,6 +621,67 @@ def build_parser() -> argparse.ArgumentParser:
     external_eval.add_argument("--redact-salaries", action="store_true", help="Mask salary-like values in reports")
     external_eval.add_argument("--redact-companies", action="store_true", help="Mask simple company/client identifiers in reports")
     external_eval.set_defaults(func=run_external_eval)
+
+    locomo_eval = subparsers.add_parser("locomo-eval", help="Evaluate local text-only LoCoMo QA data")
+    locomo_source = locomo_eval.add_mutually_exclusive_group(required=True)
+    locomo_source.add_argument("--path", help="Local LoCoMo JSON path, for example data/external/locomo/locomo10.json")
+    locomo_source.add_argument("--manifest", help="Approved local manifest with expected_schema=locomo_json")
+    locomo_eval.add_argument("--json", action="store_true", help="Print machine-readable JSON")
+    locomo_eval.add_argument("--limit-samples", type=int, default=None, help="Optional local smoke-test sample limit")
+    locomo_eval.add_argument("--max-samples", type=int, default=None, help="Alias for --limit-samples for bounded LLM subset runs")
+    locomo_eval.add_argument("--limit-qa", type=int, default=None, help="Optional local smoke-test QA limit")
+    locomo_eval.add_argument("--max-turns", type=int, default=None, help="Maximum conversation turns to ingest after sample filtering")
+    locomo_eval.add_argument("--max-api-calls", type=int, default=None, help="Maximum uncached LLM extraction API calls allowed")
+    locomo_eval.add_argument("--sample-ids", default="", help="Comma-separated LoCoMo sample ids to evaluate")
+    locomo_eval.add_argument(
+        "--dry-run-cost-estimate",
+        action="store_true",
+        help="Report LLM extraction cache/call counts without making API calls",
+    )
+    locomo_eval.add_argument(
+        "--llm-cache-dir",
+        default=".cache/engram/llm_extract",
+        help="Ignored local cache directory for LLM source-turn extraction results",
+    )
+    locomo_eval.add_argument(
+        "--extract",
+        action="store_true",
+        help="Run generic conversation extraction for CML ingestion",
+    )
+    locomo_eval.add_argument(
+        "--extractor",
+        choices=("rule-based", "llm"),
+        default="rule-based",
+        help="Extraction strategy used when --extract is set",
+    )
+    locomo_eval.add_argument(
+        "--diagnostics",
+        action="store_true",
+        help="Print extraction and retrieval diagnostics for the CML path",
+    )
+    locomo_eval.add_argument(
+        "--stage-report",
+        action="store_true",
+        help="Add per-QA extraction, retrieval, answer synthesis and abstention diagnostics for CML",
+    )
+    locomo_eval.add_argument(
+        "--retrieval-mode",
+        choices=("governed", "hybrid"),
+        default="governed",
+        help="CML retrieval strategy for LoCoMo/open conversational QA",
+    )
+    locomo_eval.add_argument(
+        "--answer-mode",
+        choices=("normal", "diagnostic-synthesis"),
+        default="normal",
+        help="Answer behavior for CML; diagnostic-synthesis answers only from selected memories",
+    )
+    locomo_eval.add_argument(
+        "--qa-evidence-in-window-only",
+        action="store_true",
+        help="Evaluation-only filter that keeps QA items whose evidence ids are inside the selected turn window",
+    )
+    locomo_eval.set_defaults(func=run_locomo_eval)
 
     mem0_env_check = subparsers.add_parser("mem0-env-check", help="Check optional Mem0 live-evaluation setup")
     mem0_env_check.add_argument("--json", action="store_true", help="Print machine-readable JSON")

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import re
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 from .models import (
     ExcludedMemory,
@@ -13,6 +13,7 @@ from .models import (
     TemporalFact,
     clamp,
     lexical_score,
+    tokenize,
 )
 from .policy import PolicyStore
 from .safety import instruction_risk_reason, sensitive_risk_reason
@@ -444,3 +445,579 @@ class RetrievalPlanner:
             "query=%r task=%s time_scope=%s selected=%s excluded=%s confidence=%.3f abstain=%s abstain_reason=%s"
             % (request.query, request.task_type, request.time_scope, selected_ids, excluded_summary, confidence, abstain, abstain_reason or "none")
         )
+
+
+class OpenConversationRetrievalPlanner:
+    """Retrieval strategy for open conversational QA.
+
+    This is intentionally separate from the governed retrieval path. It ranks
+    conversational memories with generic lexical, entity, relation and temporal
+    cues, while still respecting deletion/do-not-use style policy exclusions.
+    """
+
+    STOPWORDS = {
+        "a",
+        "an",
+        "and",
+        "are",
+        "as",
+        "at",
+        "be",
+        "been",
+        "by",
+        "did",
+        "do",
+        "does",
+        "for",
+        "from",
+        "had",
+        "has",
+        "have",
+        "he",
+        "her",
+        "his",
+        "how",
+        "i",
+        "if",
+        "in",
+        "is",
+        "it",
+        "its",
+        "of",
+        "on",
+        "or",
+        "s",
+        "she",
+        "still",
+        "that",
+        "the",
+        "their",
+        "there",
+        "they",
+        "this",
+        "to",
+        "was",
+        "were",
+        "what",
+        "when",
+        "where",
+        "which",
+        "who",
+        "why",
+        "with",
+        "would",
+    }
+    RELATION_CUE_TOKENS = {
+        "after",
+        "before",
+        "career",
+        "date",
+        "day",
+        "dating",
+        "dislike",
+        "dislikes",
+        "drink",
+        "drinks",
+        "eat",
+        "eats",
+        "field",
+        "friend",
+        "friends",
+        "go",
+        "going",
+        "hate",
+        "hates",
+        "like",
+        "likes",
+        "live",
+        "lives",
+        "location",
+        "love",
+        "loves",
+        "married",
+        "move",
+        "moved",
+        "now",
+        "plan",
+        "planning",
+        "pursue",
+        "relationship",
+        "status",
+        "time",
+        "year",
+        "years",
+    }
+    TEMPORAL_WORDS = {
+        "today",
+        "tomorrow",
+        "yesterday",
+        "tonight",
+        "morning",
+        "afternoon",
+        "evening",
+        "week",
+        "weeks",
+        "weekend",
+        "month",
+        "months",
+        "year",
+        "years",
+        "monday",
+        "tuesday",
+        "wednesday",
+        "thursday",
+        "friday",
+        "saturday",
+        "sunday",
+        "january",
+        "february",
+        "march",
+        "april",
+        "may",
+        "june",
+        "july",
+        "august",
+        "september",
+        "october",
+        "november",
+        "december",
+        "ago",
+        "next",
+        "last",
+        "current",
+        "now",
+        "later",
+        "before",
+        "after",
+    }
+    HARD_EXCLUSION_REASONS = {
+        "deleted",
+        "do_not_use",
+        "deleted_evidence",
+        "do_not_use_term",
+        "sensitive",
+        "wrong_project",
+    }
+
+    def __init__(
+        self,
+        store: InMemoryStore,
+        policy: PolicyStore,
+        min_top_score: float = 0.45,
+        min_confidence: float = 0.32,
+        min_score_margin: float = 0.04,
+    ) -> None:
+        self.store = store
+        self.policy = policy
+        self.min_top_score = min_top_score
+        self.min_confidence = min_confidence
+        self.min_score_margin = min_score_margin
+
+    def retrieve(self, request: RetrievalRequest) -> RetrievalResult:
+        query = _OpenConversationQuery.from_text(request.query, self.STOPWORDS, self.RELATION_CUE_TOKENS)
+        excluded: List[ExcludedMemory] = []
+        scored: List[Tuple[float, SelectedMemory, object, Dict[str, Any]]] = []
+        latest_timestamp = self._latest_timestamp(request)
+
+        for fact in self.store.list_facts(user_id=request.user_id, project_id=request.project_id):
+            reason = self._hard_exclusion_reason(fact, request)
+            if reason:
+                excluded.append(ExcludedMemory(fact.id, reason, "temporal_fact", fact.claim_text))
+                continue
+            score, features = self._score_record(
+                query=query,
+                claim=fact.claim_text,
+                subject=fact.subject,
+                relation=fact.relation,
+                object_value=fact.object,
+                memory_type="temporal_fact",
+                timestamp=fact.valid_at,
+                latest_timestamp=latest_timestamp,
+            )
+            if score > 0:
+                scored.append(
+                    (
+                        score,
+                        SelectedMemory(
+                            id=fact.id,
+                            memory_type="temporal_fact",
+                            claim=fact.claim_text,
+                            score=score,
+                            confidence=fact.confidence,
+                            evidence=list(fact.evidence),
+                        ),
+                        fact,
+                        features,
+                    )
+                )
+
+        for event in self.store.list_events(user_id=request.user_id, project_id=request.project_id):
+            reason = self._hard_exclusion_reason(event, request)
+            if reason:
+                excluded.append(ExcludedMemory(event.id, reason, "memory_event", event.claim_text))
+                continue
+            relation = self._event_relation(event)
+            object_value = self._event_value(event)
+            score, features = self._score_record(
+                query=query,
+                claim=event.claim_text,
+                subject=event.context.subject_id,
+                relation=relation,
+                object_value=object_value,
+                memory_type="memory_event",
+                timestamp=event.timestamp,
+                latest_timestamp=latest_timestamp,
+            )
+            if score > 0:
+                scored.append(
+                    (
+                        score,
+                        SelectedMemory(
+                            id=event.id,
+                            memory_type="memory_event",
+                            claim=event.claim_text,
+                            score=score,
+                            confidence=event.confidence,
+                            evidence=list(event.evidence_episode_ids),
+                        ),
+                        event,
+                        features,
+                    )
+                )
+
+        for reflection in self.store.list_reflections(user_id=request.user_id, project_id=request.project_id):
+            reason = self._hard_exclusion_reason(reflection, request)
+            if reason:
+                excluded.append(ExcludedMemory(reflection.id, reason, "reflection", reflection.claim))
+                continue
+            score, features = self._score_record(
+                query=query,
+                claim=reflection.claim,
+                subject=reflection.subject_id,
+                relation=reflection.relation_type,
+                object_value="",
+                memory_type="reflection",
+                timestamp=reflection.created_at,
+                latest_timestamp=latest_timestamp,
+            )
+            if score > 0:
+                scored.append(
+                    (
+                        score,
+                        SelectedMemory(
+                            id=reflection.id,
+                            memory_type="reflection",
+                            claim=reflection.claim,
+                            score=score,
+                            confidence=reflection.confidence,
+                            evidence=list(reflection.supporting_evidence),
+                        ),
+                        reflection,
+                        features,
+                    )
+                )
+
+        scored.sort(key=lambda item: (item[0], item[1].confidence), reverse=True)
+        selected_items = self._diverse_top_k(scored, request.top_k)
+        selected_memories = [memory for _, memory, _, _ in selected_items]
+        top_score = selected_items[0][0] if selected_items else 0.0
+        second_score = selected_items[1][0] if len(selected_items) > 1 else 0.0
+        score_margin = top_score - second_score
+        top_features = selected_items[0][3] if selected_items else {}
+        confidence = self._aggregate_confidence(selected_memories)
+        low_confidence = bool(selected_items) and (top_score < self.min_top_score or confidence < self.min_confidence)
+        low_margin = bool(selected_items) and len(selected_items) > 1 and score_margin < self.min_score_margin and top_score < 0.62
+        relation_mismatch = bool(
+            selected_items
+            and query.strong_relation
+            and float(top_features.get("relation", 0.0)) == 0.0
+            and float(top_features.get("temporal", 0.0)) == 0.0
+            and float(top_features.get("content", 0.0)) < 0.5
+        )
+
+        if not selected_items or low_confidence or low_margin or relation_mismatch:
+            if low_confidence:
+                reason = "low_confidence_open_conversation"
+            elif low_margin:
+                reason = "low_margin_open_conversation"
+            elif relation_mismatch:
+                reason = "relation_mismatch_open_conversation"
+            else:
+                reason = "insufficient_evidence"
+            for _, memory, _, _ in selected_items:
+                excluded.append(ExcludedMemory(memory.id, reason, memory.memory_type, memory.claim))
+            trace = self._trace(request, selected_memories, excluded, confidence, True, reason, selected_items, query)
+            return RetrievalResult(
+                selected_memories=selected_memories,
+                excluded_memories=excluded,
+                provenance=[],
+                confidence=confidence,
+                abstain_recommended=True,
+                abstain_reason=reason,
+                retrieval_trace=trace,
+                metadata=self._metadata(top_score, second_score, score_margin, top_features),
+            )
+
+        provenance = sorted({evidence_id for memory in selected_memories for evidence_id in memory.evidence})
+        trace = self._trace(request, selected_memories, excluded, confidence, False, "", selected_items, query)
+        return RetrievalResult(
+            selected_memories=selected_memories,
+            excluded_memories=excluded,
+            provenance=provenance,
+            confidence=confidence,
+            abstain_recommended=False,
+            abstain_reason="",
+            retrieval_trace=trace,
+            metadata=self._metadata(top_score, second_score, score_margin, top_features),
+        )
+
+    def _score_record(
+        self,
+        query: "_OpenConversationQuery",
+        claim: str,
+        subject: str,
+        relation: str,
+        object_value: str,
+        memory_type: str,
+        timestamp: object,
+        latest_timestamp: object,
+    ) -> Tuple[float, Dict[str, Any]]:
+        subject_tokens = self._open_tokens(subject)
+        relation_tokens = self._open_tokens(relation)
+        object_tokens = self._open_tokens(object_value)
+        claim_tokens = self._open_tokens("%s %s %s" % (claim, relation, object_value))
+        content_overlap = self._overlap_ratio(query.content_tokens, claim_tokens)
+        entity_overlap = 1.0 if subject_tokens and query.all_tokens & subject_tokens else 0.0
+        relation_match = self._relation_match(query.all_tokens, relation, relation_tokens, object_tokens, claim_tokens)
+        temporal_match = self._temporal_match(query.all_tokens, relation, object_tokens, claim_tokens)
+        recency = self._recency_score(query.all_tokens, timestamp, latest_timestamp)
+        memory_weight = {"temporal_fact": 0.06, "memory_event": 0.04, "reflection": 0.0}.get(memory_type, 0.0)
+        score = (
+            0.45 * content_overlap
+            + 0.18 * entity_overlap
+            + 0.24 * relation_match
+            + 0.10 * temporal_match
+            + recency
+            + memory_weight
+        )
+        if query.strong_relation and relation_match == 0.0:
+            score -= 0.12
+        return clamp(score), {
+            "content": round(content_overlap, 3),
+            "entity": round(entity_overlap, 3),
+            "relation": round(relation_match, 3),
+            "temporal": round(temporal_match, 3),
+            "recency": round(recency, 3),
+            "session": self._session_bucket(timestamp),
+        }
+
+    def _hard_exclusion_reason(self, memory: object, request: RetrievalRequest) -> str:
+        reason = self.policy.exclusion_reason(memory, request)
+        return reason if reason in self.HARD_EXCLUSION_REASONS else ""
+
+    def _relation_match(
+        self,
+        query_tokens: set,
+        relation: str,
+        relation_tokens: set,
+        object_tokens: set,
+        claim_tokens: set,
+    ) -> float:
+        if relation_tokens & query_tokens:
+            return 0.8
+        if query_tokens & {"where", "live", "lives", "stay", "stays", "move", "moved", "from", "location"}:
+            if relation in ("location", "home", "address") or relation_tokens & {"location", "home", "address"}:
+                return 1.0
+        if query_tokens & {"when", "time", "date", "day", "month", "year", "years", "before", "after"}:
+            if relation_tokens & {"time", "date", "day", "plan", "event", "schedule"} or object_tokens & self.TEMPORAL_WORDS:
+                return 0.8
+        if query_tokens & {"relationship", "status", "friend", "friends", "dating", "married", "single", "partner"}:
+            if relation.startswith("relationship") or claim_tokens & {"friend", "friends", "dating", "married", "single", "partner"}:
+                return 1.0
+        if query_tokens & {"like", "likes", "love", "loves", "enjoy", "enjoys", "hate", "hates"}:
+            if relation in ("likes", "dislikes"):
+                return 1.0
+        if query_tokens & {"drink", "drinks", "eat", "eats", "read", "reads", "play", "plays", "practice", "practices"}:
+            if relation in ("habit", "routine", "likes"):
+                return 0.9
+        if query_tokens & {"career", "job", "field", "education", "pursue", "path", "plan", "goal"}:
+            if relation_tokens & {"career", "job", "field", "education", "plan", "goal", "attribute"}:
+                return 0.8
+        return 0.0
+
+    def _temporal_match(self, query_tokens: set, relation: str, object_tokens: set, claim_tokens: set) -> float:
+        if not query_tokens & {"when", "time", "date", "day", "month", "year", "years", "before", "after", "now", "current", "still"}:
+            return 0.0
+        if object_tokens & self.TEMPORAL_WORDS or claim_tokens & self.TEMPORAL_WORDS:
+            return 1.0
+        if relation in ("plan", "event"):
+            return 0.5
+        return 0.0
+
+    def _recency_score(self, query_tokens: set, timestamp: object, latest_timestamp: object) -> float:
+        if not query_tokens & {"now", "current", "still", "latest"}:
+            return 0.0
+        timestamp_value = self._timestamp_value(timestamp)
+        latest_value = self._timestamp_value(latest_timestamp)
+        if timestamp_value is None or latest_value is None:
+            return 0.0
+        age_days = max(0.0, (latest_value - timestamp_value).total_seconds() / 86400.0)
+        if age_days <= 0.01:
+            return 0.06
+        if age_days <= 1.0:
+            return 0.05
+        if age_days <= 7.0:
+            return 0.03
+        if age_days <= 30.0:
+            return 0.015
+        return 0.0
+
+    def _diverse_top_k(
+        self,
+        scored: List[Tuple[float, SelectedMemory, object, Dict[str, Any]]],
+        top_k: int,
+    ) -> List[Tuple[float, SelectedMemory, object, Dict[str, Any]]]:
+        selected: List[Tuple[float, SelectedMemory, object, Dict[str, Any]]] = []
+        seen_sessions = set()
+        seen_claims = set()
+        for item in scored:
+            claim_key = item[1].claim.lower()
+            session = item[3].get("session", 0)
+            if claim_key in seen_claims:
+                continue
+            if session and session in seen_sessions and len(scored) > top_k:
+                continue
+            selected.append(item)
+            seen_claims.add(claim_key)
+            if session:
+                seen_sessions.add(session)
+            if len(selected) >= top_k:
+                return selected
+        for item in scored:
+            if item in selected:
+                continue
+            claim_key = item[1].claim.lower()
+            if claim_key in seen_claims:
+                continue
+            selected.append(item)
+            seen_claims.add(claim_key)
+            if len(selected) >= top_k:
+                break
+        return selected
+
+    def _aggregate_confidence(self, selected: List[SelectedMemory]) -> float:
+        if not selected:
+            return 0.0
+        top_score = max(memory.score for memory in selected)
+        weighted_confidence = sum(memory.confidence * memory.score for memory in selected)
+        total_score = sum(memory.score for memory in selected)
+        memory_confidence = weighted_confidence / total_score if total_score else 0.0
+        return clamp(0.7 * top_score + 0.3 * memory_confidence)
+
+    def _metadata(self, top_score: float, second_score: float, score_margin: float, top_features: Dict[str, Any]) -> Dict[str, Any]:
+        return {
+            "retrieval_mode": "hybrid",
+            "top_score": round(top_score, 4),
+            "second_score": round(second_score, 4),
+            "score_margin": round(score_margin, 4),
+            "top_relation_match": float(top_features.get("relation", 0.0)) if top_features else 0.0,
+            "top_temporal_match": float(top_features.get("temporal", 0.0)) if top_features else 0.0,
+            "top_content_overlap": float(top_features.get("content", 0.0)) if top_features else 0.0,
+        }
+
+    def _trace(
+        self,
+        request: RetrievalRequest,
+        selected: List[SelectedMemory],
+        excluded: List[ExcludedMemory],
+        confidence: float,
+        abstain: bool,
+        abstain_reason: str,
+        selected_items: List[Tuple[float, SelectedMemory, object, Dict[str, Any]]],
+        query: "_OpenConversationQuery",
+    ) -> str:
+        selected_ids = ",".join(memory.id for memory in selected) or "none"
+        candidate_ids = ",".join("%s:%.3f" % (item[1].id, item[0]) for item in selected_items[:5]) or "none"
+        excluded_summary = ",".join("%s:%s" % (item.id, item.reason) for item in excluded[:8]) or "none"
+        top_features = selected_items[0][3] if selected_items else {}
+        top_score = selected_items[0][0] if selected_items else 0.0
+        second_score = selected_items[1][0] if len(selected_items) > 1 else 0.0
+        return (
+            "query=%r mode=hybrid task=%s selected=%s candidates=%s excluded=%s content_tokens=%s top_score=%.3f score_margin=%.3f relation=%.3f temporal=%.3f confidence=%.3f abstain=%s abstain_reason=%s"
+            % (
+                request.query,
+                request.task_type,
+                selected_ids,
+                candidate_ids,
+                excluded_summary,
+                ",".join(sorted(query.content_tokens)) or "none",
+                top_score,
+                top_score - second_score,
+                float(top_features.get("relation", 0.0)) if top_features else 0.0,
+                float(top_features.get("temporal", 0.0)) if top_features else 0.0,
+                confidence,
+                abstain,
+                abstain_reason or "none",
+            )
+        )
+
+    def _event_relation(self, event: MemoryEvent) -> str:
+        for relation in event.relations:
+            if relation.relation:
+                return relation.relation
+        return event.event_type
+
+    def _event_value(self, event: MemoryEvent) -> str:
+        values = [relation.value or relation.object_id for relation in event.relations if relation.value or relation.object_id]
+        return " ".join(values)
+
+    def _latest_timestamp(self, request: RetrievalRequest) -> object:
+        timestamps = []
+        for fact in self.store.list_facts(user_id=request.user_id, project_id=request.project_id):
+            value = self._timestamp_value(fact.valid_at)
+            if value is not None:
+                timestamps.append(value)
+        for event in self.store.list_events(user_id=request.user_id, project_id=request.project_id):
+            value = self._timestamp_value(event.timestamp)
+            if value is not None:
+                timestamps.append(value)
+        for reflection in self.store.list_reflections(user_id=request.user_id, project_id=request.project_id):
+            value = self._timestamp_value(reflection.created_at)
+            if value is not None:
+                timestamps.append(value)
+        return max(timestamps) if timestamps else None
+
+    def _session_bucket(self, timestamp: object) -> int:
+        value = self._timestamp_value(timestamp)
+        if value is None:
+            return 0
+        return value.date().toordinal()
+
+    def _timestamp_value(self, timestamp: object) -> object:
+        if timestamp is None:
+            return None
+        if hasattr(timestamp, "date") and hasattr(timestamp, "__sub__"):
+            return timestamp
+        return None
+
+    def _open_tokens(self, text: str) -> set:
+        return {token for token in tokenize(text) if token not in self.STOPWORDS}
+
+    def _overlap_ratio(self, query_tokens: set, memory_tokens: set) -> float:
+        if not query_tokens or not memory_tokens:
+            return 0.0
+        return len(query_tokens & memory_tokens) / float(len(query_tokens))
+
+
+class _OpenConversationQuery:
+    def __init__(self, all_tokens: set, content_tokens: set, strong_relation: bool) -> None:
+        self.all_tokens = all_tokens
+        self.content_tokens = content_tokens
+        self.strong_relation = strong_relation
+
+    @classmethod
+    def from_text(cls, text: str, stopwords: set, relation_cues: set) -> "_OpenConversationQuery":
+        all_tokens = {token for token in tokenize(text) if token not in stopwords}
+        content_tokens = {token for token in all_tokens if token not in relation_cues}
+        strong_relation = bool(all_tokens & relation_cues)
+        return cls(all_tokens=all_tokens, content_tokens=content_tokens or all_tokens, strong_relation=strong_relation)

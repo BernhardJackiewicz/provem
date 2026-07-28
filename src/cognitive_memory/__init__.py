@@ -30,6 +30,15 @@ from .models import (
 )
 from .policy import PolicyStore
 from .persistence import MemorySnapshot, load_snapshot, retrieval_trace_record, save_snapshot
+from .reliability import (
+    GovernedMemory,
+    MemoryBackend,
+    MemoryRecord,
+    NaiveBackend,
+    RecallResult,
+    Scope,
+    UngovernedMemory,
+)
 from .reflection import SleepCycle
 from .review import build_review_queue, simulate_review
 from .retrieval import RetrievalPlanner
@@ -38,6 +47,13 @@ from .transcript_eval import Transcript, TranscriptLabels, evaluate_transcripts,
 
 __all__ = [
     "Episode",
+    "GovernedMemory",
+    "UngovernedMemory",
+    "NaiveBackend",
+    "MemoryBackend",
+    "MemoryRecord",
+    "RecallResult",
+    "Scope",
     "ConsolidatedMemory",
     "ConsolidationCandidate",
     "ConsolidationDecision",

@@ -1,0 +1,18 @@
+{
+  "datasets": [
+    {
+      "dataset_name": "fake_locomo_fixture",
+      "source": "local fake LoCoMo-shaped fixture",
+      "license": "CC0-1.0 test fixture",
+      "language": "en",
+      "domain": "generic",
+      "real_vs_synthetic": "synthetic",
+      "pii_status": "fake",
+      "local_path": "fake_locomo.json",
+      "approved_for_eval": true,
+      "expected_schema": "locomo_json",
+      "loader": "locomo_json",
+      "notes": "Tiny fake fixture for LoCoMo loader and evaluator tests."
+    }
+  ]
+}

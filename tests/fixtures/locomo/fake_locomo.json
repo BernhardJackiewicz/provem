@@ -1,0 +1,61 @@
+[
+  {
+    "sample_id": "fake_locomo_001",
+    "conversation": {
+      "speaker_a": "Maya",
+      "speaker_b": "Liam",
+      "session_1_date_time": "10:00 am on 1 January, 2026",
+      "session_1": [
+        {
+          "speaker": "Maya",
+          "dia_id": "D1:1",
+          "text": "I drink green tea before work."
+        },
+        {
+          "speaker": "Liam",
+          "dia_id": "D1:2",
+          "text": "I live in Berlin near the canal.",
+          "img_url": ["https://example.invalid/not-fetched.jpg"],
+          "blip_caption": "A synthetic image caption that must be ignored.",
+          "query": "ignored image search query"
+        }
+      ],
+      "session_2_date_time": "11:00 am on 3 January, 2026",
+      "session_2": [
+        {
+          "speaker": "Maya",
+          "dia_id": "D2:1",
+          "text": "Yesterday I moved my piano lesson to Friday."
+        },
+        {
+          "speaker": "Liam",
+          "dia_id": "D2:2",
+          "text": "You also said green tea helps you focus."
+        }
+      ]
+    },
+    "qa": [
+      {
+        "question_id": "fake_q1",
+        "question": "What does Maya drink before work?",
+        "answer": "green tea",
+        "category": 2,
+        "evidence": ["D1:1"]
+      },
+      {
+        "question_id": "fake_q2",
+        "question": "Where does Liam live?",
+        "answer": "Berlin",
+        "category": 2,
+        "evidence": ["D1:2"]
+      },
+      {
+        "question_id": "fake_q3",
+        "question": "What day is Maya's piano lesson now?",
+        "answer": "Friday",
+        "category": 3,
+        "evidence": ["D2:1"]
+      }
+    ]
+  }
+]
