@@ -221,7 +221,10 @@ class GovernedMemoryService:
     def cleanup(self, args: Dict[str, Any]) -> Dict[str, Any]:
         tenant = self._require_tenant(args)
         mem = self.memory_for(tenant)
-        removed = mem.cleanup_expired()
+        # Scope the sweep to this tenant -- the SQLite backend is shared, so an
+        # unscoped cleanup would delete other tenants' records under this
+        # tenant's retention policy.
+        removed = mem.cleanup_expired(tenant=tenant)
         return {"tenant": tenant, "removed": removed}
 
 

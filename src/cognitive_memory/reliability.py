@@ -522,15 +522,24 @@ class GovernedMemory:
             now = now.replace(tzinfo=timezone.utc)
         return (now - created).total_seconds() / 86400.0 > days
 
-    def cleanup_expired(self, now: Optional[datetime] = None) -> int:
+    def cleanup_expired(self, now: Optional[datetime] = None, tenant: Optional[str] = None) -> int:
         """Delete records past their retention window; audit the sweep. Returns
-        how many the backend confirmed deleted."""
+        how many the backend confirmed deleted.
+
+        ``tenant`` scopes the sweep to one tenant's records -- required when the
+        backend is shared across tenants (like ``forget``, which is tenant-scoped),
+        so one tenant's cleanup cannot destroy another tenant's data.
+        """
         with self._lock:
             now = now or self._now_fn()
-            remove = [r.id for r in self.backend.all_records() if self._is_expired(r, now)]
+            remove = [
+                r.id
+                for r in self.backend.all_records()
+                if (tenant is None or r.scope.tenant == tenant) and self._is_expired(r, now)
+            ]
             removed = self.backend.delete_ids(remove) if remove else 0
             if removed:
-                self.audit.record("retention_cleanup", removed=removed, targeted=len(remove))
+                self.audit.record("retention_cleanup", removed=removed, targeted=len(remove), tenant=tenant or "")
             return removed
 
     def _erasure_tokens(self, record: MemoryRecord) -> set:
