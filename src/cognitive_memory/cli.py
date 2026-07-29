@@ -207,6 +207,24 @@ def _format_external_status(status: dict) -> str:
     return "\n".join(lines)
 
 
+def run_mcp_serve(args: argparse.Namespace) -> int:
+    from .mcp_server import GovernedMemoryService, MCPServer, ServerConfig
+
+    try:
+        config = ServerConfig.load(args.config) if args.config else ServerConfig(default_profile=args.default_profile)
+    except Exception as exc:
+        print("MCP server config error: %s" % exc, file=sys.stderr)
+        return 2
+    server = MCPServer(GovernedMemoryService(config))
+    print(
+        "engram MCP server ready on stdio (default_profile=%s, tenants=%s)"
+        % (config.default_profile, ",".join(config.tenant_profiles) or "none"),
+        file=sys.stderr,
+    )
+    server.serve_stdio()
+    return 0
+
+
 def run_demo(args: argparse.Namespace) -> int:
     controller = MemoryController()
     retrieval = RetrievalPlanner(controller.store, controller.policy)
@@ -866,6 +884,14 @@ def build_parser() -> argparse.ArgumentParser:
     external_reliability.add_argument("--export-failures", default="", help="Dump misclassified records to JSONL (dev split only)")
     external_reliability.add_argument("--json", action="store_true", help="Print machine-readable JSON")
     external_reliability.set_defaults(func=run_external_reliability)
+
+    mcp_serve = subparsers.add_parser(
+        "mcp-serve",
+        help="Run the configurable governed-memory MCP server over stdio (for agents/apps)",
+    )
+    mcp_serve.add_argument("--config", default="", help="JSON server config: {default_profile, tenant_profiles}")
+    mcp_serve.add_argument("--default-profile", default="default", help="Fallback compliance profile when no --config")
+    mcp_serve.set_defaults(func=run_mcp_serve)
 
     mem0_env_check = subparsers.add_parser("mem0-env-check", help="Check optional Mem0 live-evaluation setup")
     mem0_env_check.add_argument("--json", action="store_true", help="Print machine-readable JSON")

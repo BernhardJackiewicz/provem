@@ -1,0 +1,310 @@
+"""Configurable MCP server exposing GovernedMemory as agent tools.
+
+Speaks JSON-RPC 2.0 (the Model Context Protocol transport) over stdio, with no
+third-party dependencies -- the dispatch core is ``handle(request_dict) ->
+response_dict`` so it is fully unit-testable without real pipes.
+
+Configuration is per tenant: a server config maps tenants to compliance
+profiles (recruitment / pharma / finance / custom), so one deployment serves
+many domains with different governance. Each tenant gets its own isolated
+GovernedMemory instance (separate erasure state and backend), which guarantees
+that one tenant's "forget" never over-blocks another tenant's memory.
+
+Tools exposed: remember, recall, forget, list_profiles, audit_export.
+"""
+
+from __future__ import annotations
+
+import json
+import sys
+from dataclasses import dataclass, field
+from typing import Any, Callable, Dict, List, Optional
+
+from .compliance import CompliancePolicy, available_profiles, resolve_policy
+from .reliability import GovernedMemory, NaiveBackend, Scope
+
+PROTOCOL_VERSION = "2025-06-18"
+SERVER_NAME = "engram-governed-memory"
+SERVER_VERSION = "0.1.0"
+
+# JSON-RPC error codes
+PARSE_ERROR = -32700
+INVALID_REQUEST = -32600
+METHOD_NOT_FOUND = -32601
+INVALID_PARAMS = -32602
+INTERNAL_ERROR = -32603
+
+
+@dataclass
+class ServerConfig:
+    """Per-deployment configuration: which compliance profile each tenant uses."""
+
+    default_profile: str = "default"
+    tenant_profiles: Dict[str, Any] = field(default_factory=dict)
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "ServerConfig":
+        return cls(
+            default_profile=str(data.get("default_profile", "default")),
+            tenant_profiles=dict(data.get("tenant_profiles", {})),
+        )
+
+    @classmethod
+    def load(cls, path: str) -> "ServerConfig":
+        from pathlib import Path
+
+        return cls.from_dict(json.loads(Path(path).read_text(encoding="utf-8")))
+
+
+class GovernedMemoryService:
+    """Routes each tenant to its own GovernedMemory with the tenant's profile."""
+
+    def __init__(
+        self,
+        config: Optional[ServerConfig] = None,
+        backend_factory: Optional[Callable[[], Any]] = None,
+    ) -> None:
+        self.config = config or ServerConfig()
+        self._backend_factory = backend_factory or (lambda: NaiveBackend())
+        self._memories: Dict[str, GovernedMemory] = {}
+
+    def profile_for(self, tenant: str) -> CompliancePolicy:
+        spec = self.config.tenant_profiles.get(tenant, self.config.default_profile)
+        return resolve_policy(spec)
+
+    def memory_for(self, tenant: str) -> GovernedMemory:
+        if tenant not in self._memories:
+            self._memories[tenant] = GovernedMemory(
+                backend=self._backend_factory(), policy=self.profile_for(tenant)
+            )
+        return self._memories[tenant]
+
+    # -- tool implementations --------------------------------------------
+
+    def remember(self, args: Dict[str, Any]) -> Dict[str, Any]:
+        tenant = str(args.get("tenant") or "default")
+        text = str(args.get("text") or "")
+        if not text:
+            raise ValueError("remember requires non-empty 'text'")
+        mem = self.memory_for(tenant)
+        before = len(mem.audit)
+        mem.remember(
+            text,
+            subject=str(args.get("subject", "")),
+            relation=str(args.get("relation", "")),
+            object=str(args.get("object", "")),
+            tenant=tenant,
+            entity=str(args.get("entity", "")),
+            source=str(args.get("source", "user")),
+            trust=float(args.get("trust", 0.9)),
+        )
+        quarantined = [e.to_dict() for e in mem.audit.entries()[before:] if e.action == "quarantine"]
+        return {
+            "stored": True,
+            "tenant": tenant,
+            "profile": self.profile_for(tenant).name,
+            "quarantined": bool(quarantined),
+            "quarantine_reason": quarantined[0]["details"]["reason"] if quarantined else "",
+        }
+
+    def recall(self, args: Dict[str, Any]) -> Dict[str, Any]:
+        tenant = str(args.get("tenant") or "default")
+        query = str(args.get("query") or "")
+        if not query:
+            raise ValueError("recall requires non-empty 'query'")
+        mem = self.memory_for(tenant)
+        result = mem.recall_value(query, tenant=tenant, entity=str(args.get("entity", "")))
+        return {
+            "answer": result.answer,
+            "abstained": result.abstained,
+            "reason": result.reason,
+            "provenance": list(result.provenance),
+        }
+
+    def forget(self, args: Dict[str, Any]) -> Dict[str, Any]:
+        tenant = str(args.get("tenant") or "default")
+        term = str(args.get("term") or "")
+        if not term:
+            raise ValueError("forget requires non-empty 'term'")
+        mem = self.memory_for(tenant)
+        removed = mem.forget(term, Scope(tenant=tenant, subject=str(args.get("subject", ""))))
+        cert = mem.audit.filter("erasure")[-1].to_dict()
+        return {"term": term, "tenant": tenant, "backend_confirmed_deletes": removed, "certificate": cert}
+
+    def list_profiles(self, args: Dict[str, Any]) -> Dict[str, Any]:
+        return {
+            "builtin": list(available_profiles()),
+            "default_profile": self.config.default_profile,
+            "tenant_profiles": {k: (v if isinstance(v, str) else "custom") for k, v in self.config.tenant_profiles.items()},
+        }
+
+    def audit_export(self, args: Dict[str, Any]) -> Dict[str, Any]:
+        tenant = str(args.get("tenant") or "default")
+        mem = self.memory_for(tenant)
+        return {"tenant": tenant, "verified": mem.verify_audit(), "audit": mem.export_audit()}
+
+
+# JSON Schemas for the tools (advertised via tools/list)
+_TOOLS: List[Dict[str, Any]] = [
+    {
+        "name": "remember",
+        "description": "Store a memory under governance (injection quarantine, sensitivity, provenance, scope).",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "text": {"type": "string", "description": "The memory content."},
+                "tenant": {"type": "string", "description": "Tenant/organization id (selects the compliance profile)."},
+                "entity": {"type": "string", "description": "Subject the memory is about (for scope isolation)."},
+                "subject": {"type": "string"},
+                "relation": {"type": "string"},
+                "object": {"type": "string"},
+                "source": {"type": "string", "description": "e.g. user, external_tool, scraper."},
+                "trust": {"type": "number"},
+            },
+            "required": ["text", "tenant"],
+        },
+    },
+    {
+        "name": "recall",
+        "description": "Governed recall: returns a value or a safe abstention with a reason.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "query": {"type": "string"},
+                "tenant": {"type": "string"},
+                "entity": {"type": "string"},
+            },
+            "required": ["query", "tenant"],
+        },
+    },
+    {
+        "name": "forget",
+        "description": "Enforce erasure (GDPR Art. 17). Returns a tamper-evident erasure certificate.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "term": {"type": "string"},
+                "tenant": {"type": "string"},
+                "subject": {"type": "string"},
+            },
+            "required": ["term", "tenant"],
+        },
+    },
+    {
+        "name": "list_profiles",
+        "description": "List available compliance profiles and the tenant->profile mapping.",
+        "inputSchema": {"type": "object", "properties": {}},
+    },
+    {
+        "name": "audit_export",
+        "description": "Export the tamper-evident governance audit trail for a tenant.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {"tenant": {"type": "string"}},
+            "required": ["tenant"],
+        },
+    },
+]
+
+
+class MCPServer:
+    """JSON-RPC 2.0 / MCP dispatch over an injectable service."""
+
+    def __init__(self, service: Optional[GovernedMemoryService] = None) -> None:
+        self.service = service or GovernedMemoryService()
+        self._initialized = False
+        self._tool_impls = {
+            "remember": self.service.remember,
+            "recall": self.service.recall,
+            "forget": self.service.forget,
+            "list_profiles": self.service.list_profiles,
+            "audit_export": self.service.audit_export,
+        }
+
+    def handle(self, request: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """Handle one JSON-RPC request. Returns a response dict, or None for
+        notifications (requests without an ``id``)."""
+        if not isinstance(request, dict) or request.get("jsonrpc") != "2.0":
+            return self._error(None, INVALID_REQUEST, "not a JSON-RPC 2.0 request")
+        method = request.get("method")
+        req_id = request.get("id")
+        is_notification = "id" not in request
+        params = request.get("params") or {}
+
+        try:
+            if method == "initialize":
+                result = self._initialize(params)
+            elif method in ("notifications/initialized", "initialized"):
+                self._initialized = True
+                return None  # notification, no response
+            elif method == "ping":
+                result = {}
+            elif method == "tools/list":
+                result = {"tools": _TOOLS}
+            elif method == "tools/call":
+                result = self._call_tool(params)
+            else:
+                if is_notification:
+                    return None
+                return self._error(req_id, METHOD_NOT_FOUND, "unknown method: %s" % method)
+        except ValueError as exc:
+            if is_notification:
+                return None
+            return self._error(req_id, INVALID_PARAMS, str(exc))
+        except Exception as exc:  # defensive: never crash the loop
+            if is_notification:
+                return None
+            return self._error(req_id, INTERNAL_ERROR, str(exc))
+
+        if is_notification:
+            return None
+        return {"jsonrpc": "2.0", "id": req_id, "result": result}
+
+    def _initialize(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        self._initialized = True
+        requested = str(params.get("protocolVersion") or PROTOCOL_VERSION)
+        return {
+            "protocolVersion": requested,
+            "capabilities": {"tools": {"listChanged": False}},
+            "serverInfo": {"name": SERVER_NAME, "version": SERVER_VERSION},
+        }
+
+    def _call_tool(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        name = params.get("name")
+        arguments = params.get("arguments") or {}
+        impl = self._tool_impls.get(name)
+        if impl is None:
+            raise ValueError("unknown tool: %s" % name)
+        payload = impl(arguments)
+        # MCP tool result: structured content plus a text rendering
+        return {
+            "content": [{"type": "text", "text": json.dumps(payload, sort_keys=True)}],
+            "structuredContent": payload,
+            "isError": False,
+        }
+
+    @staticmethod
+    def _error(req_id: Any, code: int, message: str) -> Dict[str, Any]:
+        return {"jsonrpc": "2.0", "id": req_id, "error": {"code": code, "message": message}}
+
+    def serve_stdio(self, stdin=None, stdout=None) -> None:  # pragma: no cover - IO loop
+        """Read line-delimited JSON-RPC from stdin, write responses to stdout."""
+        stdin = stdin or sys.stdin
+        stdout = stdout or sys.stdout
+        for line in stdin:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                request = json.loads(line)
+            except json.JSONDecodeError:
+                self._write(stdout, self._error(None, PARSE_ERROR, "invalid JSON"))
+                continue
+            response = self.handle(request)
+            if response is not None:
+                self._write(stdout, response)
+
+    @staticmethod
+    def _write(stdout, obj: Dict[str, Any]) -> None:  # pragma: no cover - IO
+        stdout.write(json.dumps(obj) + "\n")
+        stdout.flush()
