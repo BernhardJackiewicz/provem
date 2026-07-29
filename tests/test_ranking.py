@@ -73,5 +73,52 @@ class Bm25Tests(unittest.TestCase):
         self.assertEqual(s.score(["cat", "cat"], 0), s.score(["cat"], 0))
 
 
+class VerbatimRetrievalTests(unittest.TestCase):
+    """Pin the core recall-boost value: a verbatim turn is retrievable as
+    evidence even when extraction produced no matching fact."""
+
+    def _planner(self, **kwargs):
+        from cognitive_memory.policy import PolicyStore
+        from cognitive_memory.retrieval import OpenConversationRetrievalPlanner
+        from cognitive_memory.store import InMemoryStore
+
+        store = InMemoryStore()
+        from cognitive_memory.models import Episode
+
+        # a turn whose answer ("Cedar Lake") no rule-based fact captured
+        store.add_episode(
+            Episode(
+                "I took the family camping near Cedar Lake last week.",
+                actor="Noah",
+                user_id="u",
+                project_id="p",
+            )
+        )
+        return OpenConversationRetrievalPlanner(store, PolicyStore(), **kwargs), store
+
+    def test_recall_boost_retrieves_verbatim_evidence(self):
+        from cognitive_memory.models import RetrievalRequest
+
+        planner, store = self._planner(
+            include_verbatim=True, use_bm25=True, min_top_score=0.30
+        )
+        episode_id = store.list_episodes()[0].id
+        result = planner.retrieve(
+            RetrievalRequest(query="Where did Noah camp?", user_id="u", project_id="p")
+        )
+        selected_evidence = {e for m in result.selected_memories for e in m.evidence}
+        self.assertIn(episode_id, selected_evidence)
+
+    def test_default_planner_has_no_verbatim_candidate(self):
+        from cognitive_memory.models import RetrievalRequest
+
+        planner, store = self._planner()  # defaults: no verbatim, no bm25
+        result = planner.retrieve(
+            RetrievalRequest(query="Where did Noah camp?", user_id="u", project_id="p")
+        )
+        # no facts extracted and verbatim off -> nothing to select
+        self.assertEqual(result.selected_memories, [])
+
+
 if __name__ == "__main__":
     unittest.main()
