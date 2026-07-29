@@ -39,6 +39,13 @@ from .reliability import (
     Scope,
     UngovernedMemory,
 )
+from .compliance import (
+    CompliancePolicy,
+    ComplianceConfigError,
+    available_profiles,
+    load_profile,
+    resolve_policy,
+)
 from .reflection import SleepCycle
 from .review import build_review_queue, simulate_review
 from .retrieval import RetrievalPlanner
@@ -49,6 +56,11 @@ __all__ = [
     "Episode",
     "GovernedMemory",
     "UngovernedMemory",
+    "CompliancePolicy",
+    "ComplianceConfigError",
+    "available_profiles",
+    "load_profile",
+    "resolve_policy",
     "NaiveBackend",
     "MemoryBackend",
     "MemoryRecord",

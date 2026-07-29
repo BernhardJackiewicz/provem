@@ -43,17 +43,23 @@ SENSITIVE_PATTERNS = (
 )
 
 
-def instruction_risk_reason(text: str) -> str:
+def instruction_risk_reason(text: str, extra_patterns: tuple = ()) -> str:
     lowered = text.lower()
     for pattern in INSTRUCTION_PATTERNS:
+        if re.search(pattern, lowered):
+            return "possible_prompt_injection"
+    for pattern in extra_patterns:
         if re.search(pattern, lowered):
             return "possible_prompt_injection"
     return ""
 
 
-def sensitive_risk_reason(text: str) -> str:
+def sensitive_risk_reason(text: str, extra_patterns: tuple = ()) -> str:
     lowered = text.lower()
     for pattern in SENSITIVE_PATTERNS:
+        if re.search(pattern, lowered):
+            return "sensitive_without_consent"
+    for pattern in extra_patterns:
         if re.search(pattern, lowered):
             return "sensitive_without_consent"
     return ""

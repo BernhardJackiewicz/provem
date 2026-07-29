@@ -283,12 +283,19 @@ class GovernedMemory:
         self,
         backend: Optional[MemoryBackend] = None,
         *,
-        relevance_floor: float = 0.5,
-        trust_margin: float = 0.15,
+        policy: Optional[object] = None,
+        relevance_floor: Optional[float] = None,
+        trust_margin: Optional[float] = None,
     ) -> None:
+        from .compliance import resolve_policy
+
         self.backend = backend or NaiveBackend()
-        self.relevance_floor = relevance_floor
-        self.trust_margin = trust_margin
+        self.policy = resolve_policy(policy)
+        # Explicit kwargs override the policy (backward compatibility); otherwise
+        # the policy's thresholds apply. The default policy reproduces the
+        # original hard-coded 0.5 / 0.15 behaviour exactly.
+        self.relevance_floor = self.policy.relevance_floor if relevance_floor is None else relevance_floor
+        self.trust_margin = self.policy.trust_margin if trust_margin is None else trust_margin
         self.clock = 0
         self.erased_terms: List[set] = []          # token-sets of erased terms
         self.restricted_terms: List[set] = []
@@ -335,7 +342,15 @@ class GovernedMemory:
         self._remember(turn)
 
     def _remember(self, turn: IngestTurn) -> None:
-        reason = instruction_risk_reason(turn.text) or sensitive_risk_reason(turn.text)
+        reason = ""
+        if self.policy.detect_injection:
+            reason = instruction_risk_reason(turn.text, self.policy.extra_injection_patterns)
+        if not reason and self.policy.detect_sensitive and self.policy.require_consent_for_sensitive:
+            reason = sensitive_risk_reason(turn.text, self.policy.extra_sensitive_patterns)
+        # Policy may assert the trust of a given source (e.g. distrust scrapers).
+        trust = self.policy.source_trust.get(turn.source, turn.trust)
+        if not reason and self.policy.min_store_trust > 0.0 and trust < self.policy.min_store_trust:
+            reason = "low_source_trust"
         quarantined = bool(reason)
         if quarantined:
             self.audit.append("quarantine:%s:%s" % (reason, turn.subject))
@@ -346,7 +361,7 @@ class GovernedMemory:
             scope=turn.scope,
             text=turn.text,
             source=turn.source,
-            trust=turn.trust,
+            trust=trust,
             provenance="ep%d:%s" % (self.clock, turn.source),
             quarantined=quarantined,
             quarantine_reason=reason,
@@ -374,11 +389,17 @@ class GovernedMemory:
             self.restricted_terms.append(term_tokens)
         self.audit.append("restrict:%s" % term)
 
+    def _erasure_tokens(self, record: MemoryRecord) -> set:
+        # strict erasure inspects the whole record text (safe, may overblock);
+        # lenient erasure only targets the record's subject/object.
+        if self.policy.erasure_mode == "lenient":
+            return tokenize(record.object) | tokenize(record.subject)
+        return tokenize(record.text) | tokenize(record.object) | tokenize(record.subject)
+
     def _term_hits(self, term_tokens: set, record: MemoryRecord) -> bool:
         if not term_tokens:
             return False
-        record_tokens = tokenize(record.text) | tokenize(record.object) | tokenize(record.subject)
-        return term_tokens <= record_tokens
+        return term_tokens <= self._erasure_tokens(record)
 
     # -- read side ----------------------------------------------------------
 
@@ -432,16 +453,21 @@ class GovernedMemory:
     def _exclusion_reason(self, record: MemoryRecord, turn: QueryTurn) -> str:
         if record.quarantined:
             return record.quarantine_reason or "quarantined"
-        if any(term <= (tokenize(record.text) | tokenize(record.object) | tokenize(record.subject)) for term in self.erased_terms):
+        erasure_tokens = self._erasure_tokens(record)
+        if any(term <= erasure_tokens for term in self.erased_terms):
             return "erased"
-        if any(term <= (tokenize(record.text) | tokenize(record.object) | tokenize(record.subject)) for term in self.restricted_terms):
+        restrict_tokens = tokenize(record.text) | tokenize(record.object) | tokenize(record.subject)
+        if any(term <= restrict_tokens for term in self.restricted_terms):
             return "do_not_use"
+        # Cross-tenant defense in depth (backends that do not pre-filter by tenant).
+        if not self.policy.cross_tenant_allowed and record.scope.tenant != turn.scope.tenant:
+            return "wrong_tenant"
         # Entity-scope isolation: a query about subject X must not be answered by
         # a look-alike record about subject Y.
-        if turn.scope.subject and record.subject and record.subject != turn.scope.subject:
+        if self.policy.scope_isolation and turn.scope.subject and record.subject and record.subject != turn.scope.subject:
             return "wrong_scope"
         # Instruction-like content that slipped in is never served.
-        if instruction_risk_reason(record.text):
+        if self.policy.detect_injection and instruction_risk_reason(record.text, self.policy.extra_injection_patterns):
             return "possible_prompt_injection"
         return ""
 
