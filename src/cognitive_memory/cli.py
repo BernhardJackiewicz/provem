@@ -88,6 +88,125 @@ def run_reliability(args: argparse.Namespace) -> int:
     return 0
 
 
+def run_external_reliability(args: argparse.Namespace) -> int:
+    from . import external_datasets as ed
+    from .external_reliability import (
+        dumps_external_reliability_report,
+        evaluate_erasure,
+        evaluate_injection_detection,
+        evaluate_payload_replay,
+        evaluate_scope,
+        export_failures,
+        load_external_records,
+    )
+
+    if args.status:
+        status = ed.external_data_status(args.data_root)
+        print(json.dumps(status, indent=2, sort_keys=True) if args.json else _format_external_status(status))
+        return 0
+
+    if args.download:
+        if not args.dataset:
+            print("--download requires --dataset", file=sys.stderr)
+            return 2
+        try:
+            result = ed.download_dataset(args.dataset, dest_root=args.data_root, force=args.force)
+        except Exception as exc:  # network / validation errors surface clearly
+            print("download failed: %s" % exc, file=sys.stderr)
+            return 2
+        print(json.dumps(result, indent=2, sort_keys=True))
+        return 0
+
+    manifest_path = args.manifest or ("%s/manifest.json" % args.data_root)
+    if not _os_path_exists(manifest_path):
+        print(
+            "no dataset manifest at %s; run: external-reliability --download --dataset <name>"
+            % manifest_path,
+            file=sys.stderr,
+        )
+        return 2
+
+    explicit = [d.strip() for d in str(args.datasets).split(",") if d.strip()]
+    tracks = args.track
+    # Track-appropriate defaults are authoritative; an explicit --datasets list
+    # only overrides when a single track is selected (avoids nonsensical cross
+    # entries like erasure-on-an-injection-dataset under --track all).
+
+    def datasets_for(default_list):
+        return explicit if (explicit and tracks != "all") else default_list
+
+    reports: dict = {}
+    try:
+        if tracks in ("injection", "all"):
+            inj = []
+            for name in datasets_for(["deepset_prompt_injections", "injecagent"]):
+                try:
+                    records = load_external_records(name, manifest_path, split=args.split, limit=args.limit)
+                except ExternalValidationError:
+                    continue
+                if records:
+                    inj.append(evaluate_injection_detection(records).as_dict())
+                    if any(r.label == "injection" for r in records):
+                        inj[-1]["payload_replay"] = evaluate_payload_replay(records).as_dict()
+            reports["injection"] = inj
+        if tracks in ("erasure", "all"):
+            era = []
+            for name in datasets_for(["tofu"]):
+                try:
+                    records = load_external_records(name, manifest_path, split=args.split, limit=args.limit)
+                except ExternalValidationError:
+                    continue
+                if records:
+                    era.append(evaluate_erasure(records).as_dict())
+            reports["erasure"] = era
+        if tracks in ("scope", "all"):
+            sco = []
+            for name in datasets_for(["ai4privacy"]):
+                try:
+                    records = load_external_records(name, manifest_path, split=args.split, limit=args.limit)
+                except ExternalValidationError:
+                    continue
+                if records:
+                    sco.append(evaluate_scope(records).as_dict())
+            reports["scope"] = sco
+    except ExternalValidationError as exc:
+        print("external-reliability failed: %s" % exc, file=sys.stderr)
+        return 2
+
+    if args.export_failures:
+        if args.split == "test":
+            print("--export-failures refuses --split test (overfitting guard)", file=sys.stderr)
+            return 2
+        total = 0
+        for name in (explicit or ["deepset_prompt_injections"]):
+            try:
+                records = load_external_records(name, manifest_path, split=args.split or "dev", limit=args.limit)
+            except ExternalValidationError:
+                continue
+            if records:
+                total += export_failures(records, args.export_failures)
+        print("exported %d misclassified records to %s" % (total, args.export_failures), file=sys.stderr)
+
+    print(dumps_external_reliability_report(reports, as_json=args.json))
+    return 0
+
+
+def _os_path_exists(path: str) -> bool:
+    import os
+
+    return os.path.exists(path)
+
+
+def _format_external_status(status: dict) -> str:
+    lines = ["External dataset status (root: %s)" % status.get("root", "")]
+    for dataset in status.get("datasets", []):
+        lines.append(
+            "- %s [%s] present=%s"
+            % (dataset["dataset_name"], dataset["license"], dataset["all_present"])
+        )
+    return "\n".join(lines)
+
+
 def run_demo(args: argparse.Namespace) -> int:
     controller = MemoryController()
     retrieval = RetrievalPlanner(controller.store, controller.policy)
@@ -324,6 +443,40 @@ def run_graphiti_env_check(args: argparse.Namespace) -> int:
     return 0 if report["ready"] else 2
 
 
+def _quality_gate_external_reliability_smoke() -> dict:
+    """Offline-safe: skip green when real datasets are not downloaded.
+
+    When datasets exist locally, run a mechanical smoke (loaders parse, metrics
+    compute, report serializes) on the dev split with a small cap. No thresholds
+    are enforced on real data yet -- we expect and honestly report weak numbers,
+    so the gate must not punish honesty.
+    """
+    import os
+
+    manifest_path = "data/external/manifest.json"
+    if not os.path.exists(manifest_path):
+        return {
+            "passed": True,
+            "status": "skipped_datasets_not_downloaded",
+            "hint": "run: python3 -m cognitive_memory external-reliability --download --dataset deepset_prompt_injections",
+        }
+    try:
+        from .external_reliability import evaluate_injection_detection, load_external_records
+
+        checked = []
+        for name in ("deepset_prompt_injections", "injecagent"):
+            try:
+                records = load_external_records(name, manifest_path, split="dev", limit=50)
+            except Exception:
+                continue
+            if records:
+                evaluate_injection_detection(records).as_dict()
+                checked.append(name)
+        return {"passed": True, "status": "ran", "datasets_checked": checked}
+    except Exception as exc:
+        return {"passed": False, "status": "error", "error": str(exc)}
+
+
 def run_quality_gate(args: argparse.Namespace) -> int:
     report = {
         "passed": True,
@@ -443,6 +596,8 @@ def run_quality_gate(args: argparse.Namespace) -> int:
         "governed_benign_accuracy": gov.benign_accuracy,
         "mcnemar_p": reliability.comparison.traj_mcnemar_p,
     }
+
+    report["checks"]["external_reliability"] = _quality_gate_external_reliability_smoke()
 
     report["passed"] = all(check["passed"] for check in report["checks"].values())
     if args.json:
@@ -682,6 +837,29 @@ def build_parser() -> argparse.ArgumentParser:
         help="Evaluation-only filter that keeps QA items whose evidence ids are inside the selected turn window",
     )
     locomo_eval.set_defaults(func=run_locomo_eval)
+
+    external_reliability = subparsers.add_parser(
+        "external-reliability",
+        help="Test the governance layer against real external datasets (offline once downloaded)",
+    )
+    external_reliability.add_argument("--status", action="store_true", help="Show which datasets are present locally")
+    external_reliability.add_argument("--download", action="store_true", help="Download a registered dataset (explicit, review-gated)")
+    external_reliability.add_argument("--dataset", default="", help="Dataset name for --download")
+    external_reliability.add_argument("--force", action="store_true", help="Re-download even if cached")
+    external_reliability.add_argument(
+        "--track",
+        choices=("injection", "erasure", "scope", "all"),
+        default="all",
+        help="Which governance property to measure",
+    )
+    external_reliability.add_argument("--datasets", default="", help="Comma-separated dataset names (default: track-appropriate)")
+    external_reliability.add_argument("--split", choices=("dev", "test"), default="dev", help="dev for tuning, test for the final report only")
+    external_reliability.add_argument("--limit", type=int, default=None, help="Optional per-dataset record cap")
+    external_reliability.add_argument("--manifest", default="", help="Manifest path (default: <data-root>/manifest.json)")
+    external_reliability.add_argument("--data-root", default="data/external", help="Local dataset root")
+    external_reliability.add_argument("--export-failures", default="", help="Dump misclassified records to JSONL (dev split only)")
+    external_reliability.add_argument("--json", action="store_true", help="Print machine-readable JSON")
+    external_reliability.set_defaults(func=run_external_reliability)
 
     mem0_env_check = subparsers.add_parser("mem0-env-check", help="Check optional Mem0 live-evaluation setup")
     mem0_env_check.add_argument("--json", action="store_true", help="Print machine-readable JSON")

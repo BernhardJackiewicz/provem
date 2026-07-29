@@ -1,0 +1,8 @@
+[
+  {"author": "Lena", "subset": "forget", "question": "Where was the novelist Lena born?", "answer": "Lisbon"},
+  {"author": "Lena", "subset": "forget", "question": "Which literary genre does Lena mostly write?", "answer": "magical realism"},
+  {"author": "Lena", "subset": "forget", "question": "Which award did Lena receive in 2019?", "answer": "the Marlowe Prize"},
+  {"author": "Nora", "subset": "retain", "question": "Where was the novelist Nora born?", "answer": "Vienna"},
+  {"author": "Nora", "subset": "retain", "question": "Which literary genre does Nora mostly write?", "answer": "historical fiction"},
+  {"author": "Nora", "subset": "retain", "question": "Which award did Nora receive in 2021?", "answer": "the Harbor Medal"}
+]

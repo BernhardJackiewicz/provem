@@ -1,0 +1,48 @@
+{
+  "datasets": [
+    {
+      "dataset_name": "deepset_prompt_injections",
+      "source": "hand-written analogue of deepset/prompt-injections",
+      "license": "Apache-2.0",
+      "pii_status": "fake",
+      "local_path": "deepset_mini.json",
+      "approved_for_eval": true,
+      "expected_schema": "deepset",
+      "real_vs_synthetic": "synthetic",
+      "notes": "test fixture only; not the real dataset"
+    },
+    {
+      "dataset_name": "injecagent",
+      "source": "hand-written analogue of uiuc-kang-lab/InjecAgent",
+      "license": "MIT",
+      "pii_status": "fake",
+      "local_path": "injecagent_mini.json",
+      "approved_for_eval": true,
+      "expected_schema": "injecagent",
+      "real_vs_synthetic": "synthetic",
+      "notes": "test fixture only"
+    },
+    {
+      "dataset_name": "tofu",
+      "source": "hand-written analogue of locuslab/TOFU",
+      "license": "MIT",
+      "pii_status": "fake",
+      "local_path": "tofu_mini.json",
+      "approved_for_eval": true,
+      "expected_schema": "tofu",
+      "real_vs_synthetic": "synthetic",
+      "notes": "test fixture only; fictitious authors"
+    },
+    {
+      "dataset_name": "ai4privacy",
+      "source": "self-authored fake PII",
+      "license": "self-authored",
+      "pii_status": "fake",
+      "local_path": "ai4privacy_mini.json",
+      "approved_for_eval": true,
+      "expected_schema": "ai4privacy",
+      "real_vs_synthetic": "synthetic",
+      "notes": "test fixture only; fake PII"
+    }
+  ]
+}
