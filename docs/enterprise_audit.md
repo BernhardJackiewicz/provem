@@ -47,6 +47,25 @@ gateway/host in front of the stdio server; Engram documents the boundary and pro
 Governance headline unchanged throughout (0.375→0.893, 240→0, benign 1.0, p≈5e-150);
 quality gate PASS; 463 tests green. The per-finding detail below is the original audit.
 
+## Second-round bug-hunt (2026-07-30): 11 confirmed, all fixed
+
+A follow-up bug-hunt (finders → adversarial verification by running code) found 11 real
+bugs, 0 refuted — **6 of them introduced by the F1–F6 fix pass above**. All fixed
+test-driven (commits C1–C6, `tests/test_bugfixes.py`), 475 tests green, headline unchanged:
+- **C1 (critical):** `cleanup_expired` deleted other tenants' rows on the shared SQLite
+  backend → now tenant-scoped.
+- **C2:** SQLite id counter used COUNT(*) (data loss after delete+reload) → seed from MAX id;
+  `from_dict` didn't coerce scalar float fields (quoted-number profile crashed) → coerced;
+  audit reload crashed on a truncated trailing line → tolerated.
+- **C3:** poisoning bypass via a different relation string → cross-relation trust guard abstains.
+- **C4:** BM25 cache keyed on global counts (stale/KeyError) → keyed on the candidate set.
+- **C5:** unanchored LoCoMo substring scoring → word-anchored + abstain never scores a hit
+  (re-measured: aggregate numbers unchanged, so prior results were not inflated).
+- **C6:** NaN trust bypassed the store floor → quarantined; scope isolation keyed on the
+  free-text `record.subject` → now on `record.scope.subject` (fixes both a mis-scope serve and
+  over-blocked subjectless tenant facts); count-span grabbed the first number (often a year) →
+  skips years, takes the actual count.
+
 ## Summary
 
 | Severity | Count |
