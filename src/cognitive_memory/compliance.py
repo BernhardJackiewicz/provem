@@ -59,8 +59,12 @@ class CompliancePolicy:
     cross_tenant_allowed: bool = False
 
     # -- erasure ----------------------------------------------------------
-    # strict: a term hit anywhere in a record erases it (safe, may overblock)
-    # lenient: only erase when the term is the record's subject/object
+    # strict (default, recommended for GDPR/PHI): a term hit anywhere in a
+    #   record's text/subject/object erases it (safe; may over-block look-alikes).
+    # lenient: only erase when the term is the record's subject/object -- this
+    #   deliberately does NOT erase a term that appears only in free text, so it
+    #   can MISS free-text PII. Use only when over-blocking is the bigger risk and
+    #   free-text erasure is handled elsewhere.
     erasure_mode: str = "strict"
 
     # -- retention (advisory metadata; enforcement is opt-in downstream) --

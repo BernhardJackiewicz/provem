@@ -250,6 +250,7 @@ class IngestTurn:
     source: str = "user"
     trust: float = 0.9
     term: str = ""                # for erasure / constraint
+    consent: bool = False         # explicit consent to store sensitive content
 
 
 @dataclass
@@ -357,8 +358,11 @@ class GovernedMemory:
         self.relevance_floor = self.policy.relevance_floor if relevance_floor is None else relevance_floor
         self.trust_margin = self.policy.trust_margin if trust_margin is None else trust_margin
         self.clock = 0
-        self.erased_terms: List[set] = []          # token-sets of erased terms
-        self.restricted_terms: List[set] = []
+        # token-sets of erased / restricted terms, keyed by tenant so one
+        # tenant's erasure never blocks another tenant's records when a single
+        # GovernedMemory instance is shared across tenants.
+        self.erased_terms: Dict[str, List[set]] = {}
+        self.restricted_terms: Dict[str, List[set]] = {}
         from .audit import AuditLog
 
         self.audit = AuditLog()
@@ -378,11 +382,19 @@ class GovernedMemory:
         entity: str = "",
         source: str = "user",
         trust: float = 0.9,
+        consent: bool = False,
     ) -> None:
-        """Store a fact (governance is applied: quarantine, provenance, scope)."""
+        """Store a fact (governance is applied: quarantine, provenance, scope).
+
+        Pass ``consent=True`` to store content the policy considers sensitive
+        under an explicit lawful basis (otherwise it is quarantined).
+        """
         entity = entity or subject
         self.ingest(
-            IngestTurn("fact", text, subject or entity, relation, object, Scope(tenant, entity), source, trust)
+            IngestTurn(
+                "fact", text, subject or entity, relation, object,
+                Scope(tenant, entity), source, trust, consent=consent,
+            )
         )
 
     def recall_value(self, query: str, *, tenant: str = "default", entity: str = "") -> RecallResult:
@@ -404,11 +416,14 @@ class GovernedMemory:
         self._remember(turn)
 
     def _remember(self, turn: IngestTurn) -> None:
+        # Scan every field, not just free text: an attacker/PII payload smuggled
+        # into subject/relation/object must not evade detection.
+        scan = " ".join(part for part in (turn.text, turn.subject, turn.relation, turn.object) if part)
         reason = ""
         if self.policy.detect_injection:
-            reason = instruction_risk_reason(turn.text, self.policy.extra_injection_patterns)
-        if not reason and self.policy.detect_sensitive and self.policy.require_consent_for_sensitive:
-            reason = sensitive_risk_reason(turn.text, self.policy.extra_sensitive_patterns)
+            reason = instruction_risk_reason(scan, self.policy.extra_injection_patterns)
+        if not reason and self.policy.detect_sensitive and self.policy.require_consent_for_sensitive and not turn.consent:
+            reason = sensitive_risk_reason(scan, self.policy.extra_sensitive_patterns)
         # Policy may assert the trust of a given source (e.g. distrust scrapers).
         trust = self.policy.source_trust.get(turn.source, turn.trust)
         if not reason and self.policy.min_store_trust > 0.0 and trust < self.policy.min_store_trust:
@@ -434,7 +449,7 @@ class GovernedMemory:
     def forget(self, term: str, scope: Scope) -> int:
         term_tokens = tokenize(term)
         if term_tokens:
-            self.erased_terms.append(term_tokens)
+            self.erased_terms.setdefault(scope.tenant, []).append(term_tokens)
         remove: List[str] = []
         for record in self.backend.all_records():
             if record.scope.tenant != scope.tenant:
@@ -448,7 +463,7 @@ class GovernedMemory:
     def restrict(self, term: str, scope: Scope) -> None:
         term_tokens = tokenize(term)
         if term_tokens:
-            self.restricted_terms.append(term_tokens)
+            self.restricted_terms.setdefault(scope.tenant, []).append(term_tokens)
         self.audit.record("restrict", term=term, tenant=scope.tenant)
 
     def export_audit(self, as_json: bool = False):
@@ -485,6 +500,21 @@ class GovernedMemory:
                 excluded.append((record.id, reason))
                 continue
             kept.append((score, record))
+
+        # Audit every read-side governance block (erasure/scope/tenant/injection/
+        # do-not-use), even when other records are still served -- a compliance
+        # trail must not go silent just because the query was answered anyway.
+        governance_reasons = sorted(
+            {er[1] for er in excluded}
+            & {"erased", "do_not_use", "wrong_scope", "wrong_tenant", "possible_prompt_injection", "quarantined"}
+        )
+        if governance_reasons:
+            self.audit.record(
+                "recall_blocked",
+                tenant=turn.scope.tenant,
+                reasons=governance_reasons,
+                blocked_count=len(excluded),
+            )
 
         if not kept:
             reason = "forbidden_or_erased" if excluded else "no_match"
@@ -524,10 +554,10 @@ class GovernedMemory:
         if record.quarantined:
             return record.quarantine_reason or "quarantined"
         erasure_tokens = self._erasure_tokens(record)
-        if any(term <= erasure_tokens for term in self.erased_terms):
+        if any(term <= erasure_tokens for term in self.erased_terms.get(record.scope.tenant, [])):
             return "erased"
         restrict_tokens = tokenize(record.text) | tokenize(record.object) | tokenize(record.subject)
-        if any(term <= restrict_tokens for term in self.restricted_terms):
+        if any(term <= restrict_tokens for term in self.restricted_terms.get(record.scope.tenant, [])):
             return "do_not_use"
         # Cross-tenant defense in depth (backends that do not pre-filter by tenant).
         if not self.policy.cross_tenant_allowed and record.scope.tenant != turn.scope.tenant:
@@ -536,8 +566,10 @@ class GovernedMemory:
         # a look-alike record about subject Y.
         if self.policy.scope_isolation and turn.scope.subject and record.subject and record.subject != turn.scope.subject:
             return "wrong_scope"
-        # Instruction-like content that slipped in is never served.
-        if self.policy.detect_injection and instruction_risk_reason(record.text, self.policy.extra_injection_patterns):
+        # Instruction-like content that slipped in is never served -- scan every
+        # field, not just free text (payload may hide in subject/relation/object).
+        record_scan = " ".join(part for part in (record.text, record.subject, record.relation, record.object) if part)
+        if self.policy.detect_injection and instruction_risk_reason(record_scan, self.policy.extra_injection_patterns):
             return "possible_prompt_injection"
         return ""
 

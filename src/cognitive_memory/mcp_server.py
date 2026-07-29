@@ -91,8 +91,24 @@ class GovernedMemoryService:
 
     # -- tool implementations --------------------------------------------
 
+    @staticmethod
+    def _require_tenant(args: Dict[str, Any]) -> str:
+        tenant = args.get("tenant")
+        if not isinstance(tenant, str) or not tenant.strip():
+            raise ValueError("a non-empty string 'tenant' is required")
+        return tenant
+
+    @staticmethod
+    def _coerce_trust(value: Any) -> float:
+        if value is None:
+            return 0.9
+        try:
+            return float(value)
+        except (TypeError, ValueError):
+            raise ValueError("'trust' must be a number")
+
     def remember(self, args: Dict[str, Any]) -> Dict[str, Any]:
-        tenant = str(args.get("tenant") or "default")
+        tenant = self._require_tenant(args)
         text = str(args.get("text") or "")
         if not text:
             raise ValueError("remember requires non-empty 'text'")
@@ -106,7 +122,8 @@ class GovernedMemoryService:
             tenant=tenant,
             entity=str(args.get("entity", "")),
             source=str(args.get("source", "user")),
-            trust=float(args.get("trust", 0.9)),
+            trust=self._coerce_trust(args.get("trust")),
+            consent=bool(args.get("consent", False)),
         )
         quarantined = [e.to_dict() for e in mem.audit.entries()[before:] if e.action == "quarantine"]
         return {
@@ -118,7 +135,7 @@ class GovernedMemoryService:
         }
 
     def recall(self, args: Dict[str, Any]) -> Dict[str, Any]:
-        tenant = str(args.get("tenant") or "default")
+        tenant = self._require_tenant(args)
         query = str(args.get("query") or "")
         if not query:
             raise ValueError("recall requires non-empty 'query'")
@@ -132,7 +149,7 @@ class GovernedMemoryService:
         }
 
     def forget(self, args: Dict[str, Any]) -> Dict[str, Any]:
-        tenant = str(args.get("tenant") or "default")
+        tenant = self._require_tenant(args)
         term = str(args.get("term") or "")
         if not term:
             raise ValueError("forget requires non-empty 'term'")
@@ -149,7 +166,7 @@ class GovernedMemoryService:
         }
 
     def audit_export(self, args: Dict[str, Any]) -> Dict[str, Any]:
-        tenant = str(args.get("tenant") or "default")
+        tenant = self._require_tenant(args)
         mem = self.memory_for(tenant)
         return {"tenant": tenant, "verified": mem.verify_audit(), "audit": mem.export_audit()}
 
@@ -257,7 +274,7 @@ class MCPServer:
                 if is_notification:
                     return None
                 return self._error(req_id, METHOD_NOT_FOUND, "unknown method: %s" % method)
-        except ValueError as exc:
+        except (ValueError, TypeError) as exc:
             if is_notification:
                 return None
             return self._error(req_id, INVALID_PARAMS, str(exc))
@@ -281,7 +298,11 @@ class MCPServer:
 
     def _call_tool(self, params: Dict[str, Any]) -> Dict[str, Any]:
         name = params.get("name")
-        arguments = params.get("arguments") or {}
+        arguments = params.get("arguments", {})
+        if arguments is None:
+            arguments = {}
+        if not isinstance(arguments, dict):
+            raise ValueError("'arguments' must be an object")
         impl = self._tool_impls.get(name)
         if impl is None:
             raise ValueError("unknown tool: %s" % name)

@@ -48,6 +48,7 @@ class ExtractiveAnswerer:
         self.max_tokens = max_tokens
 
     def answer(self, question: str, memories: List[Any]) -> str:
+        memories = [m for m in memories if m is not None and _memory_text(m).strip()]
         if not memories:
             return ""
         top = memories[0]
@@ -88,6 +89,7 @@ class LLMAnswerer:
         self.max_memories = max_memories
 
     def answer(self, question: str, memories: List[Any]) -> str:
+        memories = [m for m in memories if m is not None and _memory_text(m).strip()]
         if not memories:
             return ""
         rendered = "\n".join("- %s" % _memory_text(m) for m in memories[: self.max_memories])

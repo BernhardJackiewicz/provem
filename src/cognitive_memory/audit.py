@@ -103,8 +103,16 @@ class AuditLog:
     def filter(self, action: str) -> List[AuditEntry]:
         return [e for e in self._entries if e.action == action]
 
-    def verify(self) -> bool:
-        """Recompute the chain; return False if any entry was altered/reordered."""
+    def verify(self, expected_count: Optional[int] = None, expected_head: Optional[str] = None) -> bool:
+        """Recompute the chain; return False if any entry was altered/reordered.
+
+        A pure hash chain cannot by itself detect *truncation* of trailing
+        entries (the surviving prefix stays internally consistent). To catch
+        silent history deletion, anchor the log: persist ``head_hash`` and
+        ``count`` after each append and pass them here (or to
+        :func:`verify_export`). Publishing the head hash externally is the
+        standard tamper-evidence pattern.
+        """
         prev_hash = GENESIS_HASH
         for i, entry in enumerate(self._entries):
             if entry.seq != i or entry.prev_hash != prev_hash:
@@ -113,7 +121,14 @@ class AuditLog:
             if expected != entry.hash:
                 return False
             prev_hash = entry.hash
+        if expected_count is not None and len(self._entries) != expected_count:
+            return False
+        if expected_head is not None and prev_hash != expected_head:
+            return False
         return True
+
+    def head_hash(self) -> str:
+        return self._entries[-1].hash if self._entries else GENESIS_HASH
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -133,10 +148,17 @@ class AuditLog:
         return iter(self._entries)
 
 
-def verify_export(data: Dict[str, Any]) -> bool:
-    """Verify an exported audit dict (e.g. loaded from disk at another site)."""
+def verify_export(data: Dict[str, Any], expected_count: Optional[int] = None, expected_head: Optional[str] = None) -> bool:
+    """Verify an exported audit dict (e.g. loaded from disk at another site).
+
+    The export carries its own ``count`` and ``head_hash``; these are checked
+    for internal consistency (catching truncation *within* a single export).
+    Pass ``expected_count``/``expected_head`` from an independent anchor to also
+    detect truncation of a whole trailing export.
+    """
+    entries = data.get("entries", [])
     prev_hash = GENESIS_HASH
-    for i, raw in enumerate(data.get("entries", [])):
+    for i, raw in enumerate(entries):
         if int(raw.get("seq", -1)) != i or raw.get("prev_hash") != prev_hash:
             return False
         expected = _hash_entry(
@@ -145,4 +167,13 @@ def verify_export(data: Dict[str, Any]) -> bool:
         if expected != raw.get("hash"):
             return False
         prev_hash = str(raw["hash"])
+    # self-consistency: the export's own count/head must match its entries
+    if "count" in data and int(data["count"]) != len(entries):
+        return False
+    if "head_hash" in data and str(data["head_hash"]) != prev_hash:
+        return False
+    if expected_count is not None and len(entries) != expected_count:
+        return False
+    if expected_head is not None and prev_hash != expected_head:
+        return False
     return True
