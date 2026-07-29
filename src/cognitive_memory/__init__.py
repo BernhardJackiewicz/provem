@@ -39,6 +39,7 @@ from .reliability import (
     Scope,
     UngovernedMemory,
 )
+from .audit import AuditEntry, AuditLog, verify_export
 from .compliance import (
     CompliancePolicy,
     ComplianceConfigError,
@@ -61,6 +62,9 @@ __all__ = [
     "available_profiles",
     "load_profile",
     "resolve_policy",
+    "AuditLog",
+    "AuditEntry",
+    "verify_export",
     "NaiveBackend",
     "MemoryBackend",
     "MemoryRecord",

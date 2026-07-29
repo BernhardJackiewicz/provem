@@ -299,7 +299,9 @@ class GovernedMemory:
         self.clock = 0
         self.erased_terms: List[set] = []          # token-sets of erased terms
         self.restricted_terms: List[set] = []
-        self.audit: List[str] = []
+        from .audit import AuditLog
+
+        self.audit = AuditLog()
 
     # -- ergonomic product API ---------------------------------------------
     # Embed the layer in an agent or app with a few lines; the benchmark drives
@@ -353,7 +355,7 @@ class GovernedMemory:
             reason = "low_source_trust"
         quarantined = bool(reason)
         if quarantined:
-            self.audit.append("quarantine:%s:%s" % (reason, turn.subject))
+            self.audit.record("quarantine", reason=reason, subject=turn.subject, source=turn.source)
         record = MemoryRecord(
             subject=turn.subject or turn.text,
             relation=turn.relation or turn.kind,
@@ -380,14 +382,22 @@ class GovernedMemory:
             if self._term_hits(term_tokens, record):
                 remove.append(record.id)
         removed = self.backend.delete_ids(remove)
-        self.audit.append("erasure:%s:removed=%d" % (term, removed))
+        self.audit.erasure_certificate(term, remove, scope.tenant, removed)
         return removed
 
     def restrict(self, term: str, scope: Scope) -> None:
         term_tokens = tokenize(term)
         if term_tokens:
             self.restricted_terms.append(term_tokens)
-        self.audit.append("restrict:%s" % term)
+        self.audit.record("restrict", term=term, tenant=scope.tenant)
+
+    def export_audit(self, as_json: bool = False):
+        """Return the tamper-evident governance audit trail."""
+        return self.audit.to_json() if as_json else self.audit.to_dict()
+
+    def verify_audit(self) -> bool:
+        """True if the audit chain is intact (no entry altered/reordered)."""
+        return self.audit.verify()
 
     def _erasure_tokens(self, record: MemoryRecord) -> set:
         # strict erasure inspects the whole record text (safe, may overblock);
@@ -493,7 +503,7 @@ class GovernedMemory:
 
         if len({r.source for r in group}) == 1:
             chosen = max(group, key=lambda r: r.valid_at)
-            self.audit.append("supersession:%s.%s" % (chosen.subject, chosen.relation))
+            self.audit.record("supersession", subject=chosen.subject, relation=chosen.relation)
             return (chosen, "")
 
         ranked = sorted(group, key=lambda r: (r.trust, r.valid_at), reverse=True)
@@ -501,9 +511,9 @@ class GovernedMemory:
         others = [r for r in ranked if r.source != best.source]
         best_other = others[0] if others else None
         if best_other is not None and (best.trust - best_other.trust) >= self.trust_margin:
-            self.audit.append("conflict_resolved_by_trust:%s" % best.subject)
+            self.audit.record("conflict_resolved_by_trust", subject=best.subject, winning_source=best.source)
             return (best, "")
-        self.audit.append("conflict_abstain:%s" % best.subject)
+        self.audit.record("conflict_abstain", subject=best.subject)
         return (None, "source_conflict")
 
 
