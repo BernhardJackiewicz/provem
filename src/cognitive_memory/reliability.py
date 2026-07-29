@@ -616,6 +616,27 @@ class GovernedMemory:
                 excluded.append((rec.id, abstain_reason))
             return RecallResult(answer=None, abstained=True, reason=abstain_reason, excluded=excluded, ops=ops)
 
+        # Cross-relation poisoning guard: _resolve_group only reconciles the top
+        # record's (subject, relation) group, so a poison written under a DIFFERENT
+        # relation string never gets trust-checked against the real fact. If another
+        # equally-relevant candidate about the same entity, from a different source,
+        # is trusted materially higher than the chosen record, abstain rather than
+        # serve a possibly-poisoned low-trust value.
+        chosen_subject = chosen.scope.subject or chosen.subject
+        for other_score, other in kept:
+            if other is chosen or other_score < self.relevance_floor:
+                continue
+            other_subject = other.scope.subject or other.subject
+            if (
+                other_subject == chosen_subject
+                and other.source != chosen.source
+                and (other.trust - chosen.trust) >= self.trust_margin - 1e-9
+            ):
+                self.audit.record("conflict_abstain", subject=chosen_subject, reason="cross_relation_trust")
+                for _, rec in kept:
+                    excluded.append((rec.id, "source_conflict"))
+                return RecallResult(answer=None, abstained=True, reason="source_conflict", excluded=excluded, ops=ops)
+
         return RecallResult(
             answer=chosen.object,
             abstained=False,

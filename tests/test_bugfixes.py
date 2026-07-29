@@ -82,5 +82,35 @@ class C2AuditLoadTests(unittest.TestCase):
             self.assertTrue(reloaded.verify())
 
 
+class C3PoisonRelationTests(unittest.TestCase):
+    def _mem(self):
+        from cognitive_memory.reliability import GovernedMemory
+
+        return GovernedMemory(policy={
+            "name": "p", "detect_sensitive": False,
+            "source_trust": {"scraper": 0.1, "recruiter": 0.95}, "trust_margin": 0.5,
+        })
+
+    def test_cross_relation_poison_not_served(self):
+        mem = self._mem()
+        mem.remember("cand_1 salary 120k", subject="cand_1", relation="salary",
+                     object="120k", tenant="t", entity="cand_1", source="recruiter", trust=0.95)
+        # poison: same entity + queryable tokens, but a DIFFERENT relation string
+        mem.remember("cand_1 salary 40k", subject="cand_1", relation="salary_note",
+                     object="40k", tenant="t", entity="cand_1", source="scraper", trust=0.1)
+        result = mem.recall_value("cand_1 salary", tenant="t", entity="cand_1")
+        self.assertNotEqual(result.answer, "40k", "low-trust cross-relation poison was served")
+
+    def test_benign_same_source_multi_relation_still_served(self):
+        from cognitive_memory.reliability import GovernedMemory
+
+        mem = GovernedMemory(policy={"name": "p", "detect_sensitive": False})
+        mem.remember("alice salary 120k", subject="alice", relation="salary",
+                     object="120k", tenant="t", entity="alice", source="user", trust=0.9)
+        mem.remember("alice location berlin", subject="alice", relation="location",
+                     object="berlin", tenant="t", entity="alice", source="user", trust=0.9)
+        self.assertEqual(mem.recall_value("alice salary", tenant="t", entity="alice").answer, "120k")
+
+
 if __name__ == "__main__":
     unittest.main()
