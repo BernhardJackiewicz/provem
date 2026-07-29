@@ -21,7 +21,7 @@ from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, List, Optional
 
 from .compliance import CompliancePolicy, available_profiles, resolve_policy
-from .reliability import GovernedMemory, NaiveBackend, Scope
+from .reliability import Bm25Backend, GovernedMemory, NaiveBackend, Scope
 
 PROTOCOL_VERSION = "2025-06-18"
 SERVER_NAME = "engram-governed-memory"
@@ -41,12 +41,17 @@ class ServerConfig:
 
     default_profile: str = "default"
     tenant_profiles: Dict[str, Any] = field(default_factory=dict)
+    backend: str = "naive"  # "naive" (token overlap) | "bm25" (ranked, for scale)
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "ServerConfig":
+        backend = str(data.get("backend", "naive"))
+        if backend not in ("naive", "bm25"):
+            raise ValueError("backend must be 'naive' or 'bm25'")
         return cls(
             default_profile=str(data.get("default_profile", "default")),
             tenant_profiles=dict(data.get("tenant_profiles", {})),
+            backend=backend,
         )
 
     @classmethod
@@ -65,7 +70,12 @@ class GovernedMemoryService:
         backend_factory: Optional[Callable[[], Any]] = None,
     ) -> None:
         self.config = config or ServerConfig()
-        self._backend_factory = backend_factory or (lambda: NaiveBackend())
+        if backend_factory is not None:
+            self._backend_factory = backend_factory
+        elif self.config.backend == "bm25":
+            self._backend_factory = lambda: Bm25Backend()
+        else:
+            self._backend_factory = lambda: NaiveBackend()
         self._memories: Dict[str, GovernedMemory] = {}
 
     def profile_for(self, tenant: str) -> CompliancePolicy:

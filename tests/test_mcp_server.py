@@ -120,6 +120,18 @@ class PerTenantProfileTests(unittest.TestCase):
         out = _call(server, "list_profiles", {})
         self.assertIn("pharma", out["builtin"])
 
+    def test_bm25_backend_config(self):
+        config = ServerConfig.from_dict({"backend": "bm25"})
+        server = MCPServer(GovernedMemoryService(config))
+        _call(server, "remember", {"text": "target enjoys kitesurfing", "subject": "t1",
+                                   "relation": "hobby", "object": "kitesurfing", "tenant": "x", "entity": "t1"})
+        out = _call(server, "recall", {"query": "kitesurfing hobby", "tenant": "x", "entity": "t1"})
+        self.assertEqual(out["answer"], "kitesurfing")
+
+    def test_invalid_backend_rejected(self):
+        with self.assertRaises(ValueError):
+            ServerConfig.from_dict({"backend": "elasticsearch"})
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -30,7 +30,9 @@ from .models import (
 )
 from .policy import PolicyStore
 from .persistence import MemorySnapshot, load_snapshot, retrieval_trace_record, save_snapshot
+from .answerer import Answerer, ExtractiveAnswerer, LLMAnswerer
 from .reliability import (
+    Bm25Backend,
     GovernedMemory,
     MemoryBackend,
     MemoryRecord,
@@ -65,6 +67,10 @@ __all__ = [
     "AuditLog",
     "AuditEntry",
     "verify_export",
+    "Answerer",
+    "ExtractiveAnswerer",
+    "LLMAnswerer",
+    "Bm25Backend",
     "NaiveBackend",
     "MemoryBackend",
     "MemoryRecord",

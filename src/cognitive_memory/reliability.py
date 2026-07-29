@@ -174,6 +174,66 @@ class NaiveBackend:
         return scored
 
 
+class Bm25Backend:
+    """Drop-in MemoryBackend with proper BM25 ranking for scale.
+
+    Same contract as :class:`NaiveBackend`, but ranks by Okapi BM25 (IDF +
+    length normalization) over the tenant's records instead of raw token
+    overlap, so the right memory surfaces above look-alikes as the store grows.
+    Scores are saturating-normalized to (0,1) so GovernedMemory's relevance and
+    abstention thresholds keep their meaning. Governance is unchanged -- only the
+    similarity substrate is stronger.
+    """
+
+    def __init__(self, k1: float = 1.5, b: float = 0.75, norm_k: float = 1.0) -> None:
+        self._records: List[MemoryRecord] = []
+        self._counter = 0
+        self.k1 = k1
+        self.b = b
+        self.norm_k = norm_k
+
+    def write(self, record: MemoryRecord) -> str:
+        self._counter += 1
+        record.id = record.id or "b%d" % self._counter
+        self._records.append(record)
+        return record.id
+
+    def delete_ids(self, ids: Sequence[str]) -> int:
+        idset = set(ids)
+        before = len(self._records)
+        self._records = [r for r in self._records if r.id not in idset]
+        return before - len(self._records)
+
+    def all_records(self) -> List[MemoryRecord]:
+        return list(self._records)
+
+    def candidates(self, query: str, tenant: str) -> List[Tuple[float, MemoryRecord]]:
+        from .ranking import Bm25Scorer
+
+        scoped = [r for r in self._records if r.scope.tenant == tenant]
+        if not scoped:
+            return []
+        docs = [tokenize("%s %s %s %s" % (r.text, r.subject, r.relation, r.object)) for r in scoped]
+        scorer = Bm25Scorer(docs, k1=self.k1, b=self.b)
+        query_terms = tokenize(query)
+        qset = set(query_terms)
+        scored: List[Tuple[float, MemoryRecord]] = []
+        for index, record in enumerate(scoped):
+            if not qset:
+                break
+            coverage = len(qset & set(docs[index])) / len(qset)
+            if coverage == 0.0:
+                continue
+            # Coverage keeps the relevance-floor semantics comparable to plain
+            # token overlap (a full match clears the floor regardless of corpus
+            # size); BM25 refines the ranking among matches.
+            bm25 = scorer.normalized_score(query_terms, index, k=self.norm_k)
+            score = coverage * (0.5 + 0.5 * bm25)
+            scored.append((score, record))
+        scored.sort(key=lambda item: (item[0], item[1].valid_at), reverse=True)
+        return scored
+
+
 # ---------------------------------------------------------------------------
 # Ingest turns (identical inputs to both arms)
 # ---------------------------------------------------------------------------
