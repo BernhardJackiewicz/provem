@@ -1,0 +1,29 @@
+{
+  "cross_tenant_allowed": false,
+  "description": "Candidate/client scope isolation, salary/visa sensitivity, low trust for tool-sourced writes.",
+  "detect_injection": true,
+  "detect_sensitive": true,
+  "erasure_mode": "strict",
+  "extra_injection_patterns": [],
+  "extra_sensitive_patterns": [
+    "\\bsalary\\b",
+    "\\bcompensation\\b",
+    "\\bnotice\\s+period\\b",
+    "\\bcurrent\\s+employer\\b",
+    "\\bvisa\\s+status\\b"
+  ],
+  "min_store_trust": 0.0,
+  "name": "recruitment",
+  "relevance_floor": 0.5,
+  "require_consent_for_sensitive": true,
+  "retention_days": {
+    "high": 365,
+    "restricted": 180
+  },
+  "scope_isolation": true,
+  "source_trust": {
+    "external_tool": 0.5,
+    "scraper": 0.4
+  },
+  "trust_margin": 0.2
+}

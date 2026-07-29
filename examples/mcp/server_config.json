@@ -1,0 +1,9 @@
+{
+  "default_profile": "default",
+  "backend": "bm25",
+  "tenant_profiles": {
+    "acme_recruiting": "recruitment",
+    "northwind_pharma": "pharma",
+    "atlas_bank": "finance"
+  }
+}

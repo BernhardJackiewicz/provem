@@ -1,0 +1,21 @@
+{
+  "name": "legal",
+  "description": "Law firm: privilege/matter isolation, client-name and case-number sensitivity.",
+  "detect_injection": true,
+  "detect_sensitive": true,
+  "require_consent_for_sensitive": true,
+  "extra_sensitive_patterns": [
+    "\\bprivileged\\b",
+    "\\bmatter\\s+number\\b",
+    "\\bcase\\s+no\\.?\\b",
+    "\\bsettlement\\s+amount\\b"
+  ],
+  "source_trust": {"external_tool": 0.5},
+  "min_store_trust": 0.2,
+  "trust_margin": 0.2,
+  "relevance_floor": 0.5,
+  "scope_isolation": true,
+  "cross_tenant_allowed": false,
+  "erasure_mode": "strict",
+  "retention_days": {"restricted": 2555}
+}

@@ -1,0 +1,26 @@
+{
+  "cross_tenant_allowed": false,
+  "description": "PCI/PII: account and card identifiers, strict tenant isolation.",
+  "detect_injection": true,
+  "detect_sensitive": true,
+  "erasure_mode": "strict",
+  "extra_injection_patterns": [],
+  "extra_sensitive_patterns": [
+    "\\biban\\b",
+    "\\baccount\\s+number\\b",
+    "\\brouting\\s+number\\b",
+    "\\bcredit\\s+card\\b",
+    "\\bcvv\\b",
+    "\\bpan\\b"
+  ],
+  "min_store_trust": 0.2,
+  "name": "finance",
+  "relevance_floor": 0.5,
+  "require_consent_for_sensitive": true,
+  "retention_days": {
+    "restricted": 2555
+  },
+  "scope_isolation": true,
+  "source_trust": {},
+  "trust_margin": 0.15
+}

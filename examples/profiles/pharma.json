@@ -1,0 +1,29 @@
+{
+  "cross_tenant_allowed": false,
+  "description": "HIPAA-style PHI: MRN/patient identifiers, consent required, strict erasure, long adverse-event retention.",
+  "detect_injection": true,
+  "detect_sensitive": true,
+  "erasure_mode": "strict",
+  "extra_injection_patterns": [],
+  "extra_sensitive_patterns": [
+    "\\bmrn\\b",
+    "\\bmedical\\s+record\\s+number\\b",
+    "\\bpatient\\s+id\\b",
+    "\\bicd[- ]?10\\b",
+    "\\badverse\\s+event\\b",
+    "\\bdiagnos[ei]s\\b",
+    "\\bprescription\\b",
+    "\\bdosage\\b"
+  ],
+  "min_store_trust": 0.3,
+  "name": "pharma",
+  "relevance_floor": 0.5,
+  "require_consent_for_sensitive": true,
+  "retention_days": {
+    "high": 1825,
+    "restricted": 3650
+  },
+  "scope_isolation": true,
+  "source_trust": {},
+  "trust_margin": 0.25
+}
