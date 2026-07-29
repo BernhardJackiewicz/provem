@@ -112,5 +112,29 @@ class C3PoisonRelationTests(unittest.TestCase):
         self.assertEqual(mem.recall_value("alice salary", tenant="t", entity="alice").answer, "120k")
 
 
+class C4Bm25CacheTests(unittest.TestCase):
+    def _planner(self):
+        from cognitive_memory.policy import PolicyStore
+        from cognitive_memory.retrieval import OpenConversationRetrievalPlanner
+        from cognitive_memory.store import InMemoryStore
+
+        return OpenConversationRetrievalPlanner(InMemoryStore(), PolicyStore(), include_verbatim=True, use_bm25=True)
+
+    def test_cache_rebuilds_when_candidate_set_changes(self):
+        from cognitive_memory.models import RetrievalRequest
+
+        planner = self._planner()
+        req = RetrievalRequest(query="x", user_id="u", project_id="p")
+        a = [{"key": "k1", "claim": "alpha unique", "relation": "", "object": ""}]
+        b = [{"key": "k2", "claim": "beta different", "relation": "", "object": ""}]
+        s1, i1 = planner._bm25_index(req, a)
+        s2, i2 = planner._bm25_index(req, b)  # same store counts, different candidates
+        # index must match the CURRENT candidate set, not the stale cached one
+        self.assertIn("k2", i2)
+        self.assertNotIn("k1", i2)
+        # scoring the current index must not KeyError and must reflect 'beta'
+        self.assertGreater(s2.normalized_score(["beta"], i2["k2"], k=1.0), 0.0)
+
+
 if __name__ == "__main__":
     unittest.main()

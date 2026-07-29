@@ -866,18 +866,22 @@ class OpenConversationRetrievalPlanner:
     def _bm25_index(
         self, request: RetrievalRequest, candidates: List[Dict[str, Any]]
     ) -> Tuple[Optional[Bm25Scorer], Dict[str, int]]:
-        """Build (and cache per stable store state) a BM25 index over candidates.
+        """Build (and cache) a BM25 index over the ACTUAL candidate set.
 
-        The corpus is stable across all queries in one sample, so it is cached by
-        a signature of the store's record counts to avoid rebuilding per query.
+        The signature is derived from the candidates themselves (their keys plus a
+        content fingerprint), not from global store counts. Keying on global counts
+        was wrong: a different request scope (user/project) or an in-place content
+        edit that keeps the total count constant would reuse a stale index whose
+        doc_index does not match the current candidates -- serving stale scores or
+        raising KeyError on lookup.
         """
         if not candidates:
             return None, {}
         signature = (
-            len(self.store.episodes),
-            len(self.store.facts) if hasattr(self.store, "facts") else 0,
-            len(self.store.events) if hasattr(self.store, "events") else 0,
-            len(self.store.reflections) if hasattr(self.store, "reflections") else 0,
+            request.user_id,
+            request.project_id,
+            tuple(c["key"] for c in candidates),
+            sum(len(c["claim"]) + len(c["relation"]) + len(c["object"]) for c in candidates),
         )
         if self._bm25_cache is not None and self._bm25_cache_signature == signature:
             return self._bm25_cache, self._bm25_cache_index
