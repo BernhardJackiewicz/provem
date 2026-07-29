@@ -24,3 +24,6 @@ transcripts/*
 # External-reliability raw failure exports (may contain payload text)
 docs/runs/*.jsonl
 docs/runs/*.err
+
+# LoCoMo per-QA run dumps (large, reproducible; canonical numbers live in docs/locomo_results.md)
+docs/runs/locomo_*.json

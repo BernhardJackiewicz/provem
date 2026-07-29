@@ -404,6 +404,7 @@ def run_locomo_eval(args: argparse.Namespace) -> int:
             retrieval_mode=args.retrieval_mode,
             extractor_mode=args.extractor,
             answer_mode=args.answer_mode,
+            recall_boost=args.recall_boost,
             qa_evidence_in_window_only=args.qa_evidence_in_window_only,
             llm_cache_dir=args.llm_cache_dir,
         )
@@ -827,9 +828,14 @@ def build_parser() -> argparse.ArgumentParser:
     )
     locomo_eval.add_argument(
         "--answer-mode",
-        choices=("normal", "diagnostic-synthesis"),
+        choices=("normal", "diagnostic-synthesis", "synthesis"),
         default="normal",
-        help="Answer behavior for CML; diagnostic-synthesis answers only from selected memories",
+        help="Answer behavior for CML; synthesis adds a concise extractive span fallback over evidence turns",
+    )
+    locomo_eval.add_argument(
+        "--recall-boost",
+        action="store_true",
+        help="Opt-in BM25 + verbatim-turn indexing (hybrid only); ~2x retrieval recall, off by default",
     )
     locomo_eval.add_argument(
         "--qa-evidence-in-window-only",

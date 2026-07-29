@@ -45,7 +45,7 @@ NO_INFORMATION_ANSWERS = {
     "i don't know",
 }
 
-ANSWER_MODES = {"normal", "diagnostic-synthesis"}
+ANSWER_MODES = {"normal", "diagnostic-synthesis", "synthesis"}
 DIAGNOSTIC_ANSWER_MIN_CONFIDENCE = 0.45
 
 
@@ -189,6 +189,7 @@ class LoCoMoCognitiveSystem:
         retrieval_mode: str = "governed",
         extractor_mode: str = "rule-based",
         answer_mode: str = "normal",
+        recall_boost: bool = False,
         llm_provider: Optional[Callable[[Dict[str, Any]], object]] = None,
     ) -> None:
         if retrieval_mode not in ("governed", "hybrid"):
@@ -199,10 +200,23 @@ class LoCoMoCognitiveSystem:
             raise LoCoMoEvaluationError("Unsupported LoCoMo answer mode: %s" % answer_mode)
         if not extract and extractor_mode != "rule-based":
             raise LoCoMoEvaluationError("--extractor %s requires --extract." % extractor_mode)
+        if recall_boost and retrieval_mode != "hybrid":
+            raise LoCoMoEvaluationError("--recall-boost requires --retrieval-mode hybrid.")
         extractor = _locomo_extractor(extract=extract, extractor_mode=extractor_mode, llm_provider=llm_provider)
         self.controller = MemoryController(extractor=extractor)
         if retrieval_mode == "hybrid":
-            self.retrieval = OpenConversationRetrievalPlanner(self.controller.store, self.controller.policy)
+            if recall_boost:
+                # opt-in BM25 + verbatim-turn indexing with recalibrated thresholds
+                self.retrieval = OpenConversationRetrievalPlanner(
+                    self.controller.store,
+                    self.controller.policy,
+                    include_verbatim=True,
+                    use_bm25=True,
+                    min_top_score=0.78,
+                    min_confidence=0.40,
+                )
+            else:
+                self.retrieval = OpenConversationRetrievalPlanner(self.controller.store, self.controller.policy)
         else:
             self.retrieval = RetrievalPlanner(self.controller.store, self.controller.policy)
         self.extract = extract
@@ -214,6 +228,55 @@ class LoCoMoCognitiveSystem:
     def ingest(self, episode: Episode) -> None:
         candidates = self.controller.ingest_episode(episode)
         self.ingested_candidates += len(candidates)
+
+    def _evidence_text_for(self, record: Dict[str, Any]) -> str:
+        """Best available verbatim text for a selected memory.
+
+        Verbatim episodes carry the turn text in ``claim``; extracted facts point
+        at their source episode(s), whose raw text we fetch from the store.
+        """
+        if record.get("memory_type") == "episode":
+            return str(record.get("claim") or "")
+        for episode_id in record.get("evidence", []):
+            episode = self.controller.store.get_episode(str(episode_id))
+            if episode is not None and episode.content:
+                return episode.content
+        return str(record.get("claim") or "")
+
+    def _synthesize_answer(self, question, selected_records, result):
+        """Template synthesis first, then a concise extractive span fallback.
+
+        Converts the retrieval layer's verbatim hits into short answer spans that
+        token-F1 / substring scoring can credit, instead of emitting whole turns.
+        """
+        from .answer import extractive_span, question_type
+
+        fields: Dict[str, Any] = {}
+        synthesis = _synthesize_diagnostic_answer_result(question, selected_records)
+        fields["synthesis_question_type"] = synthesis.question_type
+        qtype = synthesis.question_type or question_type(question)
+
+        # yes/no needs semantic entailment we do not attempt -> abstain safely.
+        if qtype == "yes_no":
+            return "ABSTAIN", "yes_no_requires_semantic_entailment", fields
+
+        if result.abstain_recommended:
+            return "ABSTAIN", result.abstain_reason or "retrieval_abstained", fields
+
+        if synthesis.answer != "ABSTAIN" and synthesis.confidence >= DIAGNOSTIC_ANSWER_MIN_CONFIDENCE:
+            fields["synthesis_source"] = "template"
+            return synthesis.answer, "", fields
+
+        # extractive fallback: pull a short span from the highest-scored evidence
+        for record in selected_records:
+            text = self._evidence_text_for(record)
+            span = extractive_span(question, text, qtype=qtype)
+            if span:
+                fields["synthesis_source"] = "extractive"
+                fields["synthesis_source_memory_id"] = str(record.get("id") or "")
+                return span, "", fields
+
+        return "ABSTAIN", synthesis.reason or "no_synthesizable_answer", fields
 
     def answer(self, request: RetrievalRequest) -> BaselineResult:
         result = self.retrieval.retrieve(request)
@@ -250,6 +313,15 @@ class LoCoMoCognitiveSystem:
             else:
                 answer = "ABSTAIN"
                 abstain_reason = synthesis.reason or "diagnostic_synthesis_no_direct_answer"
+        elif self.answer_mode == "synthesis":
+            selected_records = [
+                _selected_memory_record(self.controller.store, selected)
+                for selected in selected_memories
+            ]
+            answer, abstain_reason, synth_fields = self._synthesize_answer(
+                request.query, selected_records, result
+            )
+            normalized_fields.update(synth_fields)
         return BaselineResult(
             answer,
             result.retrieval_trace,
@@ -527,6 +599,7 @@ def evaluate_locomo(
     retrieval_mode: str = "governed",
     extractor_mode: str = "rule-based",
     answer_mode: str = "normal",
+    recall_boost: bool = False,
     qa_evidence_in_window_only: bool = False,
     llm_provider: Optional[Callable[[Dict[str, Any]], object]] = None,
     llm_cache_dir: str = DEFAULT_LLM_EXTRACT_CACHE_DIR,
@@ -607,6 +680,7 @@ def evaluate_locomo(
             retrieval_mode=retrieval_mode,
             extractor_mode=extractor_mode,
             answer_mode=answer_mode,
+            recall_boost=recall_boost,
             llm_provider=llm_provider,
         ),
     ]

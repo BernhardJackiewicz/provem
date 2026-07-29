@@ -20,6 +20,40 @@ and image query fields.
 
 The local dataset file is under ignored `data/` and must not be committed.
 
+## Retrieval recall boost (opt-in BM25 + verbatim turns) — 2026-07-29
+
+A new opt-in retrieval path (`--recall-boost`, hybrid only) adds pure-stdlib
+BM25 with light stemming and indexes **verbatim conversation turns** alongside
+extracted facts, motivated by the 2024-2026 ablation literature (arXiv:2601.00821
+verbatim-chunks-beat-fact-stores; SeCom/ICLR 2025 and arXiv:2606.04194
+BM25-competitive-with-dense). It is **off by default** (the default hybrid path
+is byte-for-byte unchanged). Thresholds are recalibrated for the BM25 score scale
+(`min_top_score=0.78`), and `--answer-mode synthesis` adds a concise extractive
+span fallback (`src/cognitive_memory/answer.py`).
+
+Dev split = conv-26,30,41,42,43 (tuning). Test split = conv-44,47,48,49,50
+(reported once). `--extract --retrieval-mode hybrid`.
+
+| Metric | Dev default | Dev boost | Test default | Test boost |
+| --- | ---: | ---: | ---: | ---: |
+| top_k_evidence_hit_rate | `0.137` | **`0.297`** | `0.115` | **`0.268`** |
+| retrieval_evidence_recall | `0.116` | **`0.259`** | `0.114` | **`0.228`** |
+| locomo_accuracy | `0.205` | `0.207` | `0.173` | `0.172` |
+| unsafe_answer_rate | `0.073` | `0.073` | `0.097` | `0.081` |
+| correct_abstention_rate | `0.810` | `0.823` | — | — |
+
+**Honest reading.** The boost roughly **doubles retrieval evidence recall**
+(top-k hit +116% dev / +134% test) and it **generalizes** to the held-out test
+split, at **flat end-to-end accuracy and flat/lower unsafe rate**. The reason
+accuracy does not move is the documented wall: **keyless extractive answer
+synthesis** cannot turn most retrieved evidence into the exact short gold span
+(no published system does this well without an LLM answerer; SOTA reaches
+`~0.55-0.66` J only *with* an LLM answerer, and even so cannot clear the
+`no_memory` abstain baseline here on some splits). The value delivered is a
+much stronger *retrieval* layer — the component the research identifies as the
+primary bottleneck — which a real LLM-in-the-loop deployment would convert into
+accuracy. We do **not** claim an end-to-end accuracy improvement.
+
 ## Run Summary
 
 - Samples: `10`

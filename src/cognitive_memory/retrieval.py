@@ -16,6 +16,7 @@ from .models import (
     tokenize,
 )
 from .policy import PolicyStore
+from .ranking import Bm25Scorer
 from .safety import instruction_risk_reason, sensitive_risk_reason
 from .scope import (
     has_ambiguous_reference,
@@ -606,12 +607,30 @@ class OpenConversationRetrievalPlanner:
         min_top_score: float = 0.45,
         min_confidence: float = 0.32,
         min_score_margin: float = 0.04,
+        include_verbatim: bool = False,
+        use_bm25: bool = False,
+        verbatim_confidence: float = 0.4,
+        bm25_norm_k: float = 1.0,
     ) -> None:
         self.store = store
         self.policy = policy
         self.min_top_score = min_top_score
         self.min_confidence = min_confidence
         self.min_score_margin = min_score_margin
+        # Recall-boost path (opt-in). The 2024-2026 ablation literature
+        # (e.g. arXiv:2601.00821, SeCom/ICLR 2025) shows BM25 over verbatim turns
+        # beats token-overlap over fact-only stores on retrieval recall, because
+        # rule-based extraction misses a large slice of answerable evidence. This
+        # roughly doubles top-k evidence hit on LoCoMo; it is off by default
+        # because the *end-to-end* gain needs an LLM answerer (keyless extractive
+        # synthesis is a documented hard wall) -- see docs/locomo_results.md.
+        self.include_verbatim = include_verbatim
+        self.use_bm25 = use_bm25
+        self.verbatim_confidence = verbatim_confidence
+        self.bm25_norm_k = bm25_norm_k
+        self._bm25_cache_signature: Optional[Tuple[int, int, int, int]] = None
+        self._bm25_cache: Optional["Bm25Scorer"] = None
+        self._bm25_cache_index: Dict[str, int] = {}
 
     def retrieve(self, request: RetrievalRequest) -> RetrievalResult:
         query = _OpenConversationQuery.from_text(request.query, self.STOPWORDS, self.RELATION_CUE_TOKENS)
@@ -619,100 +638,41 @@ class OpenConversationRetrievalPlanner:
         scored: List[Tuple[float, SelectedMemory, object, Dict[str, Any]]] = []
         latest_timestamp = self._latest_timestamp(request)
 
-        for fact in self.store.list_facts(user_id=request.user_id, project_id=request.project_id):
-            reason = self._hard_exclusion_reason(fact, request)
-            if reason:
-                excluded.append(ExcludedMemory(fact.id, reason, "temporal_fact", fact.claim_text))
-                continue
-            score, features = self._score_record(
-                query=query,
-                claim=fact.claim_text,
-                subject=fact.subject,
-                relation=fact.relation,
-                object_value=fact.object,
-                memory_type="temporal_fact",
-                timestamp=fact.valid_at,
-                latest_timestamp=latest_timestamp,
-            )
-            if score > 0:
-                scored.append(
-                    (
-                        score,
-                        SelectedMemory(
-                            id=fact.id,
-                            memory_type="temporal_fact",
-                            claim=fact.claim_text,
-                            score=score,
-                            confidence=fact.confidence,
-                            evidence=list(fact.evidence),
-                        ),
-                        fact,
-                        features,
-                    )
-                )
+        candidates = self._collect_candidates(request, excluded)
+        if self.use_bm25:
+            bm25, doc_index = self._bm25_index(request, candidates)
+            query_terms = [self._stem(token) for token in tokenize(request.query) if token not in self.STOPWORDS]
+        else:
+            bm25, doc_index, query_terms = None, {}, []
 
-        for event in self.store.list_events(user_id=request.user_id, project_id=request.project_id):
-            reason = self._hard_exclusion_reason(event, request)
-            if reason:
-                excluded.append(ExcludedMemory(event.id, reason, "memory_event", event.claim_text))
-                continue
-            relation = self._event_relation(event)
-            object_value = self._event_value(event)
+        for candidate in candidates:
+            content_score = None
+            if bm25 is not None:
+                content_score = bm25.normalized_score(query_terms, doc_index[candidate["key"]], k=self.bm25_norm_k)
             score, features = self._score_record(
                 query=query,
-                claim=event.claim_text,
-                subject=event.context.subject_id,
-                relation=relation,
-                object_value=object_value,
-                memory_type="memory_event",
-                timestamp=event.timestamp,
+                claim=candidate["claim"],
+                subject=candidate["subject"],
+                relation=candidate["relation"],
+                object_value=candidate["object"],
+                memory_type=candidate["memory_type"],
+                timestamp=candidate["timestamp"],
                 latest_timestamp=latest_timestamp,
+                content_score=content_score,
             )
             if score > 0:
                 scored.append(
                     (
                         score,
                         SelectedMemory(
-                            id=event.id,
-                            memory_type="memory_event",
-                            claim=event.claim_text,
+                            id=candidate["id"],
+                            memory_type=candidate["memory_type"],
+                            claim=candidate["claim"],
                             score=score,
-                            confidence=event.confidence,
-                            evidence=list(event.evidence_episode_ids),
+                            confidence=candidate["confidence"],
+                            evidence=list(candidate["evidence"]),
                         ),
-                        event,
-                        features,
-                    )
-                )
-
-        for reflection in self.store.list_reflections(user_id=request.user_id, project_id=request.project_id):
-            reason = self._hard_exclusion_reason(reflection, request)
-            if reason:
-                excluded.append(ExcludedMemory(reflection.id, reason, "reflection", reflection.claim))
-                continue
-            score, features = self._score_record(
-                query=query,
-                claim=reflection.claim,
-                subject=reflection.subject_id,
-                relation=reflection.relation_type,
-                object_value="",
-                memory_type="reflection",
-                timestamp=reflection.created_at,
-                latest_timestamp=latest_timestamp,
-            )
-            if score > 0:
-                scored.append(
-                    (
-                        score,
-                        SelectedMemory(
-                            id=reflection.id,
-                            memory_type="reflection",
-                            claim=reflection.claim,
-                            score=score,
-                            confidence=reflection.confidence,
-                            evidence=list(reflection.supporting_evidence),
-                        ),
-                        reflection,
+                        candidate["record"],
                         features,
                     )
                 )
@@ -721,12 +681,26 @@ class OpenConversationRetrievalPlanner:
         selected_items = self._diverse_top_k(scored, request.top_k)
         selected_memories = [memory for _, memory, _, _ in selected_items]
         top_score = selected_items[0][0] if selected_items else 0.0
-        second_score = selected_items[1][0] if len(selected_items) > 1 else 0.0
+        # Verbatim episodes are a recall safety net, not competing structured
+        # answers. When a structured memory is on top, measure the ambiguity
+        # margin against the next *structured* candidate, so a near-duplicate raw
+        # turn does not trigger a spurious low-margin abstention.
+        top_type = selected_items[0][1].memory_type if selected_items else ""
+        if top_type != "episode":
+            structured_rest = [item for item in selected_items[1:] if item[1].memory_type != "episode"]
+            second_score = structured_rest[0][0] if structured_rest else 0.0
+        else:
+            second_score = selected_items[1][0] if len(selected_items) > 1 else 0.0
         score_margin = top_score - second_score
         top_features = selected_items[0][3] if selected_items else {}
         confidence = self._aggregate_confidence(selected_memories)
         low_confidence = bool(selected_items) and (top_score < self.min_top_score or confidence < self.min_confidence)
-        low_margin = bool(selected_items) and len(selected_items) > 1 and score_margin < self.min_score_margin and top_score < 0.62
+        low_margin = (
+            top_type not in ("", "episode")
+            and second_score > 0.0
+            and score_margin < self.min_score_margin
+            and top_score < 0.62
+        )
         relation_mismatch = bool(
             selected_items
             and query.strong_relation
@@ -771,6 +745,150 @@ class OpenConversationRetrievalPlanner:
             metadata=self._metadata(top_score, second_score, score_margin, top_features),
         )
 
+    def _collect_candidates(
+        self, request: RetrievalRequest, excluded: List[ExcludedMemory]
+    ) -> List[Dict[str, Any]]:
+        """Gather every scorable memory (facts, events, reflections, and -- when
+        enabled -- verbatim conversation turns) into a uniform descriptor list.
+
+        Verbatim episodes carry their own id as evidence so retrieving a raw turn
+        credits evidence recall exactly like retrieving an extracted fact, which
+        is the point: it recovers the ~40% of answerable evidence that rule-based
+        extraction never turns into a fact.
+        """
+        candidates: List[Dict[str, Any]] = []
+        for fact in self.store.list_facts(user_id=request.user_id, project_id=request.project_id):
+            reason = self._hard_exclusion_reason(fact, request)
+            if reason:
+                excluded.append(ExcludedMemory(fact.id, reason, "temporal_fact", fact.claim_text))
+                continue
+            candidates.append(
+                {
+                    "key": "fact:%s" % fact.id,
+                    "record": fact,
+                    "id": fact.id,
+                    "memory_type": "temporal_fact",
+                    "claim": fact.claim_text,
+                    "subject": fact.subject,
+                    "relation": fact.relation,
+                    "object": fact.object,
+                    "timestamp": fact.valid_at,
+                    "confidence": fact.confidence,
+                    "evidence": list(fact.evidence),
+                }
+            )
+        for event in self.store.list_events(user_id=request.user_id, project_id=request.project_id):
+            reason = self._hard_exclusion_reason(event, request)
+            if reason:
+                excluded.append(ExcludedMemory(event.id, reason, "memory_event", event.claim_text))
+                continue
+            candidates.append(
+                {
+                    "key": "event:%s" % event.id,
+                    "record": event,
+                    "id": event.id,
+                    "memory_type": "memory_event",
+                    "claim": event.claim_text,
+                    "subject": event.context.subject_id,
+                    "relation": self._event_relation(event),
+                    "object": self._event_value(event),
+                    "timestamp": event.timestamp,
+                    "confidence": event.confidence,
+                    "evidence": list(event.evidence_episode_ids),
+                }
+            )
+        for reflection in self.store.list_reflections(user_id=request.user_id, project_id=request.project_id):
+            reason = self._hard_exclusion_reason(reflection, request)
+            if reason:
+                excluded.append(ExcludedMemory(reflection.id, reason, "reflection", reflection.claim))
+                continue
+            candidates.append(
+                {
+                    "key": "reflection:%s" % reflection.id,
+                    "record": reflection,
+                    "id": reflection.id,
+                    "memory_type": "reflection",
+                    "claim": reflection.claim,
+                    "subject": reflection.subject_id,
+                    "relation": reflection.relation_type,
+                    "object": "",
+                    "timestamp": reflection.created_at,
+                    "confidence": reflection.confidence,
+                    "evidence": list(reflection.supporting_evidence),
+                }
+            )
+        if self.include_verbatim:
+            for episode in self.store.list_episodes(user_id=request.user_id, project_id=request.project_id):
+                candidates.append(
+                    {
+                        "key": "episode:%s" % episode.id,
+                        "record": episode,
+                        "id": episode.id,
+                        "memory_type": "episode",
+                        "claim": episode.content,
+                        "subject": episode.actor,
+                        "relation": "",
+                        "object": "",
+                        "timestamp": episode.timestamp,
+                        "confidence": self.verbatim_confidence,
+                        "evidence": [episode.id],
+                    }
+                )
+        return candidates
+
+    @staticmethod
+    def _stem(token: str) -> str:
+        """Light Porter-1a-style folding for lexical matching only.
+
+        Aligns common inflections ("camping"/"camped"/"camps" -> "camp",
+        "lakes" -> "lake") so BM25 is not blind to morphology, a well-known
+        lexical-retrieval weakness. Deliberately conservative; applied only to
+        BM25 content terms, never to the relation/entity/temporal cue matching.
+        """
+        if len(token) <= 3:
+            return token
+        if token.endswith("ies") and len(token) > 4:
+            return token[:-3] + "y"
+        if token.endswith(("sses", "shes", "ches")):
+            return token[:-2]
+        if token.endswith("ing") and len(token) > 5:
+            return token[:-3]
+        if token.endswith("ed") and len(token) > 4:
+            return token[:-2]
+        if token.endswith("s") and not token.endswith("ss"):
+            return token[:-1]
+        return token
+
+    def _content_terms(self, claim: str, relation: str, object_value: str) -> List[str]:
+        text = "%s %s %s" % (claim, relation, object_value)
+        return [self._stem(token) for token in tokenize(text) if token not in self.STOPWORDS]
+
+    def _bm25_index(
+        self, request: RetrievalRequest, candidates: List[Dict[str, Any]]
+    ) -> Tuple[Optional[Bm25Scorer], Dict[str, int]]:
+        """Build (and cache per stable store state) a BM25 index over candidates.
+
+        The corpus is stable across all queries in one sample, so it is cached by
+        a signature of the store's record counts to avoid rebuilding per query.
+        """
+        if not candidates:
+            return None, {}
+        signature = (
+            len(self.store.episodes),
+            len(self.store.facts) if hasattr(self.store, "facts") else 0,
+            len(self.store.events) if hasattr(self.store, "events") else 0,
+            len(self.store.reflections) if hasattr(self.store, "reflections") else 0,
+        )
+        if self._bm25_cache is not None and self._bm25_cache_signature == signature:
+            return self._bm25_cache, self._bm25_cache_index
+        docs = [self._content_terms(c["claim"], c["relation"], c["object"]) for c in candidates]
+        index = {c["key"]: i for i, c in enumerate(candidates)}
+        scorer = Bm25Scorer(docs)
+        self._bm25_cache = scorer
+        self._bm25_cache_index = index
+        self._bm25_cache_signature = signature
+        return scorer, index
+
     def _score_record(
         self,
         query: "_OpenConversationQuery",
@@ -781,12 +899,15 @@ class OpenConversationRetrievalPlanner:
         memory_type: str,
         timestamp: object,
         latest_timestamp: object,
+        content_score: Optional[float] = None,
     ) -> Tuple[float, Dict[str, Any]]:
         subject_tokens = self._open_tokens(subject)
         relation_tokens = self._open_tokens(relation)
         object_tokens = self._open_tokens(object_value)
         claim_tokens = self._open_tokens("%s %s %s" % (claim, relation, object_value))
-        content_overlap = self._overlap_ratio(query.content_tokens, claim_tokens)
+        overlap = self._overlap_ratio(query.content_tokens, claim_tokens)
+        # BM25 content score when a corpus is available; token-overlap otherwise.
+        content_overlap = overlap if content_score is None else content_score
         entity_overlap = 1.0 if subject_tokens and query.all_tokens & subject_tokens else 0.0
         relation_match = self._relation_match(query.all_tokens, relation, relation_tokens, object_tokens, claim_tokens)
         temporal_match = self._temporal_match(query.all_tokens, relation, object_tokens, claim_tokens)
