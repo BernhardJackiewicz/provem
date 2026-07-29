@@ -113,11 +113,16 @@ def extractive_span(question: str, text: str, max_tokens: int = 12, qtype: Optio
         return _trim(span, max_tokens)
 
     if qtype == "count":
-        span = _first(r"\b(\d+)\b", text)
-        if span:
-            return span
-        span = _first(r"\b(one|two|three|four|five|six|seven|eight|nine|ten)\b", text, re.I)
-        return span
+        # Don't grab the FIRST number (often a birth year/age/duration): drop
+        # 4-digit years and take the last remaining number, which is where the
+        # actual count usually sits ("born in 1990, has 2 siblings" -> 2).
+        nums = re.findall(r"\d+", text)
+        non_year = [n for n in nums if not (len(n) == 4 and 1900 <= int(n) <= 2099)]
+        if non_year:
+            return non_year[-1]
+        if nums:
+            return nums[-1]
+        return _first(r"\b(one|two|three|four|five|six|seven|eight|nine|ten)\b", text, re.I)
 
     # object / relationship / default: the content phrase least overlapping the
     # question (the "new" information), trimmed short.

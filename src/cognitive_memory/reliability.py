@@ -426,8 +426,11 @@ class GovernedMemory:
             trust = self.policy.unlisted_source_trust
         else:
             trust = turn.trust
-        if not reason and self.policy.min_store_trust > 0.0 and trust < self.policy.min_store_trust:
-            reason = "low_source_trust"
+        if not reason and self.policy.min_store_trust > 0.0:
+            # NaN fails every ordered comparison, which would silently slip past a
+            # `trust < floor` check; treat a non-finite trust as below the floor.
+            if trust != trust or trust < self.policy.min_store_trust:
+                reason = "low_source_trust"
         quarantined = bool(reason)
         if quarantined:
             self.audit.record("quarantine", reason=reason, subject=turn.subject, source=turn.source)
@@ -662,8 +665,8 @@ class GovernedMemory:
         # a look-alike record about subject Y. A subject-less query (entity="")
         # must NOT be served a subject-scoped record either -- otherwise scope
         # isolation is bypassable by simply omitting the entity.
-        if self.policy.scope_isolation and record.subject:
-            if not turn.scope.subject or record.subject != turn.scope.subject:
+        if self.policy.scope_isolation and record.scope.subject:
+            if not turn.scope.subject or record.scope.subject != turn.scope.subject:
                 return "wrong_scope"
         # Instruction-like content that slipped in is never served -- scan every
         # field, not just free text (payload may hide in subject/relation/object).

@@ -147,5 +147,41 @@ class C5ScoringAnchorTests(unittest.TestCase):
         self.assertTrue(_has_answer_substring("near Cedar Lake.", ["Cedar Lake"]))  # phrase, boundaries ok
 
 
+class C6MediumTests(unittest.TestCase):
+    def test_nan_trust_is_quarantined(self):
+        from cognitive_memory.reliability import GovernedMemory
+
+        mem = GovernedMemory(policy={"name": "x", "min_store_trust": 0.3})
+        mem.remember("secret plan here", subject="s", relation="r", object="v",
+                     tenant="t", entity="s", source="unknown", trust=float("nan"))
+        self.assertTrue(mem.recall_value("secret plan", tenant="t", entity="s").abstained)
+
+    def test_scope_isolation_uses_scope_subject_not_free_text(self):
+        from cognitive_memory.reliability import GovernedMemory, IngestTurn, QueryTurn, Scope
+
+        mem = GovernedMemory()
+        # semantic subject 'cand_1' but assigned to scope entity 'cand_2'
+        mem.ingest(IngestTurn("fact", "cand_1 salary 999k", subject="cand_1", relation="salary",
+                              object="999k", scope=Scope("acme", "cand_2")))
+        # must be served to its OWN scope owner (cand_2), blocked from cand_1
+        served = mem.recall(QueryTurn("cand_1 salary", Scope("acme", "cand_2"), None))
+        blocked = mem.recall(QueryTurn("cand_1 salary", Scope("acme", "cand_1"), None))
+        self.assertEqual(served.answer, "999k")
+        self.assertTrue(blocked.abstained)
+
+    def test_subjectless_tenant_fact_is_retrievable(self):
+        from cognitive_memory.reliability import GovernedMemory
+
+        mem = GovernedMemory()
+        mem.remember("company holiday is dec25", object="dec25", tenant="acme")
+        self.assertFalse(mem.recall_value("company holiday", tenant="acme").abstained)
+
+    def test_count_span_skips_year_takes_actual_count(self):
+        from cognitive_memory.answer import extractive_span
+
+        self.assertEqual(extractive_span("How many siblings?", "Sarah, born in 1990, has 2 siblings.", qtype="count"), "2")
+        self.assertEqual(extractive_span("How many kids?", "We met in 2015 and now have 4 kids.", qtype="count"), "4")
+
+
 if __name__ == "__main__":
     unittest.main()
