@@ -9,6 +9,44 @@ verified** — the next step (separate) is verify → falsify → fix.
 
 Date: 2026-07-29. Reviewed surface: the full `cognitive_memory` package + MCP server.
 
+## Resolution status (after the fix pass)
+
+Two read-only verification passes then a test-driven fix pass (commits F1–F6)
+dispositioned the findings. Every claim was reproduced or refuted before acting.
+
+**FIXED — confirmed real bugs, corrected test-driven (`tests/test_security_hardening.py`):**
+- Scope isolation bypass via empty `entity` → subject-less recall no longer served subject-scoped records.
+- `source_trust` bypass for unknown/omitted source → `policy.unlisted_source_trust`.
+- ReDoS via user-supplied deny-list regex → compiled + nested-quantifier screen at policy load.
+- Missing dedup → opt-in `policy.deduplicate`.
+- Float boundary comparisons (trust margin, relation_mismatch) → epsilon.
+
+**BUILT — real missing features now implemented (Scope B):**
+- Durability: `SqliteBackend` (stdlib) + persistent hash-chained audit trail; survive restart.
+- Retention: `created_at` + `cleanup_expired` + optional recall-time enforcement + MCP `cleanup` tool.
+- Config: fail-fast validation of profiles/regex at load; input-size limits (`max_text_chars`, `max_line_bytes`).
+- Thread-safety: reentrant locks make the embeddable library safe under concurrent callers.
+
+**FALSE-POSITIVE — refuted on the actual code (no change):**
+- `memory_for` / BM25-cache / audit-seq races: `serve_stdio` is strictly sequential/single-thread
+  (locks still added in F5 for the embedded case).
+- Empty-`tokenize` erasure: guarded by `if term_tokens:`.
+- Query-side injection scan "missing": by design (the query is not stored content).
+- Erasure token-subset "over-match": subset semantics are correctly restrictive.
+- Stemmer collisions: the conservative stemmer produces no collisions on realistic words.
+
+**DOCUMENTED-SCOPE — trust-model boundaries of the stdio transport, not code bugs
+(see `docs/trust_model.md`):** no network auth/TLS/RBAC, tenant-from-caller, horizontal
+scaling, secret management, SIEM/observability stack, encryption-at-rest. These belong to a
+gateway/host in front of the stdio server; Engram documents the boundary and provides the
+`MemoryBackend` seam + shared durable store for scaling.
+
+**DEFERRED-ROADMAP (documented, not built):** schema-migration tooling, dependency lockfile
+(constraints.txt guidance given instead), explicit EU-AI-Act transparency markers.
+
+Governance headline unchanged throughout (0.375→0.893, 240→0, benign 1.0, p≈5e-150);
+quality gate PASS; 463 tests green. The per-finding detail below is the original audit.
+
 ## Summary
 
 | Severity | Count |

@@ -1,0 +1,9 @@
+# Reproducible-deployment constraints for Engram's OPTIONAL extras.
+# Core Engram has no required dependencies. When you install an optional
+# adapter, pin it for a reproducible image, e.g.:
+#     pip install -c constraints.example.txt ".[mem0]"
+# Copy to constraints.txt and pin exact versions you have validated.
+mem0ai==2.0.14
+# letta-client==1.10.3
+# graphiti==0.1.13
+# PyYAML==6.0.2   # only if you load compliance profiles from YAML

@@ -33,8 +33,17 @@ Server config (`examples/mcp/server_config.json`):
 }
 ```
 
-`backend`: `naive` (token overlap) or `bm25` (ranked, recommended at scale).
-`tenant_profiles` values can be a built-in name or an inline profile object.
+`backend`: `naive` (token overlap), `bm25` (ranked), or `sqlite` (durable,
+survives restart — set `sqlite_path`). `audit_path` persists the hash-chained
+audit trail (per-tenant JSONL, survives restart). `max_text_chars` /
+`max_line_bytes` cap input size. Profiles and deny-list regex are validated at
+load (fail fast). `tenant_profiles` values can be a built-in name or an inline
+profile object.
+
+**Trust model:** the server is stdio-only (a trusted subprocess of the host),
+so auth/TLS/RBAC/rate-limiting and horizontal scaling belong to a gateway in
+front of it — see [`docs/trust_model.md`](trust_model.md). Retention is enforced
+via the `cleanup` tool (or `cleanup_expired`) when a profile sets `retention_days`.
 
 ## Tools
 

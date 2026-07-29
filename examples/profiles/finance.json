@@ -1,8 +1,10 @@
 {
   "cross_tenant_allowed": false,
+  "deduplicate": false,
   "description": "PCI/PII: account and card identifiers, strict tenant isolation.",
   "detect_injection": true,
   "detect_sensitive": true,
+  "enforce_retention_on_recall": false,
   "erasure_mode": "strict",
   "extra_injection_patterns": [],
   "extra_sensitive_patterns": [
@@ -21,6 +23,11 @@
     "restricted": 2555
   },
   "scope_isolation": true,
-  "source_trust": {},
-  "trust_margin": 0.15
+  "source_trust": {
+    "external_tool": 0.4,
+    "scraper": 0.2,
+    "user": 0.9
+  },
+  "trust_margin": 0.15,
+  "unlisted_source_trust": 0.2
 }

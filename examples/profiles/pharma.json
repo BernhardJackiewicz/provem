@@ -1,8 +1,10 @@
 {
   "cross_tenant_allowed": false,
+  "deduplicate": false,
   "description": "HIPAA-style PHI: MRN/patient identifiers, consent required, strict erasure, long adverse-event retention.",
   "detect_injection": true,
   "detect_sensitive": true,
+  "enforce_retention_on_recall": false,
   "erasure_mode": "strict",
   "extra_injection_patterns": [],
   "extra_sensitive_patterns": [
@@ -24,6 +26,12 @@
     "restricted": 3650
   },
   "scope_isolation": true,
-  "source_trust": {},
-  "trust_margin": 0.25
+  "source_trust": {
+    "clinician": 0.9,
+    "external_tool": 0.4,
+    "scraper": 0.2,
+    "user": 0.9
+  },
+  "trust_margin": 0.25,
+  "unlisted_source_trust": 0.3
 }

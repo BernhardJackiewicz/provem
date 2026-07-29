@@ -1,8 +1,10 @@
 {
   "cross_tenant_allowed": false,
+  "deduplicate": false,
   "description": "Candidate/client scope isolation, salary/visa sensitivity, low trust for tool-sourced writes.",
   "detect_injection": true,
   "detect_sensitive": true,
+  "enforce_retention_on_recall": false,
   "erasure_mode": "strict",
   "extra_injection_patterns": [],
   "extra_sensitive_patterns": [
@@ -23,7 +25,10 @@
   "scope_isolation": true,
   "source_trust": {
     "external_tool": 0.5,
-    "scraper": 0.4
+    "recruiter": 0.9,
+    "scraper": 0.4,
+    "user": 0.9
   },
-  "trust_margin": 0.2
+  "trust_margin": 0.2,
+  "unlisted_source_trust": 0.3
 }
