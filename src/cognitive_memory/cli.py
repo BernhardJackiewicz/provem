@@ -407,6 +407,11 @@ def run_external_eval(args: argparse.Namespace) -> int:
 def run_locomo_eval(args: argparse.Namespace) -> int:
     try:
         path = args.path or locomo_path_from_manifest(args.manifest)
+        llm_answer_provider = None
+        if args.answer_mode == "llm":
+            from .llm_answer_provider import OpenAIAnswerProvider
+
+            llm_answer_provider = OpenAIAnswerProvider.from_env(model=args.answer_model or None)
         report = evaluate_locomo(
             path,
             limit_samples=args.limit_samples,
@@ -424,6 +429,7 @@ def run_locomo_eval(args: argparse.Namespace) -> int:
             answer_mode=args.answer_mode,
             recall_boost=args.recall_boost,
             qa_evidence_in_window_only=args.qa_evidence_in_window_only,
+            llm_answer_provider=llm_answer_provider,
             llm_cache_dir=args.llm_cache_dir,
         )
     except (ExternalValidationError, ExtractorSchemaError, LoCoMoEvaluationError) as exc:
@@ -846,9 +852,14 @@ def build_parser() -> argparse.ArgumentParser:
     )
     locomo_eval.add_argument(
         "--answer-mode",
-        choices=("normal", "diagnostic-synthesis", "synthesis"),
+        choices=("normal", "diagnostic-synthesis", "synthesis", "llm"),
         default="normal",
-        help="Answer behavior for CML; synthesis adds a concise extractive span fallback over evidence turns",
+        help="Answer behavior for CML; synthesis=keyless extractive span; llm=key-gated LLM answerer over governed evidence",
+    )
+    locomo_eval.add_argument(
+        "--answer-model",
+        default="",
+        help="OpenAI model for --answer-mode llm (default: env OPENAI_ANSWER_MODEL or gpt-4o-mini)",
     )
     locomo_eval.add_argument(
         "--recall-boost",

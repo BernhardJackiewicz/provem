@@ -102,5 +102,29 @@ class Bm25BackendTests(unittest.TestCase):
         self.assertTrue(mem.recall_value("x", tenant="t", entity="x").abstained)
 
 
+class LocomoLlmModeTests(unittest.TestCase):
+    def test_llm_answer_mode_uses_injected_provider(self):
+        from cognitive_memory.locomo_eval import evaluate_locomo
+
+        calls = {"n": 0}
+
+        def provider(prompt):
+            calls["n"] += 1
+            return "7 May 2023"
+
+        report = evaluate_locomo(
+            "tests/fixtures/locomo/fake_locomo.json",
+            extract=True,
+            retrieval_mode="hybrid",
+            recall_boost=True,
+            answer_mode="llm",
+            llm_answer_provider=provider,
+        )
+        cml = [s for s in report["scores"] if s["system"] == "cognitive_memory_layer"]
+        self.assertTrue(cml)
+        # at least one answer came from the provider (not every QA retrieves)
+        self.assertTrue(any(s["answer"] == "7 May 2023" for s in cml))
+
+
 if __name__ == "__main__":
     unittest.main()

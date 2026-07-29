@@ -45,7 +45,7 @@ NO_INFORMATION_ANSWERS = {
     "i don't know",
 }
 
-ANSWER_MODES = {"normal", "diagnostic-synthesis", "synthesis"}
+ANSWER_MODES = {"normal", "diagnostic-synthesis", "synthesis", "llm"}
 DIAGNOSTIC_ANSWER_MIN_CONFIDENCE = 0.45
 
 
@@ -191,6 +191,7 @@ class LoCoMoCognitiveSystem:
         answer_mode: str = "normal",
         recall_boost: bool = False,
         llm_provider: Optional[Callable[[Dict[str, Any]], object]] = None,
+        llm_answer_provider: Optional[Callable[[str], str]] = None,
     ) -> None:
         if retrieval_mode not in ("governed", "hybrid"):
             raise LoCoMoEvaluationError("Unsupported LoCoMo retrieval mode: %s" % retrieval_mode)
@@ -224,6 +225,16 @@ class LoCoMoCognitiveSystem:
         self.extractor_mode = extractor_mode if extract else "none"
         self.answer_mode = answer_mode
         self.ingested_candidates = 0
+        self._llm_answerer = None
+        if answer_mode == "llm":
+            from .answerer import ExtractiveAnswerer, LLMAnswerer
+
+            provider = llm_answer_provider
+            if provider is None:
+                from .llm_answer_provider import OpenAIAnswerProvider
+
+                provider = OpenAIAnswerProvider.from_env()
+            self._llm_answerer = LLMAnswerer(provider, fallback=ExtractiveAnswerer())
 
     def ingest(self, episode: Episode) -> None:
         candidates = self.controller.ingest_episode(episode)
@@ -322,6 +333,28 @@ class LoCoMoCognitiveSystem:
                 request.query, selected_records, result
             )
             normalized_fields.update(synth_fields)
+        elif self.answer_mode == "llm":
+            selected_records = [
+                _selected_memory_record(self.controller.store, selected)
+                for selected in selected_memories
+            ]
+            if result.abstain_recommended or not selected_records:
+                answer = "ABSTAIN"
+                abstain_reason = result.abstain_reason or "retrieval_abstained"
+            else:
+                # Feed the LLM the governed, cleared evidence turns only.
+                memories = [
+                    {"text": self._evidence_text_for(record), "object": record.get("object", "")}
+                    for record in selected_records
+                ]
+                llm_answer = self._llm_answerer.answer(request.query, memories)
+                if llm_answer and llm_answer.upper() != "ABSTAIN":
+                    answer = llm_answer
+                    abstain_reason = ""
+                else:
+                    answer = "ABSTAIN"
+                    abstain_reason = "llm_no_answer"
+                normalized_fields["synthesis_source"] = "llm"
         return BaselineResult(
             answer,
             result.retrieval_trace,
@@ -602,6 +635,7 @@ def evaluate_locomo(
     recall_boost: bool = False,
     qa_evidence_in_window_only: bool = False,
     llm_provider: Optional[Callable[[Dict[str, Any]], object]] = None,
+    llm_answer_provider: Optional[Callable[[str], str]] = None,
     llm_cache_dir: str = DEFAULT_LLM_EXTRACT_CACHE_DIR,
 ) -> Dict[str, Any]:
     if retrieval_mode not in ("governed", "hybrid"):
@@ -682,6 +716,7 @@ def evaluate_locomo(
             answer_mode=answer_mode,
             recall_boost=recall_boost,
             llm_provider=llm_provider,
+            llm_answer_provider=llm_answer_provider,
         ),
     ]
     scores: List[Dict[str, Any]] = []
