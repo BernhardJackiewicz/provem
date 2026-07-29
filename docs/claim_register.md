@@ -129,6 +129,9 @@ deck or product narrative.
 | Injection detection patterns were tuned without overfitting the test split. | Dev-only failure export + pattern iteration; test measured once | Internal process control | Yes | Medium | Supported as process claim: `--export-failures` refuses the test split; test recall generalized (`0.337`) from dev (`0.361`) |
 | The external-reliability numbers prove production security. | None | Unsupported | No | High | Rejected; synthetic replay scaffold, fictitious TOFU authors, fixture-only scope, and a weak standalone detector |
 | Scope isolation has been measured on real multi-person PII data. | None (ai4privacy download pending license review) | Unsupported | No | Medium | Rejected for now; scope track runs only on committed fixtures until a licensed real PII set is approved |
+| GovernedMemory enforces erasure and scope isolation over a real Mem0 backend. | `Mem0ReliabilityBackend`, `tests/test_mem0_integration.py` live run (mem0ai 2.0.14), `docs/mem0_governance_integration.md` | Live third-party backend smoke | Yes, live smoke (4 tests) | High | Supported narrowly: live roundtrip, erasure-despite-latency, cross-tenant isolation and injection non-serve all pass; smoke scope only, not a throughput/accuracy benchmark |
+| GovernedMemory is a runnable deployment artifact, not just a contract, on Mem0. | `Mem0ReliabilityBackend` implementing the `MemoryBackend` protocol; offline fake-client tests + live smoke | Code/tests + live smoke | Yes, local + live | Medium | Supported: the same governance code runs unchanged on Mem0; governance holds even when the backend paraphrases text or refuses/lags deletes |
+| The Mem0 governance integration is a performance or accuracy benchmark. | None | Unsupported | No | High | Rejected; it is a frugal free-tier smoke test (handful of calls, purge cleanup), explicitly not a throughput/recall claim |
 
 ## Evidence Levels
 
