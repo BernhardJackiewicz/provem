@@ -704,8 +704,8 @@ class OpenConversationRetrievalPlanner:
         relation_mismatch = bool(
             selected_items
             and query.strong_relation
-            and float(top_features.get("relation", 0.0)) == 0.0
-            and float(top_features.get("temporal", 0.0)) == 0.0
+            and float(top_features.get("relation", 0.0)) < 1e-9
+            and float(top_features.get("temporal", 0.0)) < 1e-9
             and float(top_features.get("content", 0.0)) < 0.5
         )
 

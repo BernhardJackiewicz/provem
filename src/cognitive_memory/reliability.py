@@ -424,13 +424,23 @@ class GovernedMemory:
             reason = instruction_risk_reason(scan, self.policy.extra_injection_patterns)
         if not reason and self.policy.detect_sensitive and self.policy.require_consent_for_sensitive and not turn.consent:
             reason = sensitive_risk_reason(scan, self.policy.extra_sensitive_patterns)
-        # Policy may assert the trust of a given source (e.g. distrust scrapers).
-        trust = self.policy.source_trust.get(turn.source, turn.trust)
+        # Policy may assert the trust of a source. A source not listed falls back
+        # to the policy's unlisted_source_trust (if set) rather than the caller's
+        # trust -- so an unknown/omitted source cannot bypass a distrust policy.
+        if turn.source in self.policy.source_trust:
+            trust = self.policy.source_trust[turn.source]
+        elif self.policy.unlisted_source_trust is not None:
+            trust = self.policy.unlisted_source_trust
+        else:
+            trust = turn.trust
         if not reason and self.policy.min_store_trust > 0.0 and trust < self.policy.min_store_trust:
             reason = "low_source_trust"
         quarantined = bool(reason)
         if quarantined:
             self.audit.record("quarantine", reason=reason, subject=turn.subject, source=turn.source)
+        if not quarantined and self.policy.deduplicate and self._is_duplicate(turn):
+            self.audit.record("dedup_skip", subject=turn.subject, relation=turn.relation)
+            return
         record = MemoryRecord(
             subject=turn.subject or turn.text,
             relation=turn.relation or turn.kind,
@@ -445,6 +455,21 @@ class GovernedMemory:
             valid_at=self.clock,
         )
         self.backend.write(record)
+
+    def _is_duplicate(self, turn: IngestTurn) -> bool:
+        subject = turn.subject or turn.text
+        relation = turn.relation or turn.kind
+        for record in self.backend.all_records():
+            if (
+                record.scope.tenant == turn.scope.tenant
+                and record.scope.subject == turn.scope.subject
+                and record.subject == subject
+                and record.relation == relation
+                and record.object == turn.object
+                and record.text == turn.text
+            ):
+                return True
+        return False
 
     def forget(self, term: str, scope: Scope) -> int:
         term_tokens = tokenize(term)
@@ -563,9 +588,12 @@ class GovernedMemory:
         if not self.policy.cross_tenant_allowed and record.scope.tenant != turn.scope.tenant:
             return "wrong_tenant"
         # Entity-scope isolation: a query about subject X must not be answered by
-        # a look-alike record about subject Y.
-        if self.policy.scope_isolation and turn.scope.subject and record.subject and record.subject != turn.scope.subject:
-            return "wrong_scope"
+        # a look-alike record about subject Y. A subject-less query (entity="")
+        # must NOT be served a subject-scoped record either -- otherwise scope
+        # isolation is bypassable by simply omitting the entity.
+        if self.policy.scope_isolation and record.subject:
+            if not turn.scope.subject or record.subject != turn.scope.subject:
+                return "wrong_scope"
         # Instruction-like content that slipped in is never served -- scan every
         # field, not just free text (payload may hide in subject/relation/object).
         record_scan = " ".join(part for part in (record.text, record.subject, record.relation, record.object) if part)
@@ -602,7 +630,7 @@ class GovernedMemory:
         best = ranked[0]
         others = [r for r in ranked if r.source != best.source]
         best_other = others[0] if others else None
-        if best_other is not None and (best.trust - best_other.trust) >= self.trust_margin:
+        if best_other is not None and (best.trust - best_other.trust) >= self.trust_margin - 1e-9:
             self.audit.record("conflict_resolved_by_trust", subject=best.subject, winning_source=best.source)
             return (best, "")
         self.audit.record("conflict_abstain", subject=best.subject)

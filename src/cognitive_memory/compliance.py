@@ -15,12 +15,32 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field, asdict
 import json
+import re
 from pathlib import Path
 from typing import Any, Dict, Mapping, Optional, Tuple
 
 
 class ComplianceConfigError(ValueError):
     """Raised when a compliance profile is malformed or unknown."""
+
+
+# A group that both contains an unbounded quantifier and is itself unbounded-
+# quantified (e.g. (a+)+, (.*)*, (x+)*) -- the classic catastrophic-backtracking
+# (ReDoS) signature. Conservative: reject such user-supplied deny-list patterns.
+_REDOS_SIGNATURE = re.compile(r"\([^()]*[+*][^()]*\)\s*[+*]")
+
+
+def _validate_patterns(patterns: Tuple[str, ...], kind: str) -> None:
+    for pattern in patterns:
+        try:
+            re.compile(pattern)
+        except re.error as exc:
+            raise ComplianceConfigError("invalid %s regex %r: %s" % (kind, pattern, exc))
+        if _REDOS_SIGNATURE.search(pattern):
+            raise ComplianceConfigError(
+                "potentially catastrophic (ReDoS) %s regex rejected: %r "
+                "(nested unbounded quantifier)" % (kind, pattern)
+            )
 
 
 @dataclass(frozen=True)
@@ -44,8 +64,12 @@ class CompliancePolicy:
     require_consent_for_sensitive: bool = True
 
     # -- provenance / trust ----------------------------------------------
-    # default trust to assign a source when the caller does not supply one
+    # per-source trust override (e.g. distrust scrapers)
     source_trust: Mapping[str, float] = field(default_factory=dict)
+    # trust assigned to a source NOT listed in source_trust; None keeps the
+    # caller-supplied trust (backward compatible). Set it (e.g. 0.3) so an
+    # unknown/omitted source cannot bypass a distrust policy via caller trust.
+    unlisted_source_trust: Optional[float] = None
     # writes below this trust are quarantined (0.0 = accept anything)
     min_store_trust: float = 0.0
     # cross-source value conflicts need at least this trust gap, else abstain
@@ -67,15 +91,29 @@ class CompliancePolicy:
     #   free-text erasure is handled elsewhere.
     erasure_mode: str = "strict"
 
-    # -- retention (advisory metadata; enforcement is opt-in downstream) --
+    # -- deduplication ----------------------------------------------------
+    # skip writing a record identical to an existing one (same subject/relation/
+    # object/tenant/scope-subject). Off by default (preserves record counts).
+    deduplicate: bool = False
+
+    # -- retention --------------------------------------------------------
     retention_days: Mapping[str, int] = field(default_factory=dict)
+    # also drop records older than their retention window at recall time (not
+    # only via an explicit cleanup pass). Off by default.
+    enforce_retention_on_recall: bool = False
 
     def __post_init__(self) -> None:
         if self.erasure_mode not in ("strict", "lenient"):
             raise ComplianceConfigError("erasure_mode must be 'strict' or 'lenient'")
-        for value in (self.relevance_floor, self.trust_margin, self.min_store_trust):
+        thresholds = [self.relevance_floor, self.trust_margin, self.min_store_trust]
+        if self.unlisted_source_trust is not None:
+            thresholds.append(self.unlisted_source_trust)
+        for value in thresholds:
             if not 0.0 <= float(value) <= 1.0:
                 raise ComplianceConfigError("trust/relevance thresholds must be in [0,1]")
+        # Validate user-supplied deny-list regex now (fail fast, block ReDoS)
+        _validate_patterns(self.extra_injection_patterns, "injection")
+        _validate_patterns(self.extra_sensitive_patterns, "sensitive")
 
     # -- serialization ----------------------------------------------------
 
@@ -171,7 +209,8 @@ _BUILTIN: Dict[str, CompliancePolicy] = {
         name="recruitment",
         description="Candidate/client scope isolation, salary/visa sensitivity, low trust for tool-sourced writes.",
         extra_sensitive_patterns=_RECRUITING_SENSITIVE,
-        source_trust={"external_tool": 0.5, "scraper": 0.4},
+        source_trust={"user": 0.9, "recruiter": 0.9, "external_tool": 0.5, "scraper": 0.4},
+        unlisted_source_trust=0.3,
         trust_margin=0.2,
         scope_isolation=True,
         cross_tenant_allowed=False,
@@ -182,6 +221,8 @@ _BUILTIN: Dict[str, CompliancePolicy] = {
         description="HIPAA-style PHI: MRN/patient identifiers, consent required, strict erasure, long adverse-event retention.",
         extra_sensitive_patterns=_PHARMA_SENSITIVE,
         require_consent_for_sensitive=True,
+        source_trust={"user": 0.9, "clinician": 0.9, "external_tool": 0.4, "scraper": 0.2},
+        unlisted_source_trust=0.3,
         min_store_trust=0.3,
         trust_margin=0.25,
         scope_isolation=True,
@@ -194,6 +235,8 @@ _BUILTIN: Dict[str, CompliancePolicy] = {
         description="PCI/PII: account and card identifiers, strict tenant isolation.",
         extra_sensitive_patterns=_FINANCE_SENSITIVE,
         require_consent_for_sensitive=True,
+        source_trust={"user": 0.9, "external_tool": 0.4, "scraper": 0.2},
+        unlisted_source_trust=0.2,
         min_store_trust=0.2,
         scope_isolation=True,
         cross_tenant_allowed=False,

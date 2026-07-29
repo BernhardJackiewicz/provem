@@ -136,6 +136,81 @@ class McpHardeningTests(unittest.TestCase):
         self.assertEqual(resp["error"]["code"], INVALID_PARAMS)
 
 
+class ScopeEmptyEntityTests(unittest.TestCase):
+    """Finding (confirmed): scope isolation bypassable via empty entity."""
+
+    def test_empty_entity_does_not_leak_subject_scoped_record(self):
+        mem = GovernedMemory()  # scope_isolation True
+        mem.remember("alice salary 120k", subject="alice", relation="salary",
+                     object="120k", tenant="t", entity="alice")
+        leaked = mem.recall_value("salary", tenant="t", entity="")
+        self.assertTrue(leaked.abstained, "empty-entity query must not be served a subject-scoped record")
+
+    def test_matching_entity_still_served(self):
+        mem = GovernedMemory()
+        mem.remember("alice salary 120k", subject="alice", relation="salary",
+                     object="120k", tenant="t", entity="alice")
+        self.assertEqual(mem.recall_value("alice salary", tenant="t", entity="alice").answer, "120k")
+
+
+class SourceTrustTests(unittest.TestCase):
+    """Finding (confirmed): unknown source bypasses distrust via caller trust."""
+
+    def test_unlisted_source_trust_blocks_unknown_source(self):
+        mem = GovernedMemory(policy={"name": "p", "min_store_trust": 0.3, "unlisted_source_trust": 0.1})
+        mem.remember("secret plan", subject="s", relation="r", object="v",
+                     tenant="t", entity="s", source="unknown", trust=0.9)
+        self.assertTrue(mem.recall_value("secret plan", tenant="t", entity="s").abstained)
+
+    def test_default_none_keeps_caller_trust(self):
+        mem = GovernedMemory(policy={"name": "p", "min_store_trust": 0.3})  # unlisted None
+        mem.remember("secret plan", subject="s", relation="r", object="v",
+                     tenant="t", entity="s", source="unknown", trust=0.9)
+        self.assertFalse(mem.recall_value("secret plan", tenant="t", entity="s").abstained)
+
+
+class RegexValidationTests(unittest.TestCase):
+    """Finding (confirmed): ReDoS via unvalidated user regex."""
+
+    def test_catastrophic_pattern_rejected_at_load(self):
+        from cognitive_memory.compliance import CompliancePolicy, ComplianceConfigError
+
+        with self.assertRaises(ComplianceConfigError):
+            CompliancePolicy(name="x", extra_injection_patterns=(r"(a+)+b",))
+
+    def test_invalid_regex_rejected_at_load(self):
+        from cognitive_memory.compliance import CompliancePolicy, ComplianceConfigError
+
+        with self.assertRaises(ComplianceConfigError):
+            CompliancePolicy(name="x", extra_sensitive_patterns=(r"(?P<unclosed",))
+
+    def test_builtin_profiles_still_load(self):
+        from cognitive_memory.compliance import load_profile
+
+        for name in ("default", "recruitment", "pharma", "finance"):
+            self.assertTrue(load_profile(name).name)
+
+
+class DedupTests(unittest.TestCase):
+    """Finding (confirmed): duplicate facts accumulate; opt-in dedup."""
+
+    def test_dedup_on_collapses_identical_writes(self):
+        mem = GovernedMemory(policy={"name": "d", "deduplicate": True})
+        for _ in range(3):
+            mem.remember("alice likes coffee", subject="alice", relation="likes",
+                         object="coffee", tenant="t", entity="alice")
+        records = [r for r in mem.backend.all_records() if r.subject == "alice"]
+        self.assertEqual(len(records), 1)
+
+    def test_dedup_off_by_default_keeps_all(self):
+        mem = GovernedMemory()
+        for _ in range(3):
+            mem.remember("alice likes coffee", subject="alice", relation="likes",
+                         object="coffee", tenant="t", entity="alice")
+        records = [r for r in mem.backend.all_records() if r.subject == "alice"]
+        self.assertEqual(len(records), 3)
+
+
 class AnswererNoneTests(unittest.TestCase):
     def test_extractive_abstains_on_none_entries(self):
         self.assertEqual(ExtractiveAnswerer().answer("who?", [None]), "")
