@@ -140,6 +140,14 @@ class CompliancePolicy:
             kwargs["source_trust"] = {str(k): float(v) for k, v in dict(kwargs["source_trust"]).items()}
         if "retention_days" in kwargs:
             kwargs["retention_days"] = {str(k): int(v) for k, v in dict(kwargs["retention_days"]).items()}
+        # Coerce scalar float fields too (a JSON/YAML profile may quote numbers);
+        # otherwise the value stays a str, passes __post_init__'s float() range
+        # check, and crashes the first write/recall comparison.
+        for scalar in ("min_store_trust", "trust_margin", "relevance_floor"):
+            if scalar in kwargs and kwargs[scalar] is not None:
+                kwargs[scalar] = float(kwargs[scalar])
+        if kwargs.get("unlisted_source_trust") is not None:
+            kwargs["unlisted_source_trust"] = float(kwargs["unlisted_source_trust"])
         return cls(**kwargs)
 
     def to_json(self, indent: int = 2) -> str:

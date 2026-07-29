@@ -80,7 +80,12 @@ class AuditLog:
             line = line.strip()
             if not line:
                 continue
-            raw = json.loads(line)
+            try:
+                raw = json.loads(line)
+            except (ValueError, json.JSONDecodeError):
+                # Tolerate a truncated/corrupt trailing line (a routine crash-
+                # during-append artifact); the valid prefix of the chain loads.
+                continue
             self._entries.append(
                 AuditEntry(
                     seq=int(raw["seq"]), action=str(raw["action"]), details=dict(raw.get("details", {})),

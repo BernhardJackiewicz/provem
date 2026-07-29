@@ -56,8 +56,15 @@ class SqliteBackend:
         self._counter = self._max_counter()
 
     def _max_counter(self) -> int:
-        cur = self._conn.execute("SELECT COUNT(*) AS n FROM records")
-        return int(cur.fetchone()["n"])
+        # Seed from the highest existing auto-id ('s<N>'), NOT COUNT(*): after a
+        # delete+reload, COUNT would let the next id collide with a live row and
+        # INSERT OR REPLACE would silently overwrite it (data loss).
+        cur = self._conn.execute(
+            "SELECT MAX(CAST(SUBSTR(id, 2) AS INTEGER)) AS m FROM records "
+            "WHERE id LIKE 's%' AND SUBSTR(id, 2) GLOB '[0-9]*'"
+        )
+        row = cur.fetchone()
+        return int(row["m"]) if row and row["m"] is not None else 0
 
     def write(self, record: MemoryRecord) -> str:
         self._counter += 1
