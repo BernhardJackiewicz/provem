@@ -58,12 +58,32 @@ Do not:
 
 - commit real transcripts, phone numbers, emails, names, addresses, salaries or
   CRM exports
-- download datasets from the CLI
+- download datasets implicitly, from `external-eval`, or from any command other
+  than an explicit `external-reliability --download --dataset <name>` (see the
+  narrow download exception below)
 - evaluate data with unknown license metadata
 - run data marked unapproved or with unsafe `pii_status`
 - print raw sensitive values in reports
 - treat local redaction as production anonymization
 - claim real-world performance from fake fixtures
+
+## Narrow download exception (external-reliability only)
+
+The `external-reliability --download` command may fetch a dataset **only** when
+all of the following hold, so the fetch stays review-gated and reproducible:
+
+- the dataset is listed in the committed `DATASET_REGISTRY`
+  (`src/cognitive_memory/external_datasets.py`) with reviewed license metadata;
+- GitHub sources are pinned to a raw URL (commit-pinning is preferred over
+  `main`); Hugging Face sources use the JSON `/rows` API (no extra dependency);
+- fetched bytes are SHA256-recorded and stay under the git-ignored
+  `data/external/` tree — never committed;
+- a generated `data/external/manifest.json` (same schema as this document's
+  manifest) marks the dataset `approved_for_eval` only when its license is on
+  the allowlist (Apache-2.0, MIT, CC-BY-4.0, CC-BY-SA-4.0).
+
+Evaluation itself (`external-reliability --track ...`) is fully offline once the
+data is present, and the quality gate skips green when it is absent.
 
 Local real/anonymized data belongs under ignored paths such as `data/` or
 `transcripts/`, never in committed fixtures.

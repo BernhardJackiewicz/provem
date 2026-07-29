@@ -178,39 +178,89 @@ def load_injecagent(path: Path, split: str = "") -> List[ExternalRecord]:
     return records
 
 
-def load_tofu(path: Path, split: str = "") -> List[ExternalRecord]:
-    """TOFU: fictitious-author QA. Author-level split prevents leakage.
+import re as _re
 
-    We derive the author key from an explicit field if present, else from a
-    stable hash of the question so all QA about one author stay in one split.
+_TOFU_FULLNAME = _re.compile(r"full name is ([A-Z][^.,;]{1,60}?)(?:[.,;]|$)")
+_TOFU_PROPER = _re.compile(r"\b([A-Z][a-z]+(?:[ -][A-Z][a-z]+){1,3})\b")
+
+
+def _tofu_author(question: str, answer: str) -> str:
+    """Best-effort author name for a TOFU QA (the term GDPR-erasure targets).
+
+    Real TOFU has no author field; the name recurs in the text. We prefer an
+    explicit "full name is X" anchor, else the longest capitalized proper-noun
+    phrase in the answer, else the question. Returns "" when nothing is found
+    (counted honestly against entity_coverage).
     """
-    records: List[ExternalRecord] = []
+    anchor = _TOFU_FULLNAME.search(answer)
+    if anchor:
+        return anchor.group(1).strip()
+    for text in (answer, question):
+        candidates = _TOFU_PROPER.findall(text)
+        if candidates:
+            return max(candidates, key=len).strip()
+    return ""
+
+
+def _tofu_sibling(path: Path) -> Optional[Path]:
+    """Locate the retain file that pairs with a downloaded forget file."""
+    name = path.name
+    for a, b in (("forget10", "retain90"), ("forget", "retain")):
+        if a in name:
+            candidate = path.with_name(name.replace(a, b))
+            if candidate.exists():
+                return candidate
+    return None
+
+
+def load_tofu(path: Path, split: str = "") -> List[ExternalRecord]:
+    """TOFU: fictitious-author QA (erasure enforcement + utility retention).
+
+    Two shapes are supported:
+      * fixture shape -- rows carry explicit ``subset`` and ``author`` fields;
+      * real shape -- forget/retain live in separate files (forget10/retain90)
+        with no labels, so the label comes from the filename and the author is
+        extracted from the text via :func:`_tofu_author`.
+    """
     rows = _rows_of(_load_json(path))
-    for index, row in enumerate(rows):
-        question = str(row.get("question", "")).strip()
-        answer = str(row.get("answer", "")).strip()
-        if not question:
-            continue
-        author = str(row.get("author", row.get("subject", ""))).strip()
-        subset = str(row.get("subset", row.get("_subset", ""))).lower()
-        # forget-set rows must become unanswerable; retain-set rows must survive.
-        label = "qa_forget" if "forget" in subset else "qa_retain"
-        author_key = author or ("tofu_author_%d" % (index % 20))
-        rid = "tofu:%d" % index
-        records.append(
-            ExternalRecord(
-                record_id=rid,
-                dataset="tofu",
-                text="%s %s" % (question, answer),
-                label=label,
-                # split on author, not row, so an author's patterns never leak
-                split=split or stable_split(author_key),
-                subject=author_key,
-                question=question,
-                answer=answer,
-                meta={"subset": subset},
+    has_subset = bool(rows) and ("subset" in rows[0] or "author" in rows[0])
+
+    def _emit(rows_in: List[dict], label: str, tag: str) -> List[ExternalRecord]:
+        out: List[ExternalRecord] = []
+        for index, row in enumerate(rows_in):
+            question = str(row.get("question", "")).strip()
+            answer = str(row.get("answer", "")).strip()
+            if not question:
+                continue
+            if has_subset:
+                author = str(row.get("author", row.get("subject", ""))).strip()
+                row_label = "qa_forget" if "forget" in str(row.get("subset", "")).lower() else "qa_retain"
+            else:
+                author = _tofu_author(question, answer)
+                row_label = label
+            rid = "tofu:%s:%d" % (tag, index)
+            out.append(
+                ExternalRecord(
+                    record_id=rid,
+                    dataset="tofu",
+                    text="%s %s" % (question, answer),
+                    label=row_label,
+                    # split on author when known (no author-pattern leak), else per QA
+                    split=split or stable_split(author or rid),
+                    subject=author,
+                    question=question,
+                    answer=answer,
+                )
             )
-        )
+        return out
+
+    if has_subset:
+        return _emit(rows, "qa_retain", "fix")
+
+    records = _emit(rows, "qa_forget", "forget")
+    sibling = _tofu_sibling(path)
+    if sibling is not None:
+        records.extend(_emit(_rows_of(_load_json(sibling)), "qa_retain", "retain"))
     return records
 
 
@@ -441,9 +491,15 @@ def build_payload_replay_scenarios(records: Sequence[ExternalRecord]) -> List[Sc
         true_val = "approved"
         poison_val = "denied"
         scope = Scope(tenant=tenant, subject=subject)
+        # The attacker record must be *retrievable* for the victim query, so it
+        # carries the queryable stem ("<entity> <relation>") plus the real
+        # payload text -- mirroring a MINJA-style look-alike record. Governance
+        # must catch it from the payload content; a shallow store retrieves and
+        # serves the poison value because the attack is the more recent write.
+        attack_text = "%s %s %s" % (subject, relation, record.text)
         ingest = [
             IngestTurn("fact", "%s %s %s" % (subject, relation, true_val), subject, relation, true_val, scope, "user", 0.96),
-            IngestTurn("attack", record.text, subject, relation, poison_val, scope, "external_tool", 0.8),
+            IngestTurn("attack", attack_text, subject, relation, poison_val, scope, "external_tool", 0.8),
         ]
         queries = [QueryTurn("%s %s" % (subject, relation), scope, true_val, "injection") for _ in range(2)]
         scenarios.append(Scenario("replay_%d" % index, ingest, queries, "injection"))

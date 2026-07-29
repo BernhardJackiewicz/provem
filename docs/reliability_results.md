@@ -91,6 +91,92 @@ irreversible compounding failures into recoverable ones.
 - The result is fully reproducible from seeds with no API key, no LLM, and no
   external services.
 
+## External datasets (real-world payloads)
+
+The synthetic numbers above use scenarios we authored. This section runs the
+*same shipping governance code* against attack payloads and privacy data written
+by other people. Reproduce with (data auto-downloaded once, then offline):
+
+```
+python3 -m cognitive_memory external-reliability --download --dataset deepset_prompt_injections
+python3 -m cognitive_memory external-reliability --download --dataset injecagent
+python3 -m cognitive_memory external-reliability --download --dataset tofu
+python3 -m cognitive_memory external-reliability --track all --split dev --json
+python3 -m cognitive_memory external-reliability --track all --split test --json   # report-only
+```
+
+Dev is for tuning (patterns were iterated only here); test is reported once.
+
+### Injection detection — the write-side quarantine in isolation
+
+| Dataset | Split | n | Recall | Precision | F1 | Benign FPR |
+| --- | --- | ---: | ---: | ---: | ---: | ---: |
+| deepset/prompt-injections | dev | 266 | `0.361` | `1.000` | `0.531` | `0.000` |
+| deepset/prompt-injections | test | 280 | `0.337` | — | `0.504` | `0.000` |
+| InjecAgent (tool-output) | dev | 269 | `0.000` | recall-only | — | — |
+| InjecAgent (tool-output) | test | 241 | `0.000` | recall-only | — | — |
+
+Reading: the pattern-based quarantine, in isolation, is **weak on real
+payloads**. Before this pass it caught `~4%` of deepset injections; adding
+generalized English+German override markers (calibrated on the dev split only)
+lifted recall to `~36%` at **zero** benign false positives, and this generalized
+to the held-out test split (`33.7%`). It catches **none** of InjecAgent's
+indirect tool-output attacks, which read like ordinary user requests
+("grant my friend access") and carry no override phrasing. This is the honest
+ceiling of content pattern-matching and is exactly why detection is not the only
+line of defense.
+
+### Payload replay — the full governance stack, closed loop
+
+Each real payload is planted as a higher-recency look-alike record (MINJA-style)
+and queried through the paired trajectory harness. Only the attack *text* is
+real; the fact/poison scaffold is synthetic.
+
+| Dataset | Split | n | Ungoverned poisoned | Governed poisoned |
+| --- | --- | ---: | ---: | ---: |
+| deepset | dev | 108 | `108` | `0` |
+| deepset | test | 95 | `95` | `0` |
+| InjecAgent | dev | 269 | `269` | `0` |
+| InjecAgent | test | 241 | `241` | `0` |
+
+Reading: even the `~64–100%` of payloads that **evade the content detector** are
+**contained `100%` of the time** in the closed loop, because the poison arrives
+from a lower-trust `external_tool` source and loses to the higher-trust user
+fact under provenance/trust-margin resolution. Governance does not depend on
+detecting the attack text — the strong result comes from calibrated conflict
+resolution, not pattern-matching. (Caveat: the scaffold is synthetic; this shows
+containment of the retrieval-and-refire mechanism, not a live planting exploit.)
+
+### Erasure enforcement + utility retention (TOFU)
+
+| Split | Forget QA | Retain QA | Enforcement | Utility retention | Overblocking | Entity coverage |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| dev | 221 | 234 | `1.000` | `0.987` | `0.009` | `1.00` |
+| test | 179 | 166 | `1.000` | `0.982` | `0.000` | `1.00` |
+
+Reading: on real fictitious-author QA, forgetting an entity removes **all** of
+its facts (`enforcement 1.000`) while other authors stay answerable
+(`utility ~0.98`) and erasure-driven overblocking is near zero. Violation is
+scored strictly (served-after-forget by record id **or** by value leak).
+Author names are extracted heuristically from text; coverage is reported and was
+`1.00` here, but noisy extraction (e.g. book titles mistaken for names) is a real
+limitation on other slices.
+
+### Scope isolation
+
+ai4privacy is not yet downloaded pending a license review, so the scope track is
+currently exercised only on committed fixtures (isolation `1.000`, no
+cross-subject serves). Real-data scope numbers are deferred to a later pass.
+
+### What these external numbers do and do not show
+
+- They **do** show the governance stack contains real, third-party injection
+  payloads end-to-end and enforces erasure on real QA data.
+- They **do not** show the content detector alone is strong — it is not
+  (`recall 0.34` deepset, `0.00` InjecAgent). We report that plainly.
+- They are still not a production claim: the payload-replay scaffold is
+  synthetic, TOFU authors are fictitious, and scope is fixture-only for now.
+
 ## Unsupported claims
 
 - This is **not** a claim about any specific LLM's end-to-end task success. The

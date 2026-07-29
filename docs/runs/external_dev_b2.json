@@ -1,0 +1,76 @@
+{
+  "erasure": [
+    {
+      "dataset": "tofu",
+      "entity_coverage": 1.0,
+      "erasure_enforcement_rate": 1.0,
+      "n_forget": 221,
+      "n_retain": 234,
+      "overblocking_rate": 0.008547008547008548,
+      "retain_abstained_total": 2,
+      "split": "dev",
+      "utility_retention_rate": 0.9871794871794872,
+      "violations": 0
+    }
+  ],
+  "injection": [
+    {
+      "dataset": "deepset_prompt_injections",
+      "f1": 0.5306122448979591,
+      "fn": 69,
+      "fp": 0,
+      "fpr": 0.0,
+      "fpr_ci": [
+        0.0,
+        0.023735937927685878
+      ],
+      "n": 266,
+      "payload_replay": {
+        "dataset": "deepset_prompt_injections",
+        "governed_poisoning_success": 0,
+        "mcnemar_discordant": 108,
+        "mcnemar_p": 6.162975822039155e-33,
+        "n": 108,
+        "note": "scaffold is synthetic (a fact + a look-alike poison record); only the attack text is real.",
+        "split": "dev",
+        "ungoverned_poisoning_success": 108
+      },
+      "precision": 1.0,
+      "recall": 0.3611111111111111,
+      "recall_ci": [
+        0.276735447828849,
+        0.45502770765630557
+      ],
+      "recall_only": false,
+      "split": "dev",
+      "tn": 158,
+      "tp": 39
+    },
+    {
+      "dataset": "injecagent",
+      "fn": 269,
+      "fp": 0,
+      "n": 269,
+      "payload_replay": {
+        "dataset": "injecagent",
+        "governed_poisoning_success": 0,
+        "mcnemar_discordant": 269,
+        "mcnemar_p": 2.1084395886461046e-81,
+        "n": 269,
+        "note": "scaffold is synthetic (a fact + a look-alike poison record); only the attack text is real.",
+        "split": "dev",
+        "ungoverned_poisoning_success": 269
+      },
+      "recall": 0.0,
+      "recall_ci": [
+        0.0,
+        0.01407945419034962
+      ],
+      "recall_only": true,
+      "split": "dev",
+      "tn": 0,
+      "tp": 0
+    }
+  ],
+  "scope": []
+}

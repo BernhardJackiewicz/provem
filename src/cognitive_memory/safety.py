@@ -11,6 +11,24 @@ INSTRUCTION_PATTERNS = (
     r"\btreat\b.{0,40}\bas\b.{0,20}\bsystem\b.{0,20}\bpolic(?:y|ies)\b",
     r"\b(system|developer|tool)\s*:",
     r"ignore[_ -]?all[_ -]?polic(?:y|ies)",
+    # --- generalized instruction-override markers (EN) ---------------------
+    # Calibrated on the deepset/prompt-injections *train/dev* split only:
+    # lifts real-payload detection recall from ~4% to ~36% at 0% benign FPR.
+    # Kept high-precision so benign recall/quarantine is not affected.
+    r"\b(ignore|disregard|forget)\b.{0,30}\b(all|everything|any|the|above|preceding|previous|prior)\b.{0,30}"
+    r"\b(instruction|order|command|information|task|rule|prompt|context|preceding|previous|before)",
+    r"\bforget\b.{0,20}\b(everything|all)\b",
+    r"\bignore\b.{0,15}\b(above|previous|preceding|prior|earlier)\b",
+    r"\bnew\b.{0,15}\b(tasks?|instructions?|orders?)\b.{0,15}\b(follow|now)\b",
+    r"\bnow\b.{0,20}\bnew\b.{0,10}\b(tasks?|instructions?)\b",
+    r"\b(pretend|act)\b.{0,15}\b(you are|as|to be)\b",
+    r"\byou are now\b",
+    # --- German variants (deepset is largely German) ----------------------
+    r"\bvergiss\b.{0,25}\b(alle|alles|vorherige|bisherige|vorherigen|fr(?:ü|ue)heren|obige)\b",
+    r"\bignoriere\b.{0,25}\b(alle|alles|vorherige|bisherige|obige)\b",
+    r"\b(nun|jetzt)\b.{0,20}\bfolge?n?\b.{0,15}\bneue",
+    r"\bneue\b.{0,15}\b(aufgaben?|anweisungen?|instruktionen?|befehle?)\b.{0,15}\bfolg",
+    r"\bich\s+m(?:ö|oe)chte,?\s+dass\s+(sie|du)\b.{0,20}\bals\b.{0,25}\b(fungier|agier|verhalt)",
 )
 
 SENSITIVE_PATTERNS = (

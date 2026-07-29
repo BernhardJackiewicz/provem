@@ -20,3 +20,7 @@ data/*
 transcripts/*
 !transcripts/README.md
 *.transcript-report.json
+
+# External-reliability raw failure exports (may contain payload text)
+docs/runs/*.jsonl
+docs/runs/*.err
