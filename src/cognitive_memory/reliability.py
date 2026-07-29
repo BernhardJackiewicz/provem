@@ -39,8 +39,9 @@ put in front of any memory store (see ``docs/agentic_reliability_benchmark.md``)
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from datetime import datetime, timezone
 import random
-from typing import Dict, List, Optional, Protocol, Sequence, Tuple, runtime_checkable
+from typing import Callable, Dict, List, Optional, Protocol, Sequence, Tuple, runtime_checkable
 
 from .models import lexical_score, tokenize
 from .safety import instruction_risk_reason, sensitive_risk_reason
@@ -91,6 +92,7 @@ class MemoryRecord:
     quarantine_reason: str = ""
     valid_at: int = 0            # logical clock (turn index); latest wins
     id: str = ""
+    created_at: str = ""         # wall-clock ISO timestamp for retention enforcement
 
     def __post_init__(self) -> None:
         if not self.text:
@@ -328,10 +330,13 @@ class GovernedMemory:
         relevance_floor: Optional[float] = None,
         trust_margin: Optional[float] = None,
         audit_path: Optional[str] = None,
+        now_fn: Optional[Callable[[], datetime]] = None,
     ) -> None:
         from .compliance import resolve_policy
 
         self.backend = backend or NaiveBackend()
+        # wall-clock source for retention (injectable for deterministic tests)
+        self._now_fn = now_fn or (lambda: datetime.now(timezone.utc))
         self.policy = resolve_policy(policy)
         # Explicit kwargs override the policy (backward compatibility); otherwise
         # the policy's thresholds apply. The default policy reproduces the
@@ -434,6 +439,7 @@ class GovernedMemory:
             quarantined=quarantined,
             quarantine_reason=reason,
             valid_at=self.clock,
+            created_at=self._now_fn().isoformat(),
         )
         self.backend.write(record)
 
@@ -480,6 +486,43 @@ class GovernedMemory:
         """True if the audit chain is intact (no entry altered/reordered)."""
         return self.audit.verify()
 
+    # -- retention ----------------------------------------------------------
+
+    def _retention_days_for(self, record: MemoryRecord) -> Optional[int]:
+        rd = self.policy.retention_days
+        if not rd:
+            return None
+        category = "restricted" if record.quarantined else "high"
+        if category in rd:
+            return int(rd[category])
+        if "default" in rd:
+            return int(rd["default"])
+        return None
+
+    def _is_expired(self, record: MemoryRecord, now: datetime) -> bool:
+        days = self._retention_days_for(record)
+        if days is None or not record.created_at:
+            return False
+        try:
+            created = datetime.fromisoformat(record.created_at)
+        except ValueError:
+            return False
+        if created.tzinfo is None:
+            created = created.replace(tzinfo=timezone.utc)
+        if now.tzinfo is None:
+            now = now.replace(tzinfo=timezone.utc)
+        return (now - created).total_seconds() / 86400.0 > days
+
+    def cleanup_expired(self, now: Optional[datetime] = None) -> int:
+        """Delete records past their retention window; audit the sweep. Returns
+        how many the backend confirmed deleted."""
+        now = now or self._now_fn()
+        remove = [r.id for r in self.backend.all_records() if self._is_expired(r, now)]
+        removed = self.backend.delete_ids(remove) if remove else 0
+        if removed:
+            self.audit.record("retention_cleanup", removed=removed, targeted=len(remove))
+        return removed
+
     def _erasure_tokens(self, record: MemoryRecord) -> set:
         # strict erasure inspects the whole record text (safe, may overblock);
         # lenient erasure only targets the record's subject/object.
@@ -499,9 +542,12 @@ class GovernedMemory:
         ops = len(scored)
         excluded: List[Tuple[str, str]] = []
         kept: List[Tuple[float, MemoryRecord]] = []
+        retention_now = self._now_fn() if self.policy.enforce_retention_on_recall else None
 
         for score, record in scored:
             reason = self._exclusion_reason(record, turn)
+            if not reason and retention_now is not None and self._is_expired(record, retention_now):
+                reason = "retention_expired"
             if reason:
                 excluded.append((record.id, reason))
                 continue

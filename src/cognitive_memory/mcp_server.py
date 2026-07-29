@@ -211,6 +211,12 @@ class GovernedMemoryService:
         mem = self.memory_for(tenant)
         return {"tenant": tenant, "verified": mem.verify_audit(), "audit": mem.export_audit()}
 
+    def cleanup(self, args: Dict[str, Any]) -> Dict[str, Any]:
+        tenant = self._require_tenant(args)
+        mem = self.memory_for(tenant)
+        removed = mem.cleanup_expired()
+        return {"tenant": tenant, "removed": removed}
+
 
 # JSON Schemas for the tools (advertised via tools/list)
 _TOOLS: List[Dict[str, Any]] = [
@@ -272,6 +278,15 @@ _TOOLS: List[Dict[str, Any]] = [
             "required": ["tenant"],
         },
     },
+    {
+        "name": "cleanup",
+        "description": "Delete records past their retention window for a tenant (returns count).",
+        "inputSchema": {
+            "type": "object",
+            "properties": {"tenant": {"type": "string"}},
+            "required": ["tenant"],
+        },
+    },
 ]
 
 
@@ -287,6 +302,7 @@ class MCPServer:
             "forget": self.service.forget,
             "list_profiles": self.service.list_profiles,
             "audit_export": self.service.audit_export,
+            "cleanup": self.service.cleanup,
         }
 
     def handle(self, request: Dict[str, Any]) -> Optional[Dict[str, Any]]:

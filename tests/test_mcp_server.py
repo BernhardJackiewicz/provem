@@ -39,7 +39,7 @@ class HandshakeTests(unittest.TestCase):
         server = MCPServer()
         tools = server.handle(_req("tools/list"))["result"]["tools"]
         names = {t["name"] for t in tools}
-        self.assertEqual(names, {"remember", "recall", "forget", "list_profiles", "audit_export"})
+        self.assertEqual(names, {"remember", "recall", "forget", "list_profiles", "audit_export", "cleanup"})
         for t in tools:
             self.assertIn("inputSchema", t)
 
