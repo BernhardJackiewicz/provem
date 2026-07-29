@@ -89,6 +89,32 @@ The `GovernedMemory` wrapper is backend-agnostic (`MemoryBackend` protocol) and
 embeddable in an agent or any app — see the recruiting example in
 `tests/test_reliability.py::EmbeddabilityTests`.
 
+## Use it as a product: configurable MCP server
+
+Run one dependency-free MCP server for many domains. Each tenant maps to a
+compliance profile (recruitment / pharma / finance / custom); tenants are fully
+isolated; every decision is written to a tamper-evident audit trail.
+
+```bash
+PYTHONPATH=src python3 -m cognitive_memory mcp-serve --config examples/mcp/server_config.json
+```
+
+Tools exposed to agents: `remember`, `recall`, `forget` (returns a GDPR erasure
+certificate), `list_profiles`, `audit_export`. Configure per domain by name,
+dict, or JSON/YAML profile:
+
+```python
+from cognitive_memory import GovernedMemory, CompliancePolicy
+
+mem = GovernedMemory(policy="pharma")                       # built-in profile
+mem = GovernedMemory(policy=CompliancePolicy.load("examples/profiles/custom_legal.json"))
+```
+
+Enterprise properties: configurable compliance profiles, per-tenant isolation,
+SHA-256 hash-chained audit + erasure certificates, BM25-ranked backend for
+scale, and a pluggable answerer (keyless by default; optional key-gated
+`LLMAnswerer`). Full guide: [`docs/mcp_server.md`](docs/mcp_server.md).
+
 ## What the governance layer does
 
 - **Write-side:** prompt-injection quarantine, sensitive-without-consent hold,
