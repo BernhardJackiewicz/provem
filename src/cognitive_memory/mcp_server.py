@@ -41,18 +41,38 @@ class ServerConfig:
 
     default_profile: str = "default"
     tenant_profiles: Dict[str, Any] = field(default_factory=dict)
-    backend: str = "naive"  # "naive" (token overlap) | "bm25" (ranked, for scale)
+    backend: str = "naive"  # "naive" | "bm25" | "sqlite"
+    sqlite_path: str = ""
+    audit_path: str = ""
+    max_text_chars: int = 100_000
+    max_line_bytes: int = 1_000_000
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "ServerConfig":
         backend = str(data.get("backend", "naive"))
-        if backend not in ("naive", "bm25"):
-            raise ValueError("backend must be 'naive' or 'bm25'")
-        return cls(
+        if backend not in ("naive", "bm25", "sqlite"):
+            raise ValueError("backend must be 'naive', 'bm25' or 'sqlite'")
+        config = cls(
             default_profile=str(data.get("default_profile", "default")),
             tenant_profiles=dict(data.get("tenant_profiles", {})),
             backend=backend,
+            sqlite_path=str(data.get("sqlite_path", "")),
+            audit_path=str(data.get("audit_path", "")),
+            max_text_chars=int(data.get("max_text_chars", 100_000)),
+            max_line_bytes=int(data.get("max_line_bytes", 1_000_000)),
         )
+        config.validate()
+        return config
+
+    def validate(self) -> None:
+        """Fail fast at load: every profile must resolve and every deny-list
+        regex must compile / pass the ReDoS screen (via resolve_policy)."""
+        resolve_policy(self.default_profile)
+        for tenant, spec in self.tenant_profiles.items():
+            try:
+                resolve_policy(spec)
+            except Exception as exc:
+                raise ValueError("tenant %r has an invalid profile: %s" % (tenant, exc))
 
     @classmethod
     def load(cls, path: str) -> "ServerConfig":
@@ -112,6 +132,8 @@ class GovernedMemoryService:
         text = str(args.get("text") or "")
         if not text:
             raise ValueError("remember requires non-empty 'text'")
+        if len(text) > self.config.max_text_chars:
+            raise ValueError("'text' exceeds max_text_chars (%d)" % self.config.max_text_chars)
         mem = self.memory_for(tenant)
         before = len(mem.audit)
         mem.remember(
@@ -322,9 +344,13 @@ class MCPServer:
         """Read line-delimited JSON-RPC from stdin, write responses to stdout."""
         stdin = stdin or sys.stdin
         stdout = stdout or sys.stdout
+        max_line = self.service.config.max_line_bytes
         for line in stdin:
             line = line.strip()
             if not line:
+                continue
+            if max_line and len(line) > max_line:
+                self._write(stdout, self._error(None, INVALID_REQUEST, "request exceeds max_line_bytes"))
                 continue
             try:
                 request = json.loads(line)

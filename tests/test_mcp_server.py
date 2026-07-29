@@ -132,6 +132,21 @@ class PerTenantProfileTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             ServerConfig.from_dict({"backend": "elasticsearch"})
 
+    def test_config_validates_profiles_at_load(self):
+        # unknown default profile -> fail fast at load, not at first request
+        with self.assertRaises(ValueError):
+            ServerConfig.from_dict({"default_profile": "nonexistent_profile"})
+        # a tenant profile with a catastrophic regex -> fail fast
+        with self.assertRaises(ValueError):
+            ServerConfig.from_dict({"tenant_profiles": {"t": {"name": "x", "extra_injection_patterns": ["(a+)+b"]}}})
+
+    def test_oversize_text_rejected(self):
+        config = ServerConfig.from_dict({"max_text_chars": 50})
+        server = MCPServer(GovernedMemoryService(config))
+        resp = server.handle({"jsonrpc": "2.0", "id": 1, "method": "tools/call",
+                              "params": {"name": "remember", "arguments": {"text": "x" * 100, "tenant": "t"}}})
+        self.assertIn("error", resp)
+
 
 if __name__ == "__main__":
     unittest.main()
