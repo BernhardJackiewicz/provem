@@ -55,6 +55,19 @@ improvement — and note that wiring a real LLM answerer was **measured** (next
 section) and did **not** close the gap either, because the ceiling turned out to
 be retrieval/extraction recall, not the answerer.
 
+## Scoring correctness fix (word-anchored substring) — 2026-07-30
+
+A bug-hunt found that `_has_answer_substring` used a raw `in` check, so a gold
+answer `2` matched `12 dogs`/`2020` and a system `ABSTAIN` could match a gold like
+`stain` — crediting wrong answers as correct. Fixed: the substring check is now
+word-boundary-anchored, and a system ABSTAIN on an answerable question never
+counts as a hit. **Re-measured after the fix: the aggregate dev and test numbers
+are unchanged to 4 decimals** (no_memory 0.2372 dev / 0.2118 test; CML
+recall-boost 0.2072 dev / 0.1722 test). So the bug was real per-case but the
+affected inputs are effectively absent from the actual LoCoMo split — the
+previously reported numbers were **not** inflated in aggregate. Corrected here to
+avoid an over-pessimistic claim.
+
 ## LLM answerer measurement (gpt-5-mini) — 2026-07-29
 
 Wired the optional key-gated `LLMAnswerer` (`--answer-mode llm`) over the

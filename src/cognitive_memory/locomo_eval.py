@@ -944,7 +944,11 @@ def _score_question(
     actual_abstain = answer.strip().lower() == "abstain"
     f1 = 1.0 if question.expected_abstain and actual_abstain else _best_token_f1(answer, question.answers)
     substring_match = _has_answer_substring(answer, question.answers)
-    passed = actual_abstain if question.expected_abstain else (substring_match or f1 >= 0.5)
+    # A system ABSTAIN on an answerable question is never a hit (its literal
+    # "ABSTAIN" text could otherwise substring-match a gold token like 'a'/'stain').
+    passed = actual_abstain if question.expected_abstain else (
+        not actual_abstain and (substring_match or f1 >= 0.5)
+    )
     evidence_recall = _evidence_recall(result.provenance, question.evidence_ids)
     return {
         "sample_id": sample.sample_id,
@@ -2056,8 +2060,18 @@ def _token_f1(answer: str, expected: str) -> float:
 
 
 def _has_answer_substring(answer: str, expected_answers: Sequence[str]) -> bool:
-    normalized_answer = answer.lower()
-    return any(expected.strip() and expected.strip().lower() in normalized_answer for expected in expected_answers)
+    # Word-boundary match, not raw substring: gold '2' must match '2 dogs' but
+    # NOT '12 dogs' or '2020', and gold 'stain' must NOT match 'ABSTAIN'. Raw
+    # `in` credited such wrong answers (and even ABSTAIN) as correct, inflating
+    # accuracy. \w lookarounds anchor on alphanumeric boundaries.
+    lowered = answer.lower()
+    for expected in expected_answers:
+        needle = expected.strip().lower()
+        if not needle:
+            continue
+        if re.search(r"(?<!\w)%s(?!\w)" % re.escape(needle), lowered):
+            return True
+    return False
 
 
 def _evidence_recall(provenance: Sequence[str], evidence_ids: Sequence[str]) -> Optional[float]:

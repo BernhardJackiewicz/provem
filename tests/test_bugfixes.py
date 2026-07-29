@@ -136,5 +136,16 @@ class C4Bm25CacheTests(unittest.TestCase):
         self.assertGreater(s2.normalized_score(["beta"], i2["k2"], k=1.0), 0.0)
 
 
+class C5ScoringAnchorTests(unittest.TestCase):
+    def test_substring_is_word_anchored(self):
+        from cognitive_memory.locomo_eval import _has_answer_substring
+
+        self.assertFalse(_has_answer_substring("12 dogs", ["2"]))      # '2' not inside '12'
+        self.assertFalse(_has_answer_substring("born in 2020", ["2"]))  # not inside a year
+        self.assertTrue(_has_answer_substring("she has 2 dogs", ["2"]))  # standalone token
+        self.assertFalse(_has_answer_substring("ABSTAIN", ["stain"]))    # gold not inside ABSTAIN
+        self.assertTrue(_has_answer_substring("near Cedar Lake.", ["Cedar Lake"]))  # phrase, boundaries ok
+
+
 if __name__ == "__main__":
     unittest.main()
