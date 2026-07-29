@@ -334,7 +334,10 @@ class GovernedMemory:
     ) -> None:
         from .compliance import resolve_policy
 
+        import threading
+
         self.backend = backend or NaiveBackend()
+        self._lock = threading.RLock()
         # wall-clock source for retention (injectable for deterministic tests)
         self._now_fn = now_fn or (lambda: datetime.now(timezone.utc))
         self.policy = resolve_policy(policy)
@@ -390,16 +393,20 @@ class GovernedMemory:
     # -- write side ---------------------------------------------------------
 
     def ingest(self, turn: IngestTurn) -> None:
-        self.clock += 1
-        if turn.kind == "erasure":
-            self.forget(turn.term or turn.object or turn.subject, turn.scope)
-            return
-        if turn.kind == "constraint":
-            self.restrict(turn.term or turn.object, turn.scope)
-            return
-        # 'fact' and 'attack' arrive through the identical write path; the layer
-        # does not get told which is which -- it must decide from content.
-        self._remember(turn)
+        # Reentrant lock makes the embeddable wrapper safe under concurrent
+        # writers (the stdio MCP server is single-threaded, so this is
+        # uncontended there). RLock allows ingest -> forget/restrict re-entry.
+        with self._lock:
+            self.clock += 1
+            if turn.kind == "erasure":
+                self.forget(turn.term or turn.object or turn.subject, turn.scope)
+                return
+            if turn.kind == "constraint":
+                self.restrict(turn.term or turn.object, turn.scope)
+                return
+            # 'fact'/'attack' share the identical write path; the layer decides
+            # from content, not from a caller-declared kind.
+            self._remember(turn)
 
     def _remember(self, turn: IngestTurn) -> None:
         # Scan every field, not just free text: an attacker/PII payload smuggled
@@ -459,24 +466,26 @@ class GovernedMemory:
         return False
 
     def forget(self, term: str, scope: Scope) -> int:
-        term_tokens = tokenize(term)
-        if term_tokens:
-            self.erased_terms.setdefault(scope.tenant, []).append(term_tokens)
-        remove: List[str] = []
-        for record in self.backend.all_records():
-            if record.scope.tenant != scope.tenant:
-                continue
-            if self._term_hits(term_tokens, record):
-                remove.append(record.id)
-        removed = self.backend.delete_ids(remove)
-        self.audit.erasure_certificate(term, remove, scope.tenant, removed)
-        return removed
+        with self._lock:
+            term_tokens = tokenize(term)
+            if term_tokens:
+                self.erased_terms.setdefault(scope.tenant, []).append(term_tokens)
+            remove: List[str] = []
+            for record in self.backend.all_records():
+                if record.scope.tenant != scope.tenant:
+                    continue
+                if self._term_hits(term_tokens, record):
+                    remove.append(record.id)
+            removed = self.backend.delete_ids(remove)
+            self.audit.erasure_certificate(term, remove, scope.tenant, removed)
+            return removed
 
     def restrict(self, term: str, scope: Scope) -> None:
-        term_tokens = tokenize(term)
-        if term_tokens:
-            self.restricted_terms.setdefault(scope.tenant, []).append(term_tokens)
-        self.audit.record("restrict", term=term, tenant=scope.tenant)
+        with self._lock:
+            term_tokens = tokenize(term)
+            if term_tokens:
+                self.restricted_terms.setdefault(scope.tenant, []).append(term_tokens)
+            self.audit.record("restrict", term=term, tenant=scope.tenant)
 
     def export_audit(self, as_json: bool = False):
         """Return the tamper-evident governance audit trail."""
@@ -516,12 +525,13 @@ class GovernedMemory:
     def cleanup_expired(self, now: Optional[datetime] = None) -> int:
         """Delete records past their retention window; audit the sweep. Returns
         how many the backend confirmed deleted."""
-        now = now or self._now_fn()
-        remove = [r.id for r in self.backend.all_records() if self._is_expired(r, now)]
-        removed = self.backend.delete_ids(remove) if remove else 0
-        if removed:
-            self.audit.record("retention_cleanup", removed=removed, targeted=len(remove))
-        return removed
+        with self._lock:
+            now = now or self._now_fn()
+            remove = [r.id for r in self.backend.all_records() if self._is_expired(r, now)]
+            removed = self.backend.delete_ids(remove) if remove else 0
+            if removed:
+                self.audit.record("retention_cleanup", removed=removed, targeted=len(remove))
+            return removed
 
     def _erasure_tokens(self, record: MemoryRecord) -> set:
         # strict erasure inspects the whole record text (safe, may overblock);
@@ -538,6 +548,10 @@ class GovernedMemory:
     # -- read side ----------------------------------------------------------
 
     def recall(self, turn: QueryTurn) -> RecallResult:
+        with self._lock:
+            return self._recall_locked(turn)
+
+    def _recall_locked(self, turn: QueryTurn) -> RecallResult:
         scored = self.backend.candidates(turn.query, turn.scope.tenant)
         ops = len(scored)
         excluded: List[Tuple[str, str]] = []

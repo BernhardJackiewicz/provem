@@ -100,6 +100,9 @@ class GovernedMemoryService:
 
             self._shared_sqlite = SqliteBackend(self.config.sqlite_path or ":memory:")
         self._memories: Dict[str, GovernedMemory] = {}
+        import threading
+
+        self._lock = threading.Lock()
 
     def _make_backend(self):
         if self._explicit_backend_factory is not None:
@@ -120,13 +123,17 @@ class GovernedMemoryService:
         return resolve_policy(spec)
 
     def memory_for(self, tenant: str) -> GovernedMemory:
-        if tenant not in self._memories:
-            self._memories[tenant] = GovernedMemory(
-                backend=self._make_backend(),
-                policy=self.profile_for(tenant),
-                audit_path=self._audit_path_for(tenant),
-            )
-        return self._memories[tenant]
+        # Lock the check-then-act so concurrent requests for a new tenant cannot
+        # create two isolated instances (only matters if the service is embedded
+        # in a multi-threaded host; the stdio server is single-threaded).
+        with self._lock:
+            if tenant not in self._memories:
+                self._memories[tenant] = GovernedMemory(
+                    backend=self._make_backend(),
+                    policy=self.profile_for(tenant),
+                    audit_path=self._audit_path_for(tenant),
+                )
+            return self._memories[tenant]
 
     # -- tool implementations --------------------------------------------
 
