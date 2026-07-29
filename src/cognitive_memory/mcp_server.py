@@ -90,13 +90,30 @@ class GovernedMemoryService:
         backend_factory: Optional[Callable[[], Any]] = None,
     ) -> None:
         self.config = config or ServerConfig()
-        if backend_factory is not None:
-            self._backend_factory = backend_factory
-        elif self.config.backend == "bm25":
-            self._backend_factory = lambda: Bm25Backend()
-        else:
-            self._backend_factory = lambda: NaiveBackend()
+        self._explicit_backend_factory = backend_factory
+        # A durable SQLite backend is shared across tenants (tenant is a column;
+        # governance scopes reads and keeps erasure tenant-keyed), so data and
+        # the audit trail survive a restart.
+        self._shared_sqlite = None
+        if backend_factory is None and self.config.backend == "sqlite":
+            from .adapters.sqlite_backend import SqliteBackend
+
+            self._shared_sqlite = SqliteBackend(self.config.sqlite_path or ":memory:")
         self._memories: Dict[str, GovernedMemory] = {}
+
+    def _make_backend(self):
+        if self._explicit_backend_factory is not None:
+            return self._explicit_backend_factory()
+        if self.config.backend == "sqlite":
+            return self._shared_sqlite
+        if self.config.backend == "bm25":
+            return Bm25Backend()
+        return NaiveBackend()
+
+    def _audit_path_for(self, tenant: str) -> Optional[str]:
+        if not self.config.audit_path:
+            return None
+        return "%s.%s.jsonl" % (self.config.audit_path, tenant)
 
     def profile_for(self, tenant: str) -> CompliancePolicy:
         spec = self.config.tenant_profiles.get(tenant, self.config.default_profile)
@@ -105,7 +122,9 @@ class GovernedMemoryService:
     def memory_for(self, tenant: str) -> GovernedMemory:
         if tenant not in self._memories:
             self._memories[tenant] = GovernedMemory(
-                backend=self._backend_factory(), policy=self.profile_for(tenant)
+                backend=self._make_backend(),
+                policy=self.profile_for(tenant),
+                audit_path=self._audit_path_for(tenant),
             )
         return self._memories[tenant]
 

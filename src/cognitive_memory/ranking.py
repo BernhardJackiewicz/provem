@@ -80,3 +80,34 @@ class Bm25Scorer:
         if raw <= 0.0:
             return 0.0
         return raw / (raw + k)
+
+
+def blended_bm25_candidates(records, query, k1=1.5, b=0.75, norm_k=1.0):
+    """Coverage-blended BM25 ranking shared by all ranked backends.
+
+    ``records`` is any sequence of objects with ``.text/.subject/.relation/
+    .object/.valid_at``. A full-coverage match clears typical relevance floors
+    (like plain token overlap); BM25 refines the ordering among matches. Returns
+    ``[(score, record), ...]`` sorted best-first. Kept in one place so the
+    in-memory and SQLite backends score identically.
+    """
+    from .models import tokenize
+
+    records = list(records)
+    if not records:
+        return []
+    docs = [tokenize("%s %s %s %s" % (r.text, r.subject, r.relation, r.object)) for r in records]
+    scorer = Bm25Scorer(docs, k1=k1, b=b)
+    query_terms = tokenize(query)
+    qset = set(query_terms)
+    scored = []
+    for index, record in enumerate(records):
+        if not qset:
+            break
+        coverage = len(qset & set(docs[index])) / len(qset)
+        if coverage == 0.0:
+            continue
+        bm25 = scorer.normalized_score(query_terms, index, k=norm_k)
+        scored.append((coverage * (0.5 + 0.5 * bm25), record))
+    scored.sort(key=lambda item: (item[0], item[1].valid_at), reverse=True)
+    return scored

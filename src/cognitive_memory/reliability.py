@@ -208,30 +208,10 @@ class Bm25Backend:
         return list(self._records)
 
     def candidates(self, query: str, tenant: str) -> List[Tuple[float, MemoryRecord]]:
-        from .ranking import Bm25Scorer
+        from .ranking import blended_bm25_candidates
 
         scoped = [r for r in self._records if r.scope.tenant == tenant]
-        if not scoped:
-            return []
-        docs = [tokenize("%s %s %s %s" % (r.text, r.subject, r.relation, r.object)) for r in scoped]
-        scorer = Bm25Scorer(docs, k1=self.k1, b=self.b)
-        query_terms = tokenize(query)
-        qset = set(query_terms)
-        scored: List[Tuple[float, MemoryRecord]] = []
-        for index, record in enumerate(scoped):
-            if not qset:
-                break
-            coverage = len(qset & set(docs[index])) / len(qset)
-            if coverage == 0.0:
-                continue
-            # Coverage keeps the relevance-floor semantics comparable to plain
-            # token overlap (a full match clears the floor regardless of corpus
-            # size); BM25 refines the ranking among matches.
-            bm25 = scorer.normalized_score(query_terms, index, k=self.norm_k)
-            score = coverage * (0.5 + 0.5 * bm25)
-            scored.append((score, record))
-        scored.sort(key=lambda item: (item[0], item[1].valid_at), reverse=True)
-        return scored
+        return blended_bm25_candidates(scoped, query, k1=self.k1, b=self.b, norm_k=self.norm_k)
 
 
 # ---------------------------------------------------------------------------
@@ -347,6 +327,7 @@ class GovernedMemory:
         policy: Optional[object] = None,
         relevance_floor: Optional[float] = None,
         trust_margin: Optional[float] = None,
+        audit_path: Optional[str] = None,
     ) -> None:
         from .compliance import resolve_policy
 
@@ -365,7 +346,7 @@ class GovernedMemory:
         self.restricted_terms: Dict[str, List[set]] = {}
         from .audit import AuditLog
 
-        self.audit = AuditLog()
+        self.audit = AuditLog(persist_path=audit_path)
 
     # -- ergonomic product API ---------------------------------------------
     # Embed the layer in an agent or app with a few lines; the benchmark drives

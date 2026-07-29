@@ -61,9 +61,32 @@ def _default_clock() -> Callable[[], str]:
 class AuditLog:
     """Append-only, hash-chained governance audit trail."""
 
-    def __init__(self, clock: Optional[Callable[[], str]] = None) -> None:
+    def __init__(self, clock: Optional[Callable[[], str]] = None, persist_path: Optional[str] = None) -> None:
         self._clock = clock or _default_clock()
         self._entries: List[AuditEntry] = []
+        self._persist_path = persist_path
+        if persist_path:
+            self._load_persisted(persist_path)
+
+    def _load_persisted(self, path: str) -> None:
+        """Rebuild the chain from an existing append-only JSONL file, so the
+        audit trail survives a restart (subsequent records chain onto it)."""
+        from pathlib import Path
+
+        p = Path(path)
+        if not p.exists():
+            return
+        for line in p.read_text(encoding="utf-8").splitlines():
+            line = line.strip()
+            if not line:
+                continue
+            raw = json.loads(line)
+            self._entries.append(
+                AuditEntry(
+                    seq=int(raw["seq"]), action=str(raw["action"]), details=dict(raw.get("details", {})),
+                    timestamp=str(raw["timestamp"]), prev_hash=str(raw["prev_hash"]), hash=str(raw["hash"]),
+                )
+            )
 
     def record(self, action: str, **details: Any) -> AuditEntry:
         seq = len(self._entries)
@@ -78,6 +101,9 @@ class AuditLog:
             hash=_hash_entry(seq, action, dict(details), timestamp, prev_hash),
         )
         self._entries.append(entry)
+        if self._persist_path:
+            with open(self._persist_path, "a", encoding="utf-8") as handle:
+                handle.write(json.dumps(entry.to_dict(), sort_keys=True) + "\n")
         return entry
 
     # backward-compatible convenience for the old string-append call sites

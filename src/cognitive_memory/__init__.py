@@ -30,6 +30,7 @@ from .models import (
 )
 from .policy import PolicyStore
 from .persistence import MemorySnapshot, load_snapshot, retrieval_trace_record, save_snapshot
+from .adapters.sqlite_backend import SqliteBackend
 from .answerer import Answerer, ExtractiveAnswerer, LLMAnswerer
 from .reliability import (
     Bm25Backend,
@@ -71,6 +72,7 @@ __all__ = [
     "ExtractiveAnswerer",
     "LLMAnswerer",
     "Bm25Backend",
+    "SqliteBackend",
     "NaiveBackend",
     "MemoryBackend",
     "MemoryRecord",
