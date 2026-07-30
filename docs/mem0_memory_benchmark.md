@@ -1,5 +1,12 @@
 # Our memory (Lager) vs Mem0's memory — retrieval-recall head-to-head
 
+> **Read this alongside `mem0_locomo_e2e_results.md`, which is the authoritative
+> answer.** This page measures *retrieval recall* only (a proxy that favours
+> verbatim storage). The full **end-to-end** benchmark (retrieve → LLM answers →
+> LLM judges, all 10 conversations, 1986 QA) reverses the impression here:
+> **Mem0 wins, 0.475 vs 0.388 on answerable questions, p ≈ 5×10⁻⁹.** When a real
+> LLM must produce the answer, Mem0's distilled memories beat our verbose raw turns.
+
 **Question asked:** which memory is stronger, and by exactly how much?
 
 **Short answer:** on a like-for-like *retrieval-recall* metric, the two are

@@ -1,0 +1,121 @@
+# End-to-end LoCoMo: our memory vs Mem0 — the definitive comparison
+
+**Question:** which memory is stronger, and by exactly how much?
+
+**Answer:** on the correct, literature-standard end-to-end benchmark (retrieve →
+LLM answers → LLM judges), **Mem0's memory is stronger than ours.** On answerable
+LoCoMo questions Mem0 scores **0.475 vs our 0.388** — a **+8.7-point** gap
+(95% CI 5.8–11.6), **statistically significant** (paired McNemar p ≈ 5.2×10⁻⁹).
+In relative terms Mem0 gets **~22% more answers right** (0.475 / 0.388 = 1.22×).
+Mem0 leads in **every category** and in **9 of 10 conversations**.
+
+This **reverses** the earlier retrieval-recall snapshot (`mem0_memory_benchmark.md`),
+where our verbatim store looked comparable-or-ahead. That metric rewarded raw
+answer-token presence, which verbatim storage gets for free. The moment a real LLM
+has to *produce* an answer, Mem0's clean, distilled memories beat our verbose raw
+turns. This is Mem0's design thesis, and the end-to-end test confirms it — and it
+matches Mem0's published LoCoMo range.
+
+## Setup (identical for both — only the memory differs)
+
+- **Dataset:** full LoCoMo, all 10 conversations, 1986 QA (1540 answerable + 446
+  adversarial/no-info). 5882 dialogue turns.
+- **Ingestion:** each conversation ingested into each memory, date-augmented in
+  LoCoMo answer format (`"7 May 2023 | Speaker: ..."`) identically for both. Mem0
+  distilled the 5882 turns to ~1700 extracted memories (≈150–250 per conversation);
+  our side keeps turns verbatim + lexical recall-boost retrieval.
+- **Retrieval:** top-k = 20 from each memory.
+- **Answerer (shared):** `gpt-5-mini`, `reasoning_effort=medium`, answering from
+  ONLY the retrieved context, instructed to say `NO ANSWER` when absent.
+- **Judge (shared):** `gpt-5`, `reasoning_effort=low`, semantic correctness
+  (paraphrase- and date/number-format-robust), YES/NO.
+- **Abstention:** answerable questions are judged for correctness; adversarial/
+  no-info questions are scored correct iff the system declined (`NO ANSWER`).
+- **Cost:** €3.81 total OpenAI (7097 LLM calls); well under the €30 cap. Mem0 paid
+  tier (the full 10-conversation ingestion exhausted one billing period's quota
+  and had to be topped up before the query phase).
+
+## Results
+
+### Headline — answerable accuracy (n = 1540)
+
+| System | Accuracy | 95% CI | Correct |
+|---|---|---|---|
+| Mem0 | **0.475** | [0.450, 0.500] | 731 |
+| Ours | **0.388** | [0.364, 0.412] | 597 |
+
+- **Difference (ours − Mem0): −0.087**, 95% CI **[−0.116, −0.058]** (paired bootstrap).
+- **Paired McNemar:** ours-only-correct = 195, Mem0-only-correct = 329,
+  discordant = 524, **p ≈ 5.2×10⁻⁹** → the gap is real, not noise.
+- **Relative:** Mem0 answers ~**22% more** questions correctly.
+
+### Abstention — declining trick questions (n = 446)
+
+| System | Accuracy | Correct |
+|---|---|---|
+| Mem0 | 0.883 | 394 |
+| Ours | 0.863 | 385 |
+
+Difference −0.020, 95% CI [−0.058, +0.018], McNemar **p = 0.34 → a tie.** Both
+memories decline unanswerable questions about equally well (governance parity).
+
+### By category (answerable)
+
+| Category | Ours | Mem0 | Mem0 lead |
+|---|---|---|---|
+| multi-hop (cat 1) | 0.206 | 0.316 | +0.110 |
+| single-hop (cat 2) | 0.411 | 0.436 | +0.025 |
+| temporal (cat 3) | 0.198 | 0.260 | +0.062 |
+| open-domain (cat 4) | 0.461 | 0.567 | +0.106 |
+
+Mem0 leads everywhere; the gap is widest on **multi-hop** and **open-domain**
+reasoning, where distilled memories that connect facts across sessions help the
+answerer most. (Category codes are the harness's; names follow canonical LoCoMo.)
+
+### By conversation
+
+Mem0 wins **9 of 10**; we win only conv-1 (0.506 vs 0.444). Per-conv accuracy
+ranges 0.33–0.51 (ours) vs 0.43–0.53 (Mem0).
+
+## Honest reading
+
+- **Our Lager is genuinely behind Mem0 on the standard benchmark.** This is
+  consistent with everything measured before: our retrieval recall was the
+  bottleneck, and a strong answerer cannot recover answers our retrieval buries
+  in noise as well as it can read Mem0's curated memories.
+- **Config sensitivity (important caveat).** End-to-end accuracy is very sensitive
+  to answerer strength. With a *weak* answerer (`reasoning_effort=minimal`) our
+  side collapsed to 0.20 while Mem0 held ~0.60 — because our verbose verbatim
+  context needs reasoning to parse. At a fair `medium` answerer the gap narrows to
+  the 8.7 points reported here. We report the fair setting; a weaker or stronger
+  answerer would move both numbers (and the gap).
+- **Where we are NOT behind:** declining unanswerable questions is a tie, and the
+  governance/reliability layer (the "Schloss": injection quarantine, source-trust
+  conflict resolution, tenant erasure, calibrated abstention) is a different axis
+  this benchmark does not test — that is where our value sits, not raw recall.
+- **What would close the recall gap:** better retrieval (dense/hybrid embeddings,
+  reranking) and/or an extraction/consolidation step so the answerer reads
+  distilled facts instead of raw turns — i.e. adopting the part of Mem0's design
+  that this result vindicates.
+
+## Threats to validity
+
+- Single answerer/judge family (gpt-5-mini / gpt-5). A different judge could shift
+  absolute numbers; the large, significant gap is unlikely to flip.
+- Mem0's async indexing is slow; stores were settled (~1700 memories) before the
+  query phase, but Mem0 keeps distilling for a long time after ingest.
+- LLM-judge grading has irreducible noise on borderline paraphrases; applied
+  identically to both, so it does not bias the *difference*.
+
+## Reproduce
+
+```
+export OPENAI_API_KEY=... MEM0_API_KEY=...
+# ingest is slow-async on Mem0 and can exhaust a billing period's quota for the
+# full 10 conversations; the harness reuses existing stores and resumes.
+python scripts/mem0_locomo_e2e.py --workers 4 --include-abstain \
+    --answer-effort medium --judge-effort low --out runs/e2e.jsonl
+python scripts/mem0_e2e_report.py --in runs/e2e.jsonl
+```
+
+Per-QA predictions + verdicts: `docs/runs/locomo_e2e_ours_vs_mem0.jsonl`.
