@@ -209,6 +209,11 @@ def dated_content(ep):
 # ---------------------------------------------------------------- our memory
 # `features` is the campaign's A/B switchboard: every optimization is opt-in and
 # attributable. Empty set == the frozen 0.388 baseline pipeline.
+VEC_CACHE = os.environ.get(
+    "ENGRAM_VEC_CACHE",
+    "/private/tmp/claude-501/-Users-bernhard-Desktop-brain/e9f97b9f-09f0-4aff-ac11-a991e6b1aafa/scratchpad/vector_cache.jsonl")
+
+
 def build_ours(sample, use_dates, features=frozenset()):
     sysm = LoCoMoCognitiveSystem(retrieval_mode="hybrid", recall_boost=True)
     sysm.ours_features = frozenset(features)
@@ -221,6 +226,12 @@ def build_ours(sample, use_dates, features=frozenset()):
         if annotate is not None:
             ep.content = annotate(ep.content, getattr(ep, "timestamp", None))
         sysm.ingest(ep)
+    if "dense" in features:
+        from cognitive_memory.embeddings import CachedEmbedder, DiskVectorCache, OpenAIEmbeddingProvider
+        sysm.embedder = CachedEmbedder(OpenAIEmbeddingProvider(), DiskVectorCache(VEC_CACHE))
+        ids = [str(ep.id) for ep in sample.episodes]
+        vectors = sysm.embedder.embed([ep.content for ep in sample.episodes])
+        sysm.dense_index = list(zip(ids, vectors))
     return sysm
 
 
@@ -289,14 +300,38 @@ def _present(entries, trim=420):
 
 def our_context(sysm, sample, q, k):
     features = getattr(sysm, "ours_features", frozenset())
+    dense = "dense" in features and getattr(sysm, "embedder", None) is not None
+    fetch_k = 50 if dense else k
     req = RetrievalRequest(query=q.question, user_id=sample.sample_id, project_id="locomo",
-                           task_type="temporal" if q.category_name == "temporal" else "general", top_k=k)
+                           task_type="temporal" if q.category_name == "temporal" else "general", top_k=fetch_k)
     res = sysm.retrieval.retrieve(req)
     entries = []
-    for m in res.selected_memories[:k]:
+    for m in res.selected_memories[:fetch_k]:
         dia, text = _evidence_id_and_text(sysm, m.to_dict())
         if text:
             entries.append((dia, text))
+    if dense:
+        # RRF-fuse the lexical top-50 with the dense top-50 (paraphrase channel)
+        from cognitive_memory.embeddings import cosine, rrf_fuse
+        qvec = sysm.embedder.embed([q.question])[0]
+        sims = sorted(((cosine(qvec, vec), eid) for eid, vec in sysm.dense_index), reverse=True)
+        dense_rank = [eid for _, eid in sims[:50]]
+        lex_rank = [dia for dia, _ in entries if dia]
+        text_by_id = dict((dia, t) for dia, t in entries if dia)
+        fused = rrf_fuse([lex_rank, dense_rank])
+        merged = []
+        for eid, _score in fused:
+            text = text_by_id.get(eid)
+            if text is None:
+                episode = sysm.controller.store.get_episode(eid)
+                text = episode.content if episode is not None else ""
+            if text:
+                merged.append((eid, text))
+            if len(merged) >= k:
+                break
+        entries = merged
+    else:
+        entries = entries[:k]
     if "window" in features:
         entries = _expand_windows(sysm, entries, mode="both")
     elif "window_prev" in features:
