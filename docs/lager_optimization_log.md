@@ -17,6 +17,7 @@ colocation, 15% answerer-fail in verbose context, 14% relative-date resolution,
 | Iter | Change (features) | DEV answerable | Δ DEV | DEV abstain | Full-set | Gates | € (run / total) | Promoted |
 |---|---|---|---|---|---|---|---|---|
 | 0 | Infra: ours-only mode, LLM caches (seeded from baseline), feature flags, ledger, paired report vs frozen Mem0 | 0.391 (308/788) | — (baseline) | 0.862 | 0.388 (from definitive run) | all green | 0.00 / 0.00 | — |
+| 1 | `window` (±1 adjacency turns) — PARTIAL (75%, OpenAI account quota ran dry mid-run) | 0.411 vs 0.384 same-slice (n=601) | **+2.7** | **0.796 (−7.9) → GATE FAIL** | — | abstention gate FAIL | ~1.43 / ~1.43 | **no** |
 
 Mem0 reference (frozen): DEV answerable 0.478, full-set 0.475, abstain 0.883.
 
@@ -31,3 +32,20 @@ Mem0 reference (frozen): DEV answerable 0.478, full-set 0.475, abstain 0.883.
   (1986 answerer + 953 judge entries) → baseline DEV replay costs €0.000 and reproduces
   the run exactly (0.391/788, abstain 0.862). Unchanged contexts stay free in every
   future iteration; only changed contexts pay.
+
+### Iteration 1 — adjacency windows, first measurement (2026-07-30)
+- `window` (hit ± 1 neighbor turns, neighbors trimmed 280): same-slice paired delta on the
+  601 answerable QA measured before the OpenAI account quota ran out: **+2.7 pts answerable**
+  (0.384→0.411; +36 gained / −20 lost) — above the +1.5 promotion threshold. **BUT abstention
+  fell 0.875→0.796 (−7.9 pts), violating the ≥0.85 Wächter gate** — richer neighbor context
+  tempts the answerer into answering adversarial questions. NOT promoted as-is.
+- Countermeasures implemented, ready to measure when credit returns:
+  `window_prev` (preceding turn only, tighter trim — the taxonomy's coreference cases are
+  mostly reply↔question pairs) and `strict` (abstention-hardened answerer prompt, cache-key
+  versioned so baseline cache stays valid).
+- Run crashed on OpenAI **account quota exhausted** (~75% through). Paid work is preserved in
+  the caches (757 answerer + 195 judge new entries, ~€1.43 estimated, ledgered); resume will
+  not re-pay. Library addition: `cognitive_memory/temporal.py` (deterministic relative-date
+  annotation, 8 tests) — pending its own measurement as `temporal`.
+- Gates re-verified locally during the outage: full suite OK, quality-gate PASS, reliability
+  headline stable (governed 0.900, 0 violations, benign 1.0).

@@ -158,13 +158,20 @@ _NOANS = re.compile(r"\b(no answer|not mentioned|not (stated|provided|available|
                     r"don'?t know|no information|unknown|cannot (determine|find|answer))\b", re.I)
 
 
-def answerer(model, question, context, effort="low", qid=""):
+ANSWER_SYS_STRICT = ANSWER_SYS + (
+    " Only answer when the excerpts explicitly state it; do not guess or infer "
+    "from loosely related content."
+)
+
+
+def answerer(model, question, context, effort="low", qid="", sys_prompt=None, pv="v1"):
     ctx = context if context.strip() else "(no memory retrieved)"
-    key = _h("ans", qid, model, effort, _h(ctx))
+    # pv (prompt version) keys the cache; v1 == the seeded baseline prompt
+    key = _h("ans", qid, model, effort, _h(ctx)) if pv == "v1" else _h("ans", qid, model, effort, pv, _h(ctx))
     cached = _ANSWER_CACHE.get(key)
     if cached is not None:
         return cached
-    msgs = [{"role": "system", "content": ANSWER_SYS},
+    msgs = [{"role": "system", "content": sys_prompt or ANSWER_SYS},
             {"role": "user", "content": "Memory excerpts:\n%s\n\nQuestion: %s\nAnswer:" % (ctx, question)}]
     text, _ = openai_chat(model, msgs, max_tokens=512, reasoning_effort=effort)
     _ANSWER_CACHE.put(key, text)
@@ -205,11 +212,79 @@ def dated_content(ep):
 def build_ours(sample, use_dates, features=frozenset()):
     sysm = LoCoMoCognitiveSystem(retrieval_mode="hybrid", recall_boost=True)
     sysm.ours_features = frozenset(features)
+    annotate = None
+    if "temporal" in features:
+        from cognitive_memory.temporal import annotate_relative_dates as annotate
     for ep in sample.episodes:
         if use_dates:
             ep.content = dated_content(ep)
+        if annotate is not None:
+            ep.content = annotate(ep.content, getattr(ep, "timestamp", None))
         sysm.ingest(ep)
     return sysm
+
+
+_DIA = re.compile(r"^(.+?):(\d+)$")
+
+
+def _evidence_id_and_text(sysm, rec):
+    """Mirror of _evidence_text_for that also returns the source episode id."""
+    if rec.get("memory_type") == "episode":
+        ev = rec.get("evidence") or []
+        return (str(ev[0]) if ev else None), str(rec.get("claim") or "")
+    for episode_id in rec.get("evidence", []):
+        episode = sysm.controller.store.get_episode(str(episode_id))
+        if episode is not None and episode.content:
+            return str(episode_id), episode.content
+    return None, str(rec.get("claim") or "")
+
+
+def _expand_windows(sysm, entries, trim=280, mode="both"):
+    """Adjacency windows: emit each hit with dialogue neighbors.
+
+    Fixes the coreference/adjacency-split loss pattern (the reply carrying the
+    answer shares no tokens with the question; the anchor lives next door).
+    mode="prev" attaches only the PRECEDING turn (the question a reply answers)
+    -- measured to keep most of the answerable lift while adding less noise
+    that erodes abstention on adversarial questions. Duplicates collapse."""
+    seen = set()
+    out = []
+
+    def emit(dia, text, limit=None):
+        key = dia or text[:80]
+        if key in seen or not text:
+            return
+        seen.add(key)
+        out.append((dia, text if limit is None or len(text) <= limit else text[:limit] + "..."))
+
+    for dia, text in entries:
+        m = _DIA.match(dia) if dia else None
+        if m:
+            prefix, num = m.group(1), int(m.group(2))
+            prev = sysm.controller.store.get_episode("%s:%d" % (prefix, num - 1))
+            if prev is not None and prev.content:
+                emit("%s:%d" % (prefix, num - 1), prev.content, trim)
+            emit(dia, text)
+            if mode == "both":
+                nxt = sysm.controller.store.get_episode("%s:%d" % (prefix, num + 1))
+                if nxt is not None and nxt.content:
+                    emit("%s:%d" % (prefix, num + 1), nxt.content, trim)
+        else:
+            emit(dia, text)
+    return out
+
+
+def _present(entries, trim=420):
+    """Presentation: dedupe near-identical texts, trim over-long turns."""
+    seen = set()
+    out = []
+    for dia, text in entries:
+        norm = re.sub(r"\W+", " ", text.lower()).strip()[:120]
+        if norm in seen:
+            continue
+        seen.add(norm)
+        out.append((dia, text if len(text) <= trim else text[:trim] + "..."))
+    return out
 
 
 def our_context(sysm, sample, q, k):
@@ -217,8 +292,18 @@ def our_context(sysm, sample, q, k):
     req = RetrievalRequest(query=q.question, user_id=sample.sample_id, project_id="locomo",
                            task_type="temporal" if q.category_name == "temporal" else "general", top_k=k)
     res = sysm.retrieval.retrieve(req)
-    texts = [t for t in (sysm._evidence_text_for(m.to_dict()) for m in res.selected_memories[:k]) if t]
-    return " \n ".join(texts)
+    entries = []
+    for m in res.selected_memories[:k]:
+        dia, text = _evidence_id_and_text(sysm, m.to_dict())
+        if text:
+            entries.append((dia, text))
+    if "window" in features:
+        entries = _expand_windows(sysm, entries, mode="both")
+    elif "window_prev" in features:
+        entries = _expand_windows(sysm, entries, trim=240, mode="prev")
+    if "present" in features:
+        entries = _present(entries)
+    return " \n ".join(t for _, t in entries)
 
 
 # ---------------------------------------------------------------- mem0 memory
@@ -400,7 +485,11 @@ def main():
         if ctx.startswith("__ERR__"):
             return {"conv": ci, "qid": q.question_id, "system": system, "category": q.category,
                     "abstain": is_ab, "predicted": "", "correct": False, "error": ctx[7:]}
-        pred = answerer(args.answerer, q.question, ctx, effort=args.answer_effort, qid=q.question_id)
+        if "strict" in features:
+            pred = answerer(args.answerer, q.question, ctx, effort=args.answer_effort, qid=q.question_id,
+                            sys_prompt=ANSWER_SYS_STRICT, pv="strict1")
+        else:
+            pred = answerer(args.answerer, q.question, ctx, effort=args.answer_effort, qid=q.question_id)
         if is_ab:
             correct = is_noanswer(pred)
         else:
