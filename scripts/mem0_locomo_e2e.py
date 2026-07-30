@@ -163,6 +163,32 @@ ANSWER_SYS_STRICT = ANSWER_SYS + (
     "from loosely related content."
 )
 
+# strict1 killed inference-requiring answers along with fabrications. strict2
+# forbids ONLY answering about facts the excerpts never mention -- the exact
+# discrimination adversarial questions need -- while explicitly allowing
+# reasonable inference from what IS mentioned.
+ANSWER_SYS_STRICT2 = ANSWER_SYS + (
+    " If the excerpts do not mention the asked-about fact or event at all, reply "
+    "exactly: NO ANSWER - never invent details. When the excerpts do mention it, "
+    "answer; reasonable inference from what they say is fine."
+)
+
+# strict2 flip analysis: with rich context the model CORRECTS false premises
+# ("No - Oscar is a guinea pig") instead of declining; the benchmark (applied
+# identically to Mem0) requires declining unanswerable/false-premise questions.
+ANSWER_SYS_STRICT3 = ANSWER_SYS_STRICT2 + (
+    " If the question presupposes an event or thing that the excerpts never "
+    "mention (it may never have happened), reply exactly: NO ANSWER - do not "
+    "correct or discuss the premise."
+)
+
+# strict3 residue: for questions about a MENTIONED topic whose asked-for detail
+# is never stated, the inference allowance overreaches into plausible guessing.
+ANSWER_SYS_STRICT4 = ANSWER_SYS_STRICT3 + (
+    " Infer only what the excerpts directly imply. If the specific detail asked "
+    "for is neither stated nor directly implied, reply exactly: NO ANSWER."
+)
+
 
 def answerer(model, question, context, effort="low", qid="", sys_prompt=None, pv="v1"):
     ctx = context if context.strip() else "(no memory retrieved)"
@@ -272,11 +298,12 @@ def _expand_windows(sysm, entries, trim=280, mode="both"):
         m = _DIA.match(dia) if dia else None
         if m:
             prefix, num = m.group(1), int(m.group(2))
-            prev = sysm.controller.store.get_episode("%s:%d" % (prefix, num - 1))
-            if prev is not None and prev.content:
-                emit("%s:%d" % (prefix, num - 1), prev.content, trim)
+            if mode in ("both", "prev"):
+                prev = sysm.controller.store.get_episode("%s:%d" % (prefix, num - 1))
+                if prev is not None and prev.content:
+                    emit("%s:%d" % (prefix, num - 1), prev.content, trim)
             emit(dia, text)
-            if mode == "both":
+            if mode in ("both", "next"):
                 nxt = sysm.controller.store.get_episode("%s:%d" % (prefix, num + 1))
                 if nxt is not None and nxt.content:
                     emit("%s:%d" % (prefix, num + 1), nxt.content, trim)
@@ -336,6 +363,8 @@ def our_context(sysm, sample, q, k):
         entries = _expand_windows(sysm, entries, mode="both")
     elif "window_prev" in features:
         entries = _expand_windows(sysm, entries, trim=240, mode="prev")
+    elif "window_next" in features:
+        entries = _expand_windows(sysm, entries, trim=240, mode="next")
     if "present" in features:
         entries = _present(entries)
     return " \n ".join(t for _, t in entries)
@@ -520,7 +549,16 @@ def main():
         if ctx.startswith("__ERR__"):
             return {"conv": ci, "qid": q.question_id, "system": system, "category": q.category,
                     "abstain": is_ab, "predicted": "", "correct": False, "error": ctx[7:]}
-        if "strict" in features:
+        if "strict4" in features:
+            pred = answerer(args.answerer, q.question, ctx, effort=args.answer_effort, qid=q.question_id,
+                            sys_prompt=ANSWER_SYS_STRICT4, pv="strict4")
+        elif "strict3" in features:
+            pred = answerer(args.answerer, q.question, ctx, effort=args.answer_effort, qid=q.question_id,
+                            sys_prompt=ANSWER_SYS_STRICT3, pv="strict3")
+        elif "strict2" in features:
+            pred = answerer(args.answerer, q.question, ctx, effort=args.answer_effort, qid=q.question_id,
+                            sys_prompt=ANSWER_SYS_STRICT2, pv="strict2")
+        elif "strict" in features:
             pred = answerer(args.answerer, q.question, ctx, effort=args.answer_effort, qid=q.question_id,
                             sys_prompt=ANSWER_SYS_STRICT, pv="strict1")
         else:

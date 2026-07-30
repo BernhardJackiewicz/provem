@@ -18,6 +18,58 @@ colocation, 15% answerer-fail in verbose context, 14% relative-date resolution,
 |---|---|---|---|---|---|---|---|---|
 | 0 | Infra: ours-only mode, LLM caches (seeded from baseline), feature flags, ledger, paired report vs frozen Mem0 | 0.391 (308/788) | — (baseline) | 0.862 | 0.388 (from definitive run) | all green | 0.00 / 0.00 | — |
 | 1 | `window` (±1 adjacency turns) — PARTIAL (75%, OpenAI account quota ran dry mid-run) | 0.411 vs 0.384 same-slice (n=601) | **+2.7** | **0.796 (−7.9) → GATE FAIL** | — | abstention gate FAIL | ~1.43 / ~1.43 | **no** |
+| 2 | `window_prev` (preceding turn only) | 0.395 (311/788) | +0.4 | 0.858 ✓ | — | abstain ok, lift below threshold | 1.02 / 2.45 | **no** |
+| 3 | `temporal` (write-time date annotation) | 0.391 (308/788) | ±0.0 | 0.845 (−1.7) | — | neutral | 0.65 / 3.10 | **no** |
+| 4 | `window_next` (following turn only) | 0.406 (320/788) | +1.5 | **0.793 → GATE FAIL** | — | abstention gate FAIL | 1.02 / 4.12 | **no** |
+| 5 | `dense` (embeddings + RRF hybrid) | **0.519 (409/788)** | **+12.8** | **0.797 → GATE FAIL** | — | huge lift, abstention broken | 0.96 / 5.08 | not yet (strict combo pending) |
+| 6 | `dense,strict` | 0.423 | +3.2 | 0.888 ✓ | — | strict1 too harsh: eats 9.6 of dense's 12.8 pts | 0.93 / 6.00 | no |
+| 7 | `dense,strict2` (fabrication-only ban, inference allowed) | **0.543** | **+15.2** | 0.823 ✗ | — | answerable even above dense-alone; abstain 3 flips short | 0.99 / 6.99 | no |
+| 8 | `dense,strict3` (+ no premise-correction) | 0.539 | +14.8 | 0.841 ✗ (= Mem0 parity) | full checkpoint running | still 3 flips short of 0.85 | 0.98 / 7.97 | no |
+| 9 | `dense,strict4` (+ infer-only-what's-implied) | **0.534** | **+14.3** | **0.866 ✓ (above baseline!)** | pending | **ALL DEV GATES GREEN** | 0.96 / 8.94 | **candidate** |
+| F1 | full-set checkpoint `dense,strict3` | — | — | — | 0.523 / abst 0.854 ✓ / p=3.9e-4 | green | 1.03 / 9.00 | superseded by F2 |
+| F2 | **FINAL full-set `dense,strict4`** | — | — | — | **0.536 / abst 0.886 / p=4.2e-6** | **all green** | 0.96 / 10.92 | **PROMOTED** |
+
+## CAMPAIGN RESULT (2026-07-31): target reached — significantly better than Mem0
+
+Final configuration `dense,strict4` on all 1540 answerable + 446 adversarial QA, paired
+against Mem0's frozen rows (identical questions, answerer model, judge):
+
+- **Answerable: OURS 0.536 [0.511, 0.561] vs MEM0 0.475 [0.450, 0.500]** —
+  diff **+0.062** (95% CI +0.036..+0.088), McNemar ours-only-right 258 vs 163,
+  **p = 4.2×10⁻⁶** → significantly better. Relative: **+13%** more correct answers.
+- **Abstention: OURS 0.886 vs MEM0 0.883** (p = 1) — exact parity, and **above our own
+  0.863 baseline** → no Wächter regression; the abstention-calibration iterations paid off.
+- **Holdout-only confirmation** (convs 1,3,5,7,9 — never used for tuning): answerable
+  **0.539 vs 0.471 (+0.068, p = 4.2×10⁻⁴)**, abstention 0.907 ✓ → the win generalizes;
+  not a DEV-overfitting artifact.
+- Categories: single-hop 0.520 vs 0.436, open-domain 0.667 vs 0.567, temporal 0.302 vs
+  0.260; multi-hop remains Mem0's (0.245 vs 0.316) — honest residual gap (cross-session
+  assembly needs extraction/consolidation, wave 3, not required for the target).
+- **Wächter gates all green** at promotion: 488 unit tests OK, reliability headline exactly
+  stable (governed 0.900, 0 violations, benign accuracy 1.0), quality-gate PASS (incl.
+  external_reliability), MCP-sqlite restart smoke PASS, feature-less baseline byte-identical.
+- **Cost: €10.92 of €30** (ledger-verified).
+
+What made the difference (in causal order of the campaign):
+1. **Failure-driven design**: 49% of losses to Mem0 were retrieval misses; the largest
+   single pattern (30%) was the paraphrase/attribute-colocation gap.
+2. **`dense`** — key-gated text-embedding-3-small + RRF fusion over the lexical top-50:
+   +12.8 pts DEV alone. This is the fix for exactly that pattern.
+3. **`strict2→4` prompt calibration** — restored abstention (0.797 → 0.886) that richer
+   contexts had eroded, at a cost of only ~0.9 pts answerable, via flip-analysis-driven
+   wording: ban fabrication (not inference) → never correct false premises → infer only
+   what is directly implied.
+
+Honest limitations (documented for any skeptic):
+- The strict4 prompt is OUR pipeline's context-presentation layer, tuned on DEV; Mem0's
+  frozen rows used the original neutral prompt (its stores would need re-querying to re-run,
+  and its abstention was already 0.883 neutral). The core win does NOT depend on the prompt:
+  neutral-prompt `dense` alone already beats Mem0 on answerable (DEV 0.519 vs 0.478) — the
+  prompt work only repaired abstention.
+- Judge = gpt-5 (single family); absolute numbers shift with a different judge, the paired
+  difference is robust (both sides judged identically).
+- `dense` requires an embeddings key at write+read (cached, deterministic, cents per
+  conversation); the stdlib-only default path is unchanged and byte-identical.
 
 Mem0 reference (frozen): DEV answerable 0.478, full-set 0.475, abstain 0.883.
 
@@ -49,3 +101,36 @@ Mem0 reference (frozen): DEV answerable 0.478, full-set 0.475, abstain 0.883.
   annotation, 8 tests) — pending its own measurement as `temporal`.
 - Gates re-verified locally during the outage: full suite OK, quality-gate PASS, reliability
   headline stable (governed 0.900, 0 violations, benign 1.0).
+
+### Iterations 2–5 — single-feature attribution (2026-07-31)
+- **The window family** (any direction) consistently trades abstention for answerable
+  accuracy: both=+2.7/−7.9, prev=+0.4/−0.4, next=+1.5/−6.9 (all deltas in pts). Flip
+  analysis: prev-window gains come from open-domain (+16/−8) but dilute single-/multi-hop;
+  the taxonomy's real adjacency case is the REPLY after a hit (next), which indeed lifts
+  more than prev — but every added neighbor tempts the answerer into answering adversarial
+  questions. Conclusion: windows need the `strict` abstention-hardened prompt to be viable.
+- **`temporal` is aggregate-neutral** (±0.0 answerable, −1.7 abstain): temporal-category
+  +2/−1, single-hop +10/−12 — the date annotations shift BM25 token weights slightly and
+  giveth/taketh away. Not promoted alone; may still help stacked on dense (different
+  retrieval channel). Honest negative result.
+- **`dense` (text-embedding-3-small + RRF over lexical top-50) is the breakthrough:
+  answerable 0.391→0.519 (+12.8 pts), beating Mem0's DEV 0.478** — open-domain
+  0.473→0.671, temporal 0.164→0.262, multi-hop 0.212→0.258. Exactly the 30%
+  paraphrase/attribute-colocation loss pattern the taxonomy predicted. Abstention broke the
+  gate (0.797) like the windows did → `dense,strict` combo is the promotion candidate.
+
+### Iterations 6–9 — calibrating abstention back without losing the dense win (2026-07-31)
+Score-gated abstention was ruled out first with data: dense top-cosine distributions of
+expected-abstain vs answerable questions barely separate (median 0.568 vs 0.609) — no usable
+threshold. The lever is the answerer prompt, iterated with flip analysis:
+- `strict` (v1, "only explicit statements"): abstain 0.888 ✓ but answerable crashes to 0.423 —
+  it bans the inference that 12% of questions need.
+- `strict2` (ban fabrication only, allow inference): answerable 0.543 (best), abstain 0.823.
+  Flip analysis: the model now CORRECTS false premises ("No — Oscar is a guinea pig") instead
+  of declining; scored wrong by the (Mem0-identical) abstention rule.
+- `strict3` (+ never correct premises): abstain 0.841 = exact Mem0 parity, answerable 0.539.
+  Remaining fails: mentioned-topic questions whose specific detail was never stated — the
+  inference allowance overreaches into plausible guessing.
+- `strict4` (+ infer only what is directly implied): **answerable 0.534 (+14.3 over baseline,
+  +5.6 over Mem0's DEV 0.478), abstain 0.866 ✓ — above the 0.862 baseline. All DEV gates
+  green; promotion candidate.** Full-set confirmation pending.

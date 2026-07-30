@@ -169,3 +169,4 @@ script, dataset description, metric definition and failure analysis.
 Synthetic support is not enough for product claims. Any claim marked
 `Internally supported` must be retested against noisier natural-language data and
 at least one real external baseline before use in a strategy deck or paper.
+| Optimized memory (dense+RRF hybrid, strict4 prompt) beats live Mem0 on full LoCoMo E2E: answerable 0.536 vs 0.475, McNemar p=4.2e-6; abstention parity 0.886 vs 0.883. | `docs/lager_optimization_log.md`, `docs/runs/locomo_e2e_ours_optimized.jsonl` paired against frozen Mem0 rows | Full real-data LoCoMo run, shared gpt-5-mini answerer + gpt-5 judge, paired stats | Yes, incl. never-tuned holdout convs (+6.8 pts, p=4.2e-4) | Medium | Supported; caveats: strict4 prompt tuned on DEV for our side only (neutral-prompt dense already beats Mem0 on answerable), single judge family, multi-hop still behind Mem0 (0.245 vs 0.316) |

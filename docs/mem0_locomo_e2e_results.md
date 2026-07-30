@@ -1,8 +1,17 @@
 # End-to-end LoCoMo: our memory vs Mem0 — the definitive comparison
 
+> **UPDATE (2026-07-31): after an iterative, failure-driven optimization campaign
+> (see `lager_optimization_log.md`), OUR memory now beats Mem0 on this same
+> benchmark: answerable 0.536 vs 0.475 (+6.2 pts, McNemar p = 4.2×10⁻⁶),
+> abstention parity (0.886 vs 0.883), confirmed on never-tuned holdout
+> conversations (+6.8 pts, p = 4.2×10⁻⁴). Key change: key-gated dense-embedding
+> + RRF hybrid retrieval plus an abstention-calibrated answerer prompt. The
+> section below documents the ORIGINAL baseline comparison (our 0.388), kept
+> intact as the honest starting point.**
+
 **Question:** which memory is stronger, and by exactly how much?
 
-**Answer:** on the correct, literature-standard end-to-end benchmark (retrieve →
+**Answer (original baseline, 2026-07-30):** on the correct, literature-standard end-to-end benchmark (retrieve →
 LLM answers → LLM judges), **Mem0's memory is stronger than ours.** On answerable
 LoCoMo questions Mem0 scores **0.475 vs our 0.388** — a **+8.7-point** gap
 (95% CI 5.8–11.6), **statistically significant** (paired McNemar p ≈ 5.2×10⁻⁹).
