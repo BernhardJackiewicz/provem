@@ -49,6 +49,46 @@ EUR_PER_USD = 0.92
 _COST = {"usd": 0.0, "calls": 0, "in_tok": 0, "out_tok": 0}
 _COST_LOCK = threading.Lock()
 
+# ---------------------------------------------------------------- LLM disk caches
+# Iteration economics: only CHANGED contexts pay. Answerer keyed by (qid, model,
+# effort, context-hash); judge keyed by (qid, model, effort, normalized answer).
+import hashlib
+
+
+class DiskCache:
+    def __init__(self, path):
+        self.path = path
+        self.lock = threading.Lock()
+        self.data = {}
+        if path and os.path.exists(path):
+            with open(path) as h:
+                for line in h:
+                    try:
+                        r = json.loads(line)
+                        self.data[r["k"]] = r["v"]
+                    except Exception:
+                        pass
+
+    def get(self, key):
+        return self.data.get(key)
+
+    def put(self, key, value):
+        with self.lock:
+            if key in self.data:
+                return
+            self.data[key] = value
+            if self.path:
+                with open(self.path, "a") as h:
+                    h.write(json.dumps({"k": key, "v": value}) + "\n")
+
+
+def _h(*parts):
+    return hashlib.sha256("|".join(str(p) for p in parts).encode("utf-8")).hexdigest()
+
+
+_ANSWER_CACHE = DiskCache(None)
+_JUDGE_CACHE = DiskCache(None)
+
 
 def _price(model, in_tok, out_tok):
     pin, pout = PRICES.get(model, (2.5, 10.0))
@@ -118,11 +158,16 @@ _NOANS = re.compile(r"\b(no answer|not mentioned|not (stated|provided|available|
                     r"don'?t know|no information|unknown|cannot (determine|find|answer))\b", re.I)
 
 
-def answerer(model, question, context, effort="low"):
+def answerer(model, question, context, effort="low", qid=""):
     ctx = context if context.strip() else "(no memory retrieved)"
+    key = _h("ans", qid, model, effort, _h(ctx))
+    cached = _ANSWER_CACHE.get(key)
+    if cached is not None:
+        return cached
     msgs = [{"role": "system", "content": ANSWER_SYS},
             {"role": "user", "content": "Memory excerpts:\n%s\n\nQuestion: %s\nAnswer:" % (ctx, question)}]
     text, _ = openai_chat(model, msgs, max_tokens=512, reasoning_effort=effort)
+    _ANSWER_CACHE.put(key, text)
     return text
 
 
@@ -131,13 +176,19 @@ def is_noanswer(text):
     return (not t) or bool(_NOANS.search(t)) or t.upper() == "NO ANSWER"
 
 
-def judge(model, question, golds, predicted, effort="low"):
+def judge(model, question, golds, predicted, effort="low", qid=""):
+    key = _h("jud", qid, model, effort, (predicted or "").strip().lower())
+    cached = _JUDGE_CACHE.get(key)
+    if cached is not None:
+        return bool(cached)
     gold = " | ".join(str(g) for g in golds)
     msgs = [{"role": "system", "content": JUDGE_SYS},
             {"role": "user", "content": "Question: %s\nGold answer(s): %s\nPredicted: %s\nCorrect?"
              % (question, gold, predicted)}]
     text, _ = openai_chat(model, msgs, max_tokens=128, reasoning_effort=effort)
-    return text.strip().upper().startswith("Y")
+    verdict = text.strip().upper().startswith("Y")
+    _JUDGE_CACHE.put(key, verdict)
+    return verdict
 
 
 # ---------------------------------------------------------------- date augmentation (fair, identical)
@@ -149,8 +200,11 @@ def dated_content(ep):
 
 
 # ---------------------------------------------------------------- our memory
-def build_ours(sample, use_dates):
+# `features` is the campaign's A/B switchboard: every optimization is opt-in and
+# attributable. Empty set == the frozen 0.388 baseline pipeline.
+def build_ours(sample, use_dates, features=frozenset()):
     sysm = LoCoMoCognitiveSystem(retrieval_mode="hybrid", recall_boost=True)
+    sysm.ours_features = frozenset(features)
     for ep in sample.episodes:
         if use_dates:
             ep.content = dated_content(ep)
@@ -159,10 +213,12 @@ def build_ours(sample, use_dates):
 
 
 def our_context(sysm, sample, q, k):
+    features = getattr(sysm, "ours_features", frozenset())
     req = RetrievalRequest(query=q.question, user_id=sample.sample_id, project_id="locomo",
                            task_type="temporal" if q.category_name == "temporal" else "general", top_k=k)
     res = sysm.retrieval.retrieve(req)
-    return " \n ".join(t for t in (sysm._evidence_text_for(m.to_dict()) for m in res.selected_memories[:k]) if t)
+    texts = [t for t in (sysm._evidence_text_for(m.to_dict()) for m in res.selected_memories[:k]) if t]
+    return " \n ".join(texts)
 
 
 # ---------------------------------------------------------------- mem0 memory
@@ -276,14 +332,52 @@ def main():
     ap.add_argument("--uid-prefix", default="engram_e2e")
     ap.add_argument("--out", default="/private/tmp/claude-501/-Users-bernhard-Desktop-brain/e9f97b9f-09f0-4aff-ac11-a991e6b1aafa/scratchpad/e2e_results.jsonl")
     ap.add_argument("--skip-mem0", action="store_true")
+    ap.add_argument("--systems", default=None, help="comma list: ours,mem0 (default both; ours == --skip-mem0)")
+    ap.add_argument("--ours-features", default="", help="comma list of opt-in pipeline features for OUR side")
+    ap.add_argument("--tag", default="", help="run tag for the ledger")
+    ap.add_argument("--cache-dir", default="/private/tmp/claude-501/-Users-bernhard-Desktop-brain/e9f97b9f-09f0-4aff-ac11-a991e6b1aafa/scratchpad")
+    ap.add_argument("--ledger", default="/private/tmp/claude-501/-Users-bernhard-Desktop-brain/e9f97b9f-09f0-4aff-ac11-a991e6b1aafa/scratchpad/campaign_ledger.jsonl")
+    ap.add_argument("--campaign-cap-eur", type=float, default=30.0)
     args = ap.parse_args()
+
+    # LLM caches (answerer/judge) — shared across all iterations of the campaign
+    global _ANSWER_CACHE, _JUDGE_CACHE
+    if args.cache_dir:
+        _ANSWER_CACHE = DiskCache(os.path.join(args.cache_dir, "llm_cache_answer.jsonl"))
+        _JUDGE_CACHE = DiskCache(os.path.join(args.cache_dir, "llm_cache_judge.jsonl"))
+        print("caches: answer=%d judge=%d entries" % (len(_ANSWER_CACHE.data), len(_JUDGE_CACHE.data)), flush=True)
+
+    # campaign budget ledger: hard cap across ALL runs
+    spent_before = 0.0
+    if args.ledger and os.path.exists(args.ledger):
+        with open(args.ledger) as h:
+            for line in h:
+                try:
+                    spent_before += float(json.loads(line).get("eur", 0.0))
+                except Exception:
+                    pass
+    remaining_eur = max(0.0, args.campaign_cap_eur - spent_before)
+    if remaining_eur <= 0.05:
+        print("!! campaign cap exhausted (%.2f/%.2f EUR spent) - refusing to run" % (spent_before, args.campaign_cap_eur))
+        return
+    args.budget_eur = min(args.budget_eur, remaining_eur)
+    print("campaign ledger: %.2f EUR spent, %.2f remaining; this run capped at %.2f EUR"
+          % (spent_before, remaining_eur, args.budget_eur), flush=True)
 
     use_dates = not args.no_dates
     samples = LoCoMoLoader().load(args.data)
     idxs = [int(x) for x in args.convs.split(",")] if args.convs else list(range(len(samples)))
+    features = frozenset(f.strip() for f in args.ours_features.split(",") if f.strip())
+    if features:
+        print("ours features: %s" % ",".join(sorted(features)), flush=True)
+    sys_list = [s.strip() for s in args.systems.split(",")] if args.systems else None
+    if sys_list == ["ours"]:
+        args.skip_mem0 = True
 
-    from mem0 import MemoryClient
-    client = None if args.skip_mem0 else MemoryClient(api_key=os.environ["MEM0_API_KEY"])
+    client = None
+    if not args.skip_mem0:
+        from mem0 import MemoryClient
+        client = MemoryClient(api_key=os.environ["MEM0_API_KEY"])
 
     done = load_done(args.out)
     out = open(args.out, "a")
@@ -306,11 +400,12 @@ def main():
         if ctx.startswith("__ERR__"):
             return {"conv": ci, "qid": q.question_id, "system": system, "category": q.category,
                     "abstain": is_ab, "predicted": "", "correct": False, "error": ctx[7:]}
-        pred = answerer(args.answerer, q.question, ctx, effort=args.answer_effort)
+        pred = answerer(args.answerer, q.question, ctx, effort=args.answer_effort, qid=q.question_id)
         if is_ab:
             correct = is_noanswer(pred)
         else:
-            correct = (not is_noanswer(pred)) and judge(args.judge, q.question, q.answers, pred, effort=args.judge_effort)
+            correct = (not is_noanswer(pred)) and judge(args.judge, q.question, q.answers, pred,
+                                                        effort=args.judge_effort, qid=q.question_id)
         return {"conv": ci, "qid": q.question_id, "system": system, "category": q.category,
                 "abstain": is_ab, "predicted": pred, "correct": bool(correct)}
 
@@ -321,7 +416,7 @@ def main():
         if not questions:
             continue
         print("\n=== conv %d (%s): %d episodes, %d QA ===" % (ci, sample.sample_id, len(sample.episodes), len(questions)), flush=True)
-        ours = build_ours(sample, use_dates)
+        ours = build_ours(sample, use_dates, features)
         uid = "%s_conv%d" % (args.uid_prefix, ci)
         if client is not None:
             if not mem0_has(client, uid):
@@ -387,6 +482,12 @@ def main():
     spent_eur = _COST["usd"] * EUR_PER_USD
     print("\ncost total: %.3f EUR (%d LLM calls, %d in / %d out tokens)"
           % (spent_eur, _COST["calls"], _COST["in_tok"], _COST["out_tok"]))
+    if args.ledger:
+        with open(args.ledger, "a") as h:
+            h.write(json.dumps({"ts": time.strftime("%Y-%m-%dT%H:%M:%S"), "tag": args.tag or "run",
+                                "features": sorted(features), "convs": idxs, "eur": round(spent_eur, 4),
+                                "calls": _COST["calls"]}) + "\n")
+        print("ledger: campaign total %.2f / %.2f EUR" % (spent_before + spent_eur, args.campaign_cap_eur))
 
 
 if __name__ == "__main__":

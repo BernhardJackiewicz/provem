@@ -11,18 +11,38 @@ sys.path.insert(0, "src")
 from cognitive_memory.stats import mcnemar_from_pairs, wilson_point_and_interval, bootstrap_diff_ci
 
 
-def main():
-    ap = argparse.ArgumentParser()
-    ap.add_argument("--in", dest="inp", default="/private/tmp/claude-501/-Users-bernhard-Desktop-brain/e9f97b9f-09f0-4aff-ac11-a991e6b1aafa/scratchpad/e2e_results.jsonl")
-    args = ap.parse_args()
-
-    rows = {}
-    for line in open(args.inp):
+def _load_rows(path, rows, only_system=None):
+    for line in open(path):
         try:
             r = json.loads(line)
         except Exception:
             continue
+        if only_system and r["system"] != only_system:
+            continue
         rows[(r["conv"], r["qid"], r["system"])] = r
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--in", dest="inp", default=None, help="combined run (both systems in one file)")
+    ap.add_argument("--ours", default=None, help="ours-only iteration run (JSONL)")
+    ap.add_argument("--mem0-baseline", default="docs/runs/locomo_e2e_ours_vs_mem0.jsonl",
+                    help="frozen baseline run supplying the mem0 rows")
+    ap.add_argument("--convs", default=None, help="restrict to comma-separated conv indices (e.g. DEV slice)")
+    args = ap.parse_args()
+
+    rows = {}
+    if args.inp:
+        _load_rows(args.inp, rows)
+    else:
+        if not args.ours:
+            raise SystemExit("need --in or --ours")
+        _load_rows(args.mem0_baseline, rows, only_system="mem0")
+        _load_rows(args.ours, rows, only_system="ours")
+
+    if args.convs:
+        keep = {int(x) for x in args.convs.split(",")}
+        rows = {k: v for k, v in rows.items() if k[0] in keep}
 
     # pair by (conv, qid)
     keys = sorted({(c, q) for (c, q, s) in rows})
