@@ -30,6 +30,32 @@ Wächter (no regressions): 490 unit tests OK; reliability headline exactly stabl
 quality-gate 10× PASS; feature-less stdlib default byte-identical; MCP restart smoke PASS.
 Costs: OpenAI €19.04 of the €30 cap; Anthropic ~€3.8–11.2 of €20 (pricing band).
 
+## Three-system result (added 2026-08-01): Provem > Mem0 > Zep
+
+Zep was added as a third arm, ingested per Zep's own published evaluation
+checklist (one graph owner per conversation with proper user/assistant roles and
+speaker names; timestamps via the native created_at field, NOT appended to text;
+retrieval via parallel edge+node graph searches composed into dated facts +
+entity summaries, k-capped like the others). Graph processing was verified
+complete (5,788/5,882 episodes) before evaluation; ingestion was read-back
+verified per session. Answerer/judges identical to the other systems.
+
+| Judge | Provem | Mem0 | Zep |
+|---|---|---|---|
+| strict gpt-5 | **0.614** | 0.509 | 0.449 |
+| claude-opus-5 | **0.502** | 0.419 | 0.329 |
+| Mem0's own prompt | **0.772** | 0.722 | 0.632 |
+| Abstention (446) | **0.863** | 0.848 | 0.704 |
+
+Pairwise McNemar: Provem>Mem0 p=7.2e-14, Provem>Zep p=1.0e-35, Mem0>Zep
+p=7.4e-5. The ordering is invariant across all three judges. Congruence with
+independent evidence: our strict Zep (0.449) sits next to the ENGRAM paper's
+independent Zep measurement (42.3); Zep self-reports 94.7 under its own
+gpt-5.4-CoT setup. Caveats: Zep ran on a trial account; two harness bugs
+(timestamp format, a 400-misclassified-as-429 retry loop) delayed but did not
+bias the run — both are documented in the optimization log; the eval ran only
+after read-back-verified ingestion and confirmed graph completion.
+
 ## Where Mem0 is still better (honest)
 
 1. **Nothing on this benchmark with statistical significance.** The single category

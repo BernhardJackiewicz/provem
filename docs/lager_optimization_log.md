@@ -256,3 +256,23 @@ everything published (research workflow, 3 agents, sources in ship_report):
   (n=321 is temporal, n=841 single-hop, n=96 open-domain); numbers unchanged.
 - README rebuilt: tier table, three-judge scoreboard, published-numbers context table,
   MVP history moved intact to docs/research_journal.md.
+
+## Phase Z (2026-08-01): Zep as the third arm
+
+- Config per Zep's own rebuttal checklist (user model, native created_at, parallel
+  edge+node searches). Trial account. Ingestion: 272/272 sessions READ-BACK VERIFIED;
+  graph processing confirmed at 5,788/5,882 episodes before eval. 1,986 QA, 0 errors.
+- **Result: Provem 0.614 > Mem0 0.509 > Zep 0.449 (strict); ordering identical under
+  claude-opus-5 (0.502/0.419/0.329) and Mem0's own judge (0.772/0.722/0.632);
+  abstention 0.863/0.848/0.704. All pairwise McNemar significant (1e-35..7e-5).**
+- Congruence: our Zep lands next to the independent ENGRAM-paper measurement (42.3),
+  far from Zep's self-report (94.7) — same pattern as with Mem0's numbers.
+- Two self-inflicted harness bugs cost ~3h and are the evening's lesson in verified
+  writes: (1) tz-aware timestamps + appended "Z" made invalid created_at values →
+  Zep's 400 "invalid json"; (2) the retry classifier matched the word "rate" which
+  appears in EVERY Zep error via x-ratelimit headers → permanent 400s retried as 429s,
+  first silently swallowed (chunk loop exhausted without raising), then honestly
+  failing. Fixes: tz-conditional timestamps, retry only on literal status_code 429,
+  never-swallow chunk failures, per-session read-back verification. A benchmarking
+  project about governed, verified memory writes got burned twice in one evening by
+  its own unverified API writes; the irony is documented on purpose.

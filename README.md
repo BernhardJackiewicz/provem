@@ -181,13 +181,20 @@ so we present three separately-valid rankings instead.
 
 **Ranking 1 — measured in this repo, same harness (the only ranking we claim):**
 
-| Rank | System | Strict judge | Mem0's own judge | Abstention |
-|---|---|---|---|---|
-| 1 | **Provem (dense tier)** | **0.614** | **0.772** | 0.863 |
-| 2 | Mem0 platform | 0.509 | 0.722 | 0.848 |
+| Rank | System | Strict judge | Claude judge | Mem0's own judge | Abstention |
+|---|---|---|---|---|---|
+| 1 | **Provem (dense tier)** | **0.614** | **0.502** | **0.772** | **0.863** |
+| 2 | Mem0 platform | 0.509 | 0.419 | 0.722 | 0.848 |
+| 3 | Zep platform | 0.449 | 0.329 | 0.632 | 0.704 |
 
-Identical questions, answerer, and judge for both rows; paired McNemar
-p = 7×10⁻¹⁴ (strict) / 4×10⁻⁵ (Mem0's judge). We rank only what we measured.
+Identical questions, answerer, and judges for every row. All pairwise
+differences are significant (paired McNemar: Provem>Mem0 p = 7×10⁻¹⁴,
+Provem>Zep p = 1×10⁻³⁵, Mem0>Zep p = 7×10⁻⁵) and the ordering is identical
+under all three judges. Zep was configured following its own published
+evaluation checklist (proper user model, native created_at timestamps,
+parallel edge+node graph searches) to pre-empt the misconfiguration critique
+it raised against Mem0's paper; config details in the ship report. We rank
+only what we measured.
 
 **Ranking 2 — independent third-party evaluations (quoted verbatim, their setups):**
 
@@ -203,10 +210,12 @@ p = 7×10⁻¹⁴ (strict) / 4×10⁻⁵ (Mem0's judge). We rank only what we me
 ¹ Unrelated academic system (arXiv 2511.12960), no relation to this project.
 
 **The anchor that connects the tables:** our strict-judge Mem0 measurement
-(0.509) matches LoCoMo-Refined's strict Mem0 (48.9) almost exactly, and under
-Mem0's own judge our Mem0 lands at 0.722 — inside its published band. Our
-harness reproduces what independent evaluations find; we did not measure Zep,
-MemOS, or the others head-to-head, so we make no claims against them.
+(0.509) matches LoCoMo-Refined's strict Mem0 (48.9) almost exactly; our
+strict-judge Zep (0.449) lands next to the ENGRAM paper's independent Zep
+(42.3) — and far from Zep's self-reported 94.7. Under Mem0's own judge our
+Mem0 lands at 0.722, inside its published band. Our harness reproduces what
+independent evaluations find. MemOS and the remaining systems were not
+measured head-to-head, so we make no claims against them.
 
 **Ranking 3 — vendor self-reports (marketing conditions, listed for completeness):**
 Zep 94.7 (gpt-5.4 CoT reader/judge; after retracting an earlier 84% figure) ·
