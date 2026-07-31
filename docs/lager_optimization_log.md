@@ -60,6 +60,39 @@ What made the difference (in causal order of the campaign):
    wording: ban fabrication (not inference) → never correct false premises → infer only
    what is directly implied.
 
+## Next frontiers (hypothesis catalog, 2026-07-31 — designed, not yet executed)
+
+Mining the FINAL config's 38 multi-hop losses reframed footnote 1: **it is ~2/3 an
+enumeration problem, not a reasoning problem** (13/38 have the full answer in context but
+strict4 suppresses lists — "Figurines" instead of "Figurines, shoes"; 24/38 need exactly
+2 evidence turns; the rest split 11 partial / 14 retrieval-miss).
+
+**Multi-hop (0.245 → target >0.316):** H-M1 aggregation-routed prompt variant
+(regex-router → strict4-agg that licenses enumeration of explicitly stated items;
+~€1.5, +4-6 pts multi-hop). H-M2 per-session diversity quota + dense-MMR for routed
+questions (~€1, +1.5-2.5). H-M3 deterministic per-entity sub-query union for "both X
+and Y" (~€1, +1.5-2.5). Together realistically +7-10 pts → parity to slightly above
+Mem0. H-M4 wave-3 fact extraction + governed cross-session rollups (~€6, 2.5d,
++5-8 pts standalone) is the structural fix and the only one that scales past parity;
+highest risk (extraction poisoning → substring-filter + provenance + review queue).
+
+**Keyless tier (0.39 → honest ceiling ~0.42-0.44):** H-K1 window_next×strict4 (never
+measured together; ~€2, +0.5-1.5). H-K2 corpus-internal PPMI co-occurrence query
+expansion (stdlib; ~€2.5, +1-3). H-K3 RM3-style pseudo-relevance feedback (~€1.5,
++0.5-2). **Verdict: keyless parity with Mem0 is NOT realistic** — the +12.8-pt lever was
+semantic embeddings; corpus statistics recover only a fraction. H-K4 optional
+`[local-embeddings]` pip extra (static/ONNX model, no API key) reaches ~0.47-0.50 — the
+honest middle tier between stdlib-default and key-gated dense.
+
+**External validity ("one benchmark, one judge"):** V1 cross-vendor second judge over the
+STORED predictions of both systems (~€1.5, no retrieval needed) — kills the
+"answerer-vendor judges itself" objection. V2 full-set neutral-prompt symmetric control
+(ours dense/pv=v1 vs frozen neutral Mem0; ~€1) — removes the strict4-asymmetry caveat
+(DEV already suggests we still win: 0.519 vs 0.478). V3 zero-cost reproducibility freeze
+(run manifest + caches + €0 replay target). V4 LongMemEval-S port (~€4.5, 1.5d,
+ours-vs-ourselves ablation; no affordable Mem0 arm there — quota). V1+V2+V3 ≈ €2.5 and
+upgrade the claim to "two judge vendors, prompt-symmetric, bit-exact reproducible".
+
 Honest limitations (documented for any skeptic):
 - The strict4 prompt is OUR pipeline's context-presentation layer, tuned on DEV; Mem0's
   frozen rows used the original neutral prompt (its stores would need re-querying to re-run,
