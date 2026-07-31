@@ -230,3 +230,29 @@ threshold. The lever is the answerer prompt, iterated with flip analysis:
 - `strict4` (+ infer only what is directly implied): **answerable 0.534 (+14.3 over baseline,
   +5.6 over Mem0's DEV 0.478), abstain 0.866 ✓ — above the 0.862 baseline. All DEV gates
   green; promotion candidate.** Full-set confirmation pending.
+
+### Category-name correction (2026-07-31)
+The harness's category display names for cats 2/3/4 were mislabeled. Verified against
+Mem0's official run JSONs by question counts: cat1 n=282 = multi-hop, cat2 n=321 =
+**temporal** (we had "single-hop"), cat3 n=96 = **open-domain** (we had "temporal"),
+cat4 n=841 = **single-hop** (we had "open-domain"). All NUMBERS are unchanged — only
+display names. Re-narrated final result: we win temporal 0.614 vs 0.442 (the
+date-augmentation/temporal work paying off), single-hop 0.717 vs 0.592, multi-hop
+0.411 vs 0.397; the statistical tie sits in open-domain (n=96).
+
+### Published-numbers congruence check + bridge test (2026-07-31/08-01)
+Before putting competitor numbers in the README we verified our Mem0 measurement against
+everything published (research workflow, 3 agents, sources in ship_report):
+- Landscape: Mem0 self 66.9 (2025, judge told to "be generous") → 82.7/91.6 (2026, top-50/200,
+  gpt-5 CoT answerer, judge with partial credit + 14-day date tolerance); Zep self 75.1→94.7
+  (after retracting an 84% figure); independent: ENGRAM paper Mem0=64.7 (k=20), LoCoMo-Refined
+  strict human-validated judge Mem0=**48.9** — our strict-judge 0.509 matches the independent
+  strict measurement almost exactly; our Opus-5 0.419 matches "Claude judges are strictest".
+- **Bridge test:** scored BOTH systems' stored predictions with Mem0's OWN judge prompt
+  (verbatim from mem0ai/memory-benchmarks, gpt-5): **Mem0 0.722** (inside its published band;
+  residual gap to its 82.7 self-report = k=20 vs k=50 + answerer tier) and **ours 0.772
+  (+5.0, p=4.4e-5) — we also win under their scoring.** Cost €5.16 (ledgered; OpenAI total
+  ~€24.20/30). Category display names corrected against Mem0's official run JSONs
+  (n=321 is temporal, n=841 single-hop, n=96 open-domain); numbers unchanged.
+- README rebuilt: tier table, three-judge scoreboard, published-numbers context table,
+  MVP history moved intact to docs/research_journal.md.

@@ -15,13 +15,14 @@ question-type routing. Mem0: its platform pipeline over the same conversations
 |---|---|---|---|
 | Answerable accuracy (n=1540), judge gpt-5 | **0.614** | 0.509 | **+10.5 pts, McNemar p=7.2×10⁻¹⁴** |
 | Answerable accuracy, judge claude-opus-5 | **0.502** | 0.419 | **+8.2 pts, p=5.1×10⁻¹⁰** (cross-vendor confirmed) |
+| Answerable accuracy, **Mem0's own published judge prompt** (gpt-5, partial credit + 14-day date tolerance) | **0.772** | 0.722 | **+5.0 pts, p=4.4×10⁻⁵** — we win under their scoring too; Mem0's 0.722 sits inside its published band (paper 66.9, independent k=20 64.7, own k=50 82.7), validating our harness |
 | Holdout-only (never tuned, n=752) | **0.617** | 0.503 | +11.4 pts, p=1.7×10⁻⁸ |
 | Neutral prompt (no tuning at all) | **0.596** | 0.509 | win survives without prompt tuning |
 | Abstention on adversarial (n=446) | **0.863** | 0.848 | parity (p=0.49), gate ≥0.85 ✓ |
 | multi-hop (n=282) | **0.411** | 0.397 | flipped in campaign 2 |
-| single-hop (n=321) | **0.614** | 0.442 | clear win |
-| open-domain (n=841) | **0.717** | 0.592 | clear win |
-| cat_3 "temporal" (n=96) | 0.312 | 0.333 | statistical tie (2 questions; CIs overlap) |
+| temporal (n=321) | **0.614** | 0.442 | clear win |
+| single-hop (n=841) | **0.717** | 0.592 | clear win |
+| open-domain (n=96) | 0.312 | 0.333 | statistical tie (2 questions; CIs overlap) |
 | Judge agreement (Cohen's κ, gpt-5 vs opus-5) | 0.70–0.83 | — | substantial |
 
 Wächter (no regressions): 490 unit tests OK; reliability headline exactly stable
@@ -32,7 +33,7 @@ Costs: OpenAI €19.04 of the €30 cap; Anthropic ~€3.8–11.2 of €20 (pric
 ## Where Mem0 is still better (honest)
 
 1. **Nothing on this benchmark with statistical significance.** The single category
-   where Mem0's point estimate leads (cat_3, 0.333 vs 0.312) is a 2-question gap on
+   where Mem0's point estimate leads (open-domain n=96, 0.333 vs 0.312) is a 2-question gap on
    n=96 — noise, not a finding. We chose not to iterate on it to avoid overfitting.
 2. **Write-time consolidation as a product capability.** Mem0 distills conversations
    into a compact, human-readable memory set (~150–250 facts/conversation). We

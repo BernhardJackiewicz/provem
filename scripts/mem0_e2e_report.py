@@ -81,7 +81,10 @@ def main():
     summ(paired_ans, "ANSWERABLE accuracy")
     summ(paired_ab, "ABSTENTION accuracy (adversarial/no-info)")
 
-    CATN = {"1": "multi-hop", "2": "single-hop", "3": "temporal", "4": "open-domain", "5": "adversarial"}
+    # Canonical LoCoMo category names, verified against Mem0's official run JSONs
+    # by question counts: cat1 n=282 multi-hop, cat2 n=321 temporal,
+    # cat3 n=96 open-domain, cat4 n=841 single-hop (earlier docs had 2/3/4 mislabeled).
+    CATN = {"1": "multi-hop", "2": "temporal", "3": "open-domain", "4": "single-hop", "5": "adversarial"}
     print("\n-- by category (raw code / harness name) --")
     for ccode in sorted(cat):
         pairs = cat[ccode]; n = len(pairs)
