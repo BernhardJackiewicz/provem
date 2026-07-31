@@ -1,0 +1,55 @@
+{
+ "purpose": "Reproducibility freeze for the Engram-vs-Mem0 LoCoMo E2E comparison campaigns",
+ "git_sha": "263bf887948c46500b6d10e78bebda4dad057012",
+ "dataset": {
+  "file": "data/external/locomo/locomo10.json",
+  "convs": 10,
+  "qa": 1986,
+  "answerable": 1540,
+  "adversarial": 446
+ },
+ "dev_convs": [
+  0,
+  2,
+  4,
+  6,
+  8
+ ],
+ "holdout_convs": [
+  1,
+  3,
+  5,
+  7,
+  9
+ ],
+ "top_k": 20,
+ "models": {
+  "answerer": "gpt-5-mini (reasoning_effort=medium)",
+  "primary_judge": "gpt-5 (reasoning_effort=low)",
+  "second_judge": "claude-opus-5",
+  "embeddings": "text-embedding-3-small"
+ },
+ "prompt_versions": {
+  "answerer_default": "v1",
+  "strict_chain": [
+   "strict1",
+   "strict2",
+   "strict3",
+   "strict4",
+   "strict4agg"
+  ],
+  "judge": "JUDGE_SYS in scripts/mem0_locomo_e2e.py (shared verbatim by both judges)"
+ },
+ "known_issue_fixed": "empty content with finish_reason=length was scored wrong pre-fix; both systems patched symmetrically (see lager_optimization_log.md)",
+ "artifacts_sha256_16": {
+  "docs/runs/locomo_e2e_ours_vs_mem0.jsonl": "02893eb0296882f8",
+  "docs/runs/locomo_e2e_ours_optimized.jsonl": "3dd8622addbb5421",
+  "data/external/locomo/locomo10.json": "79fa87e90f040813",
+  "docs/runs/caches/campaign_ledger.jsonl": "1362135c83baa3b2",
+  "docs/runs/caches/judge2_cache.jsonl": "e59def36a67680f8",
+  "docs/runs/caches/llm_cache_answer.jsonl": "826b2d1cee666578",
+  "docs/runs/caches/llm_cache_judge.jsonl": "63e625419b9abb92",
+  "docs/runs/caches/vector_cache.jsonl": "26dcbef10ebe08b4"
+ },
+ "replay": "scripts/replay_report.sh reproduces all headline numbers at EUR 0 from the caches"
+}
