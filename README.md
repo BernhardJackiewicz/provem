@@ -6,8 +6,8 @@ Two results, one system, every number reproducible from frozen artifacts at zero
 
 | Axis | Result |
 |---|---|
-| 🔒 **Governance** | Compliance violations **240 → 0**, memory-poisoning success **100% → 0%**, silent compounding errors **72.6% → 0.0%** (paired McNemar p ≈ 5×10⁻¹⁵⁰, deterministic, no API key) |
-| 📦 **Memory** | **Beats Mem0 on full LoCoMo**: 0.614 vs 0.509 answerable accuracy (paired, +10.5 pts, p = 7×10⁻¹⁴) — confirmed under an independent Claude judge (+8.2, p = 5×10⁻¹⁰) **and under Mem0's own published judge prompt** (0.772 vs 0.722, p = 4×10⁻⁵) |
+| **Governance** | Compliance violations **240 → 0**, memory-poisoning success **100% → 0%**, silent compounding errors **72.6% → 0.0%** (paired McNemar p ≈ 5×10⁻¹⁵⁰, deterministic, no API key) |
+| **Memory** | **Beats Mem0 on full LoCoMo**: 0.614 vs 0.509 answerable accuracy (paired, +10.5 pts, p = 7×10⁻¹⁴) — confirmed under an independent Claude judge (+8.2, p = 5×10⁻¹⁰) **and under Mem0's own published judge prompt** (0.772 vs 0.722, p = 4×10⁻⁵) |
 
 ## The problem
 
