@@ -9,33 +9,78 @@ Two results, one system, every number reproducible from frozen artifacts at zero
 | 🔒 **Governance** | Compliance violations **240 → 0**, memory-poisoning success **100% → 0%**, silent compounding errors **72.6% → 0.0%** (paired McNemar p ≈ 5×10⁻¹⁵⁰, deterministic, no API key) |
 | 📦 **Memory** | **Beats Mem0 on full LoCoMo**: 0.614 vs 0.509 answerable accuracy (paired, +10.5 pts, p = 7×10⁻¹⁴) — confirmed under an independent Claude judge (+8.2, p = 5×10⁻¹⁰) **and under Mem0's own published judge prompt** (0.772 vs 0.722, p = 4×10⁻⁵) |
 
-## What "governed" means — and why it matters professionally
+## The problem
 
-The moment an agent *remembers*, it stops being a stateless tool and becomes a
-**data-holding system** — with everything that legally and operationally implies.
-Recall benchmarks measure whether memory helps the agent. Governance decides
-whether you can **deploy** that memory: to real customers, under real
-regulations, with real liability. Concretely, "governed" means each of these
-enterprise requirements is enforced by the memory layer itself — not hoped for
-in a prompt:
+Take a recruiting agent. It picks up information from everywhere: email, the
+CRM, Slack, web pages, PDFs, meetings, the user chat. All of it lands in a
+memory, and most agent memories work the same way: store → embed → retrieve.
+This works surprisingly well.
 
-| Enterprise requirement | The incident without it | Provem mechanism |
+Then the memory grows, and the hard question changes. It is no longer
+*"can I find it?"* — it becomes ***"am I allowed to use it?"***
+
+A candidate writes: *"Please delete my salary expectation."* Three months later
+the agent uses it anyway. The retrieval was perfect. **The memory was legally
+wrong.**
+
+The same shift shows up everywhere once agents hold data about real people and
+real companies:
+
+- A scraped page plants a wrong fact — it quietly becomes "knowledge" and
+  re-fires in every future answer (this is how MINJA/AgentPoison-style attacks
+  work).
+- Customer A's data surfaces in customer B's session.
+- Someone asks *"why did the agent say that?"* — and there is no answer.
+- The agent states a stale fact confidently instead of saying "I don't know",
+  and in a multi-step workflow that error compounds (measured below: one bad
+  memory corrupts 2.12 downstream steps on average).
+
+Better retrieval fixes none of this. These are governance problems, and today
+they are mostly "solved" in prompts (unenforceable) or in per-app code
+(unauditable).
+
+## What Provem is
+
+Provem is an open-source research project: a governance layer that sits between
+the agent and whatever actually stores the memories.
+
+```text
+   Agent  (any model: GPT, Claude, Llama, Gemini, ...)
+     |
+     v
+   Provem   decides:  may this be stored?   may it be read?
+     |                whose data is it?     was it deleted?
+     |                do I trust the source?
+     |                should I rather say "I don't know"?
+     v
+   any backend:  SQLite · BM25 · Mem0 · Zep/Graphiti · your own DB
+```
+
+Two design decisions make the pieces swappable:
+
+- **Backend-agnostic.** The storage engine is a plug-in behind a small
+  `MemoryBackend` protocol. Erasure, scoping, trust, and audit live *above* the
+  store and do not change when you swap it.
+- **Model-agnostic.** The rules have nothing to do with which LLM you run.
+  Support on GPT, legal on Claude, internal tools on Llama? The erasure duty is
+  the same, tenant isolation is the same, the audit trail is the same. One
+  governance layer — instead of re-implementing compliance once per model and
+  once per memory vendor.
+
+Concretely, the layer enforces:
+
+| Requirement | Without it | Provem mechanism |
 |---|---|---|
-| **Right to erasure** (GDPR Art. 17 & co.) | Agent quotes a customer's deleted data months later — now a reportable violation | Erasure enforced *at recall*, tenant-scoped, with signed erasure certificates |
-| **Untrusted data sources** | A scraped page or tool output plants a false fact; it silently becomes "company knowledge" and re-fires forever (MINJA/AgentPoison-style poisoning) | Provenance + source-trust tagging, injection quarantine at write time, trust-weighted conflict resolution at read time |
-| **Tenant isolation** | Customer A's salary data surfaces in customer B's session — a contract breach, not a bug | Hard scope isolation per tenant and entity, tested adversarially |
-| **Auditability** | Regulator, customer, or court asks *"why did your AI say that?"* — and nobody can answer | SHA-256 hash-chained, tamper-evident audit log; every serve/refuse decision carries reasons and provenance |
-| **Confident wrong answers** | Agent acts on a stale or forbidden fact; in multi-step workflows one bad memory corrupts every downstream step (measured: 2.12 steps each, ungoverned) | Calibrated abstention — a recoverable "I don't know" instead of a confident error; retention windows enforced |
-| **Domain-specific rules** | Recruiting must honor do-not-contact and candidate confidentiality; pharma needs consent on health data; finance has retention duties — hardcoding this per app doesn't scale and can't be audited | Declarative compliance profiles per tenant (recruitment / pharma / finance / custom JSON-YAML), one server, many domains |
+| Right to erasure (GDPR Art. 17 & co.) | Agent quotes deleted data months later | Erasure enforced *at recall*, tenant-scoped, with erasure certificates |
+| Untrusted sources | A planted fact becomes permanent "knowledge" | Provenance + trust tagging, injection quarantine at write, trust-weighted conflict resolution at read |
+| Tenant isolation | Customer A's data in customer B's session | Hard scope isolation per tenant and entity, tested adversarially |
+| Auditability | *"Why did the agent say that?"* has no answer | SHA-256 hash-chained audit log; every serve/refuse decision carries reasons and provenance |
+| Calibrated uncertainty | Confident stale answers that compound | Abstention as a first-class outcome; retention windows enforced |
+| Domain rules | Recruiting ≠ pharma ≠ finance, hardcoded per app | Declarative per-tenant compliance profiles (JSON/YAML) |
 
-The reason this is a *layer* and not a feature: every team building agents
-re-implements deletion, scoping, and audit ad hoc — in prompts, where nothing is
-enforceable, or in app code, where nothing is auditable. Provem moves it into
-the memory boundary, backend-agnostic, and **proves the effect end to end**: the
-benchmark below shows the identical agent on the identical memory going from 240
-compliance violations, 100% poisoning success and 72.6% silently corrupted steps
-to **zero on all three** — while its recall stack independently beats the market
-reference on the standard memory benchmark.
+This is a research project first: every claim on this page has a reproducible
+benchmark behind it, negative results are documented alongside the wins, and
+the whole evidence chain replays from frozen artifacts at zero cost.
 
 ## Quick start
 
