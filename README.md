@@ -9,16 +9,33 @@ Two results, one system, every number reproducible from frozen artifacts at zero
 | 🔒 **Governance** | Compliance violations **240 → 0**, memory-poisoning success **100% → 0%**, silent compounding errors **72.6% → 0.0%** (paired McNemar p ≈ 5×10⁻¹⁵⁰, deterministic, no API key) |
 | 📦 **Memory** | **Beats Mem0 on full LoCoMo**: 0.614 vs 0.509 answerable accuracy (paired, +10.5 pts, p = 7×10⁻¹⁴) — confirmed under an independent Claude judge (+8.2, p = 5×10⁻¹⁰) **and under Mem0's own published judge prompt** (0.772 vs 0.722, p = 4×10⁻⁵) |
 
-## Why govern memory?
+## What "governed" means — and why it matters professionally
 
-Agent memory is usually benchmarked on recall. But recall is not what breaks
-agents in production — **compounding memory errors are**: a stale, poisoned, or
-legally-forbidden fact does not fail once, it re-fires on every future step that
-retrieves it. Engram wraps any memory backend with a governance layer (injection
-quarantine, source-trust conflict resolution, tenant-isolated GDPR erasure with
-certificates, tamper-evident audit, calibrated abstention) — and its retrieval
-stack is now independently strong enough to beat the market reference on the
-standard recall benchmark too.
+The moment an agent *remembers*, it stops being a stateless tool and becomes a
+**data-holding system** — with everything that legally and operationally implies.
+Recall benchmarks measure whether memory helps the agent. Governance decides
+whether you can **deploy** that memory: to real customers, under real
+regulations, with real liability. Concretely, "governed" means each of these
+enterprise requirements is enforced by the memory layer itself — not hoped for
+in a prompt:
+
+| Enterprise requirement | The incident without it | Engram mechanism |
+|---|---|---|
+| **Right to erasure** (GDPR Art. 17 & co.) | Agent quotes a customer's deleted data months later — now a reportable violation | Erasure enforced *at recall*, tenant-scoped, with signed erasure certificates |
+| **Untrusted data sources** | A scraped page or tool output plants a false fact; it silently becomes "company knowledge" and re-fires forever (MINJA/AgentPoison-style poisoning) | Provenance + source-trust tagging, injection quarantine at write time, trust-weighted conflict resolution at read time |
+| **Tenant isolation** | Customer A's salary data surfaces in customer B's session — a contract breach, not a bug | Hard scope isolation per tenant and entity, tested adversarially |
+| **Auditability** | Regulator, customer, or court asks *"why did your AI say that?"* — and nobody can answer | SHA-256 hash-chained, tamper-evident audit log; every serve/refuse decision carries reasons and provenance |
+| **Confident wrong answers** | Agent acts on a stale or forbidden fact; in multi-step workflows one bad memory corrupts every downstream step (measured: 2.12 steps each, ungoverned) | Calibrated abstention — a recoverable "I don't know" instead of a confident error; retention windows enforced |
+| **Domain-specific rules** | Recruiting must honor do-not-contact and candidate confidentiality; pharma needs consent on health data; finance has retention duties — hardcoding this per app doesn't scale and can't be audited | Declarative compliance profiles per tenant (recruitment / pharma / finance / custom JSON-YAML), one server, many domains |
+
+The reason this is a *layer* and not a feature: every team building agents
+re-implements deletion, scoping, and audit ad hoc — in prompts, where nothing is
+enforceable, or in app code, where nothing is auditable. Engram moves it into
+the memory boundary, backend-agnostic, and **proves the effect end to end**: the
+benchmark below shows the identical agent on the identical memory going from 240
+compliance violations, 100% poisoning success and 72.6% silently corrupted steps
+to **zero on all three** — while its recall stack independently beats the market
+reference on the standard memory benchmark.
 
 ## Quick start
 
