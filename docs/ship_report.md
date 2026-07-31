@@ -76,7 +76,7 @@ Costs: OpenAI €19.04 of the €30 cap; Anthropic ~€3.8–11.2 of €20 (pric
   win: +11.4). Judge verdict caching makes every historical number replayable at €0.
 - **Answerer dependency.** E2E accuracy is answerer-sensitive (a weak answerer favors
   Mem0's distilled contexts). Our numbers use gpt-5-mini/medium for both systems.
-- **Governance benchmark is separate evidence.** The Schloss numbers (silent errors
+- **Governance benchmark is separate evidence.** The governance numbers (silent errors
   72.6%→0, poisoning 100%→0, 240→0 violations, p≈5e-150) come from the deterministic
   closed-loop reliability benchmark, NOT from LoCoMo, and use a scripted agent by
   design (documented limitation; isolates the memory layer's causal contribution).
@@ -86,11 +86,11 @@ Costs: OpenAI €19.04 of the €30 cap; Anthropic ~€3.8–11.2 of €20 (pric
 **Ship the governed dense tier — it is the product story, and it is now evidenced on
 both axes.** Concretely:
 
-1. **SHIP: Governance layer (Schloss) — ready.** Backend-agnostic, deterministic,
+1. **SHIP: Governance layer — ready.** Backend-agnostic, deterministic,
    dependency-free, 490 tests, tamper-evident audit, tenant erasure, injection
    containment on real payloads, configurable per-domain profiles, MCP server.
    This is the differentiator no competitor in this comparison has at all.
-2. **SHIP: dense memory tier (Lager) as the recommended configuration.** Key-gated
+2. **SHIP: dense memory tier as the recommended configuration.** Key-gated
    embeddings + RRF over verbatim storage: significantly stronger than Mem0 on the
    standard benchmark under two judge vendors, with abstention parity. Requires an
    embeddings API key; costs cents per conversation; vectors disk-cached.
@@ -104,7 +104,7 @@ both axes.** Concretely:
    small human eval, optional local-embeddings tier, wave-3 fact rollups (would also
    give the curated-memories UX where Mem0 still shines).
 
-**Bottom line: shippable.** The lock is proven, the warehouse now beats the market
+**Bottom line: shippable.** The governance layer is proven, and the memory now beats the market
 reference on the standard benchmark with cross-vendor significance, every limitation
 above is documented and none of them reverses the sign of the result.
 

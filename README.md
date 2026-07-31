@@ -1,6 +1,6 @@
 # Engram
 
-**Governed memory for AI agents — the lock and the warehouse, both proven.**
+**Governed memory for AI agents — stronger recall than Mem0, zero compliance violations, both proven.**
 
 Two results, one system, every number reproducible from frozen artifacts at zero cost:
 
