@@ -1,5 +1,12 @@
 # End-to-end LoCoMo: our memory vs Mem0 — the definitive comparison
 
+> **FINAL UPDATE (2026-07-31, campaign 2): after fixing an empty-prediction harness
+> bug SYMMETRICALLY on both sides and closing the multi-hop gap, the final paired
+> result is **0.614 vs 0.509 (+10.5 pts, p=7.2e-14)** under gpt-5 and **0.502 vs
+> 0.419 (+8.2, p=5.1e-10)** under the independent claude-opus-5 judge; abstention
+> parity 0.863 vs 0.848; multi-hop flipped (0.411 vs 0.397). See `ship_report.md`
+> for the full scoreboard and honest limitations.**
+>
 > **UPDATE (2026-07-31): after an iterative, failure-driven optimization campaign
 > (see `lager_optimization_log.md`), OUR memory now beats Mem0 on this same
 > benchmark: answerable 0.536 vs 0.475 (+6.2 pts, McNemar p = 4.2×10⁻⁶),

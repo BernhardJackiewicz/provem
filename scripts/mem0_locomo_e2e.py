@@ -34,6 +34,7 @@ sys.path.insert(0, "src")
 from cognitive_memory.locomo_eval import LoCoMoLoader, LoCoMoCognitiveSystem
 from cognitive_memory.models import RetrievalRequest
 from cognitive_memory.answer import is_aggregation_question as _is_agg
+from cognitive_memory.answer import question_type as _qtype
 
 # ---------------------------------------------------------------- pricing (USD/1M tokens)
 # EDIT these to your actual account prices; the pilot prints real $ so you can calibrate.
@@ -200,6 +201,22 @@ ANSWER_SYS_STRICT4 = ANSWER_SYS_STRICT3 + (
     "for is neither stated nor directly implied, reply exactly: NO ANSWER."
 )
 
+# The empty-content fix exposed that strict4's calibration partly rode on the
+# bug (empty answers scored as declines). strict5 hardens the mention check:
+# topic similarity is not license to answer.
+ANSWER_SYS_STRICT5 = ANSWER_SYS_STRICT4 + (
+    " Before answering, verify the excerpts explicitly discuss the SPECIFIC "
+    "thing asked about (that exact event, object, or attribute). Related or "
+    "similar-topic content is NOT enough - in that case reply exactly: "
+    "NO ANSWER. Some questions deliberately ask about things never discussed."
+)
+
+ANSWER_SYS_STRICT5_AGG = ANSWER_SYS_STRICT5 + (
+    " This question asks for a list, count, or comparison: combining multiple "
+    "explicitly stated items IS directly implied - enumerate ALL matching items "
+    "found anywhere in the excerpts, even across different excerpts."
+)
+
 # Aggregation route (M1): 13/38 multi-hop losses had the FULL answer in context
 # but strict4's implied-only + concise wording suppressed enumeration ("Figurines"
 # instead of "Figurines, shoes"). Only regex-routed list/union/count questions get
@@ -288,6 +305,30 @@ def build_ours(sample, use_dates, features=frozenset()):
 
 _DIA = re.compile(r"^(.+?):(\d+)$")
 
+_OP_STRIP = re.compile(r"^(?:which|what|who|how\s+many(?:\s+times)?|name\s+all|list\s+all|"
+                       r"what\s+are\s+the\s+names\s+of)\b", re.I)
+_STOP_NAMES = {"what", "which", "who", "did", "how", "name", "list", "the", "is", "are",
+               "was", "were", "has", "have", "do", "does", "both", "and"}
+
+
+def _agg_subqueries(question):
+    stripped = _OP_STRIP.sub(" ", question)
+    stripped = re.sub(r"\bboth\b", " ", stripped, flags=re.I)
+    stripped = re.sub(r"\s+", " ", stripped).strip(" ?.")
+    subs = []
+    names = [n for n in re.findall(r"\b[A-Z][a-z]+\b", question) if n.lower() not in _STOP_NAMES]
+    uniq = list(dict.fromkeys(names))
+    if len(uniq) >= 2 and re.search(r"\bboth\b", question, re.I):
+        rest = stripped
+        for n in uniq:
+            rest = re.sub(r"\b%s\b" % re.escape(n), " ", rest)
+        rest = re.sub(r"\s+", " ", rest).strip(" ?.")
+        for n in uniq[:3]:
+            subs.append(("%s %s" % (n, rest)).strip())
+    if stripped and stripped.lower() != question.lower():
+        subs.append(stripped)
+    return subs[:3]
+
 
 def _evidence_id_and_text(sysm, rec):
     """Mirror of _evidence_text_for that also returns the source episode id."""
@@ -365,20 +406,46 @@ def our_context(sysm, sample, q, k):
     if dense:
         # RRF-fuse the lexical top-50 with the dense top-50 (paraphrase channel)
         from cognitive_memory.embeddings import cosine, rrf_fuse
-        qvec = sysm.embedder.embed([q.question])[0]
-        sims = sorted(((cosine(qvec, vec), eid) for eid, vec in sysm.dense_index), reverse=True)
-        dense_rank = [eid for _, eid in sims[:50]]
+        routed = _is_agg(q.question)
+        queries = [q.question]
+        if routed and "aggfan" in features:
+            # M3: deterministic sub-queries — per-entity split for "both X and Y"
+            # (a combined query embeds as a centroid matching neither person) and
+            # an operator-stripped content query.
+            queries += _agg_subqueries(q.question)
+        qvecs = sysm.embedder.embed(queries)
+        rankings = []
+        for qvec in qvecs:
+            sims = sorted(((cosine(qvec, vec), eid) for eid, vec in sysm.dense_index), reverse=True)
+            rankings.append([eid for _, eid in sims[:50]])
         lex_rank = [dia for dia, _ in entries if dia]
         text_by_id = dict((dia, t) for dia, t in entries if dia)
-        fused = rrf_fuse([lex_rank, dense_rank])
+        fused = rrf_fuse([lex_rank] + rankings)
+        vec_by_id = dict(sysm.dense_index)
+        session_count = {}
+        chosen_vecs = []
         merged = []
         for eid, _score in fused:
             text = text_by_id.get(eid)
             if text is None:
                 episode = sysm.controller.store.get_episode(eid)
                 text = episode.content if episode is not None else ""
-            if text:
-                merged.append((eid, text))
+            if not text:
+                continue
+            if routed and "aggdiv" in features:
+                # M2: session diversity + MMR — list items live in different
+                # sessions; stop one session's paraphrase cluster from crowding
+                # out the second item.
+                sess = eid.split(":")[0] if ":" in eid else eid
+                if session_count.get(sess, 0) >= 3:
+                    continue
+                vec = vec_by_id.get(eid)
+                if vec is not None and any(cosine(vec, cv) > 0.92 for cv in chosen_vecs):
+                    continue
+                session_count[sess] = session_count.get(sess, 0) + 1
+                if vec is not None:
+                    chosen_vecs.append(vec)
+            merged.append((eid, text))
             if len(merged) >= k:
                 break
         entries = merged
@@ -574,7 +641,19 @@ def main():
         if ctx.startswith("__ERR__"):
             return {"conv": ci, "qid": q.question_id, "system": system, "category": q.category,
                     "abstain": is_ab, "predicted": "", "correct": False, "error": ctx[7:]}
-        if "agg" in features and "strict4" in features and _is_agg(q.question):
+        if "strict5" in features and "agg" in features and _is_agg(q.question):
+            pred = answerer(args.answerer, q.question, ctx, effort=args.answer_effort, qid=q.question_id,
+                            sys_prompt=ANSWER_SYS_STRICT5_AGG, pv="strict5agg")
+        elif "strict5" in features and "temporalroute" in features and _qtype(q.question) == "temporal":
+            # strict5's mention-check costs date answers (temporal 0.406->0.312);
+            # temporal-typed questions route to strict4 (only 3.4% of adversarial
+            # questions are temporal-typed - bounded abstention exposure).
+            pred = answerer(args.answerer, q.question, ctx, effort=args.answer_effort, qid=q.question_id,
+                            sys_prompt=ANSWER_SYS_STRICT4, pv="strict4")
+        elif "strict5" in features:
+            pred = answerer(args.answerer, q.question, ctx, effort=args.answer_effort, qid=q.question_id,
+                            sys_prompt=ANSWER_SYS_STRICT5, pv="strict5")
+        elif "agg" in features and "strict4" in features and _is_agg(q.question):
             pred = answerer(args.answerer, q.question, ctx, effort=args.answer_effort, qid=q.question_id,
                             sys_prompt=ANSWER_SYS_STRICT4_AGG, pv="strict4agg")
         elif "strict4" in features:

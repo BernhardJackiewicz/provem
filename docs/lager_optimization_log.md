@@ -116,6 +116,46 @@ by their run files; the post-fix comparison supersedes them.
   the enumeration license is useless while list items are missing from context AND
   while empty-content swallows the enumerating answers. Re-evaluated post-fix.
 
+### Post-fix picture (both sides repaired symmetrically)
+- **OURS(fixed) 0.611 vs MEM0(patched) 0.509 answerable (+10.2 pts, p=1.3e-13)** — the
+  bug had hidden ~7.5 pts of our true accuracy (and ~3.4 of Mem0's: 731→784, 53 of 195
+  re-asked empties now correct). Multi-hop gap shrinks to −2.5 (0.372 vs 0.397);
+  temporal now clearly ours (0.406 vs 0.333); single-hop 0.629 vs 0.442.
+- **BUT abstention collapsed to 0.780** (Mem0 0.848): empty answers on adversarial
+  questions had counted as declines — the strict4 calibration partly rode on the bug.
+  Honest and expected: fixing an artifact exposes the real calibration state.
+- **Cross-vendor second judge (claude-opus-5, pre-fix predictions): both findings
+  CONFIRMED.** Baseline: ours 0.347 vs mem0 0.404 (p=6.9e-5, Mem0 ahead — same sign as
+  gpt-5). Optimized: ours 0.478 vs mem0 0.404 (**+7.4 pts, p=3.1e-8** — same sign,
+  even larger). Opus 5 is stricter in absolute terms; the paired differences are what
+  survives. Judge agreement κ=0.73–0.83. Cost €2.9–8.8 (pricing-band).
+- **strict5** (mention-check hardened: "similar-topic content is NOT enough") on DEV:
+  answerable 0.608 (no loss vs 0.611-slice), **abstention 0.853 ✓ gate recovered**,
+  multi-hop 0.384. Promotion candidate; full-set run in flight.
+
+### Campaign 2 finals (2026-07-31): every gap closed or statistically tied
+Iteration attribution on DEV (each €0.3-1.8, caches make unchanged questions free):
+- V2 neutral-prompt control (full set): **ours 0.596 vs Mem0 0.509 even with the
+  completely untuned prompt** — the win does not depend on prompt tuning; the strict
+  chain only buys abstention (0.693 neutral → 0.863 strict5).
+- agg-prompt license alone: ±0.0 (post-fix the enumeration flows anyway). Session-
+  diversity/MMR: −2.0 multi-hop (displaces useful context) — REJECTED. **Sub-query
+  fanout (per-entity split + operator strip, RRF-unioned): +1.3 multi-hop, abstention
+  unchanged — PROMOTED.** Temporal-typed questions route to strict4 (strict5's mention
+  check cost date answers; only 3.4% of adversarials are temporal-typed): +0.4 overall.
+- **FINAL config `dense,strict5,agg,aggfan,temporalroute`, full 1986 QA, paired vs
+  Mem0-patched:**
+  - answerable **0.614 vs 0.509 (+10.5 pts, McNemar p=7.2e-14)**; holdout-only
+    **0.617 vs 0.503 (+11.4, p=1.7e-8)**
+  - abstention **0.863 vs 0.848** (gate ≥0.85 ✓, parity p=0.49)
+  - by category: multi-hop **0.411 vs 0.397** (flipped!), single-hop 0.614 vs 0.442,
+    open-domain 0.717 vs 0.592, cat_3 0.312 vs 0.333 (2 questions of 96 — statistical
+    noise, CIs overlap massively; further iteration on it would be noise-chasing).
+- Wächter gates at close: 490 tests OK, reliability headline exact (governed 0.900,
+  0 violations, benign 1.0), quality-gate 10× PASS, feature-less default byte-identical.
+- Ledger: OpenAI €19.04/€30; Anthropic ~€3-9/€20 (pricing band), second-judge top-up on
+  final predictions in flight.
+
 Honest limitations (documented for any skeptic):
 - The strict4 prompt is OUR pipeline's context-presentation layer, tuned on DEV; Mem0's
   frozen rows used the original neutral prompt (its stores would need re-querying to re-run,

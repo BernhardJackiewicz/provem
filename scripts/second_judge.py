@@ -226,6 +226,8 @@ def main():
         report[set_name] = {"answerable": [c_ans, n_ans], "abstain": [c_ab, n_ab]}
     for a, b, label in (("ours_base", "mem0", "BASELINE ours vs mem0"), ("ours_opt", "mem0", "OPTIMIZED ours vs mem0")):
         ca, cb, n, x, y, pval = paired(a, b)
+        if n == 0:
+            continue
         print("%-24s: %.3f vs %.3f (n=%d)  diff %+0.3f  McNemar a-only=%d b-only=%d p=%.3g"
               % (label, ca / n, cb / n, n, (ca - cb) / n, x, y, pval))
         report[label] = {"a": ca, "b": cb, "n": n, "p": pval}
