@@ -1,6 +1,6 @@
 # Provem
 
-**Provem** *(pronounced PROH-vem)* **— governed, GDPR-native memory for AI agents. Stronger recall than Mem0, zero compliance violations, both proven.**
+**Governed, GDPR-native memory for AI agents — stronger recall than Mem0, zero compliance violations, both proven.**
 
 Two results, one system, every number reproducible from frozen artifacts at zero cost:
 
