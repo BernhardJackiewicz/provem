@@ -33,6 +33,7 @@ sys.path.insert(0, "src")
 
 from cognitive_memory.locomo_eval import LoCoMoLoader, LoCoMoCognitiveSystem
 from cognitive_memory.models import RetrievalRequest
+from cognitive_memory.answer import is_aggregation_question as _is_agg
 
 # ---------------------------------------------------------------- pricing (USD/1M tokens)
 # EDIT these to your actual account prices; the pilot prints real $ so you can calibrate.
@@ -72,11 +73,11 @@ class DiskCache:
     def get(self, key):
         return self.data.get(key)
 
-    def put(self, key, value):
+    def put(self, key, value, overwrite=False):
         with self.lock:
-            if key in self.data:
+            if key in self.data and not overwrite:
                 return
-            self.data[key] = value
+            self.data[key] = value  # loader is last-line-wins, so appending overwrites
             if self.path:
                 with open(self.path, "a") as h:
                     h.write(json.dumps({"k": key, "v": value}) + "\n")
@@ -116,12 +117,22 @@ def openai_chat(model, messages, max_tokens=256, retries=5, reasoning_effort="mi
         try:
             with urllib.request.urlopen(req, timeout=90) as resp:
                 payload = json.loads(resp.read().decode("utf-8"))
-            text = payload["choices"][0]["message"]["content"] or ""
+            choice = payload["choices"][0]
+            text = choice["message"]["content"] or ""
             usage = payload.get("usage", {})
             it = int(usage.get("prompt_tokens", 0)); ot = int(usage.get("completion_tokens", 0))
             with _COST_LOCK:
                 _COST["usd"] += _price(model, it, ot); _COST["calls"] += 1
                 _COST["in_tok"] += it; _COST["out_tok"] += ot
+            # Reasoning models can burn the whole completion budget thinking and
+            # return EMPTY content with finish_reason=length (HTTP 200!). That
+            # silently scored as a wrong answer for 12-23% of answerable QA.
+            # Retry once per attempt with a doubled budget.
+            if not text.strip() and choice.get("finish_reason") == "length" and attempt < retries - 1:
+                fld = "max_tokens" if "max_tokens" in body else "max_completion_tokens"
+                body[fld] = min(int(body.get(fld, max_tokens)) * 2, 4096)
+                data = json.dumps(body).encode("utf-8")
+                continue
             return text.strip(), usage
         except urllib.error.HTTPError as e:
             last = "%s %s" % (e.code, e.read().decode("utf-8", "ignore")[:200])
@@ -189,18 +200,32 @@ ANSWER_SYS_STRICT4 = ANSWER_SYS_STRICT3 + (
     "for is neither stated nor directly implied, reply exactly: NO ANSWER."
 )
 
+# Aggregation route (M1): 13/38 multi-hop losses had the FULL answer in context
+# but strict4's implied-only + concise wording suppressed enumeration ("Figurines"
+# instead of "Figurines, shoes"). Only regex-routed list/union/count questions get
+# this license; the premise/fabrication bans stay verbatim so adversarial matches
+# (7.6% of them) keep declining unstated things.
+ANSWER_SYS_STRICT4_AGG = ANSWER_SYS_STRICT4 + (
+    " This question asks for a list, count, or comparison: combining multiple "
+    "explicitly stated items IS directly implied - enumerate ALL matching items "
+    "found anywhere in the excerpts, even across different excerpts."
+)
+
 
 def answerer(model, question, context, effort="low", qid="", sys_prompt=None, pv="v1"):
     ctx = context if context.strip() else "(no memory retrieved)"
     # pv (prompt version) keys the cache; v1 == the seeded baseline prompt
     key = _h("ans", qid, model, effort, _h(ctx)) if pv == "v1" else _h("ans", qid, model, effort, pv, _h(ctx))
     cached = _ANSWER_CACHE.get(key)
-    if cached is not None:
+    if cached is not None and cached.strip():
         return cached
+    # cached=="" entries predate the empty-content/finish_reason=length fix:
+    # re-ask with headroom and overwrite the stale empty entry.
+    retry_empty = cached is not None
     msgs = [{"role": "system", "content": sys_prompt or ANSWER_SYS},
             {"role": "user", "content": "Memory excerpts:\n%s\n\nQuestion: %s\nAnswer:" % (ctx, question)}]
-    text, _ = openai_chat(model, msgs, max_tokens=512, reasoning_effort=effort)
-    _ANSWER_CACHE.put(key, text)
+    text, _ = openai_chat(model, msgs, max_tokens=1024 if retry_empty else 512, reasoning_effort=effort)
+    _ANSWER_CACHE.put(key, text, overwrite=retry_empty)
     return text
 
 
@@ -549,7 +574,10 @@ def main():
         if ctx.startswith("__ERR__"):
             return {"conv": ci, "qid": q.question_id, "system": system, "category": q.category,
                     "abstain": is_ab, "predicted": "", "correct": False, "error": ctx[7:]}
-        if "strict4" in features:
+        if "agg" in features and "strict4" in features and _is_agg(q.question):
+            pred = answerer(args.answerer, q.question, ctx, effort=args.answer_effort, qid=q.question_id,
+                            sys_prompt=ANSWER_SYS_STRICT4_AGG, pv="strict4agg")
+        elif "strict4" in features:
             pred = answerer(args.answerer, q.question, ctx, effort=args.answer_effort, qid=q.question_id,
                             sys_prompt=ANSWER_SYS_STRICT4, pv="strict4")
         elif "strict3" in features:

@@ -46,6 +46,28 @@ _BAD_PROPER = set(_WEEKDAYS) | set(_MONTHS) | {
 }
 
 
+_AGG_PATTERNS = (
+    re.compile(r"\bboth\b", re.I),
+    re.compile(r"\bhow\s+many\s+times\b", re.I),
+    re.compile(r"\b(?:list|name)\s+(?:the|all)\b", re.I),
+    re.compile(r"\ball\s+(?:the\s+)?\w+s\b", re.I),
+    re.compile(r"\bwhat\s+are\s+the\s+names\b", re.I),
+    # plural-head list questions: "Which cities has Jon visited?",
+    # "What items has Melanie bought?", "What musical artists/bands has ... seen?"
+    re.compile(r"^(?:which|what)\s+(?:\w+\s+){0,2}\w+(?:s|s/\w+s)\s+(?:has|have|did|do|does|is|are|was|were)\b", re.I),
+)
+
+
+def is_aggregation_question(question: str) -> bool:
+    """Detect list/union/count/comparison questions whose answer is assembled
+    from MULTIPLE stated items ("Which cities has Jon visited?", "Did both X
+    and Y ...?", "How many times ..."). Used to route such questions to an
+    enumeration-licensed answer mode; deliberately conservative regexes so
+    ordinary single-fact questions stay on the default path."""
+    q = question.strip()
+    return any(p.search(q) for p in _AGG_PATTERNS)
+
+
 def question_type(question: str) -> str:
     lowered = question.lower().strip()
     tokens = set(tokenize(question))

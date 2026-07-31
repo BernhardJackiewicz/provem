@@ -93,6 +93,29 @@ STORED predictions of both systems (~€1.5, no retrieval needed) — kills the
 ours-vs-ourselves ablation; no affordable Mem0 arm there — quota). V1+V2+V3 ≈ €2.5 and
 upgrade the claim to "two judge vendors, prompt-symmetric, bit-exact reproducible".
 
+## Campaign 2 (2026-07-31): multi-hop, validity hardening, ship report
+
+### The empty-prediction harness bug (discovered via M1 flip analysis)
+M1 (aggregation-routed enumeration prompt) moved DEV multi-hop ±0.0 — investigating WHY
+exposed a real harness bug: reasoning models can burn the entire completion budget
+thinking and return **empty content with finish_reason=length (HTTP 200)**, which the
+harness silently scored as a wrong answer on answerable questions. Counts on the frozen
+runs: **ours-optimized 352/1540 (22.9%) answerable predictions empty, Mem0 195/1540
+(12.7%), ours-baseline 251/1540 (16.3%)** — it suppressed BOTH systems, ours more
+(verbose contexts + strict prompts → more reasoning). Fix: retry with doubled budget on
+empty+length; stale cached empties re-asked with headroom (cache overwrite, last-line-wins).
+**Fairness: the fix is applied to BOTH sides** — our side re-run locally; Mem0's side
+re-asked against its still-existing stores through the identical pipeline
+(`scripts/patch_mem0_empties.py`, neutral prompt as in its original run). Caveat
+documented: Mem0's stores kept distilling since the freeze (drift favors Mem0 →
+conservative for us). All prior numbers in this log predate the fix and are labeled
+by their run files; the post-fix comparison supersedes them.
+- M1 router audit (free, offline): matches 18/38 mined multi-hop losses, 11.8% of
+  answerable, 7.6% of adversarial questions (premise-ban retained as their guard).
+- M1 alone on DEV (pre-fix): multi-hop ±0.0 (+3/−3), overall −0.3, abstention +0.5 —
+  the enumeration license is useless while list items are missing from context AND
+  while empty-content swallows the enumerating answers. Re-evaluated post-fix.
+
 Honest limitations (documented for any skeptic):
 - The strict4 prompt is OUR pipeline's context-presentation layer, tuned on DEV; Mem0's
   frozen rows used the original neutral prompt (its stores would need re-querying to re-run,
