@@ -1,4 +1,4 @@
-# Engram research journal — full MVP history and prototype documentation
+# Research journal (developed under the working name "Engram", now Provem) — full MVP history and prototype documentation
 
 This is the complete, unabridged research history of the project: every MVP
 milestone, every synthetic suite, every limitation, in the order it happened.

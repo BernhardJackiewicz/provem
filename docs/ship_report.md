@@ -1,4 +1,4 @@
-# Ship report: Engram memory vs Mem0 — final numbers, honest limitations, recommendation
+# Ship report: Provem (formerly Provem) memory vs Mem0 — final numbers, honest limitations, recommendation
 
 Date: 2026-07-31. Full evidence chain: `lager_optimization_log.md` (both campaigns),
 `mem0_locomo_e2e_results.md` (original baseline), `docs/runs/manifest.json` +
@@ -11,7 +11,7 @@ retrieval over the verbatim store, abstention-calibrated answerer prompt with
 question-type routing. Mem0: its platform pipeline over the same conversations
 (empty-prediction fix applied to its stored answers too).
 
-| Metric | **Engram** | Mem0 | Verdict |
+| Metric | **Provem** | Mem0 | Verdict |
 |---|---|---|---|
 | Answerable accuracy (n=1540), judge gpt-5 | **0.614** | 0.509 | **+10.5 pts, McNemar p=7.2×10⁻¹⁴** |
 | Answerable accuracy, judge claude-opus-5 | **0.502** | 0.419 | **+8.2 pts, p=5.1×10⁻¹⁰** (cross-vendor confirmed) |
@@ -42,9 +42,9 @@ Costs: OpenAI €19.04 of the €30 cap; Anthropic ~€3.8–11.2 of €20 (pric
    about X" as curated facts, Mem0's representation is genuinely nicer today (our
    wave-3 fact-rollup design exists but was not needed to win and is unbuilt).
 3. **Managed-service ergonomics.** Mem0 is a hosted platform (API, dashboard, zero ops).
-   Engram is a library + self-hosted MCP server; hosting, scaling and dashboards are
+   Provem is a library + self-hosted MCP server; hosting, scaling and dashboards are
    the operator's job (documented trust model, no managed offering).
-4. **Keyless operation.** Without any API key, Engram's stdlib default is at ~0.39-0.45
+4. **Keyless operation.** Without any API key, Provem's stdlib default is at ~0.39-0.45
    answerable — below Mem0's 0.509. Keyless parity was analyzed and is NOT realistic
    (the winning lever is semantic embeddings). Tier model: stdlib (governance-first,
    weakest recall) → optional local embeddings (unbuilt; projected ~0.47–0.50) →

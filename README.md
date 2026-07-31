@@ -1,6 +1,6 @@
-# Engram
+# Provem
 
-**Governed memory for AI agents — stronger recall than Mem0, zero compliance violations, both proven.**
+**Provem** *(pronounced PROH-vem)* **— governed, GDPR-native memory for AI agents. Stronger recall than Mem0, zero compliance violations, both proven.**
 
 Two results, one system, every number reproducible from frozen artifacts at zero cost:
 
@@ -19,7 +19,7 @@ regulations, with real liability. Concretely, "governed" means each of these
 enterprise requirements is enforced by the memory layer itself — not hoped for
 in a prompt:
 
-| Enterprise requirement | The incident without it | Engram mechanism |
+| Enterprise requirement | The incident without it | Provem mechanism |
 |---|---|---|
 | **Right to erasure** (GDPR Art. 17 & co.) | Agent quotes a customer's deleted data months later — now a reportable violation | Erasure enforced *at recall*, tenant-scoped, with signed erasure certificates |
 | **Untrusted data sources** | A scraped page or tool output plants a false fact; it silently becomes "company knowledge" and re-fires forever (MINJA/AgentPoison-style poisoning) | Provenance + source-trust tagging, injection quarantine at write time, trust-weighted conflict resolution at read time |
@@ -30,7 +30,7 @@ in a prompt:
 
 The reason this is a *layer* and not a feature: every team building agents
 re-implements deletion, scoping, and audit ad hoc — in prompts, where nothing is
-enforceable, or in app code, where nothing is auditable. Engram moves it into
+enforceable, or in app code, where nothing is auditable. Provem moves it into
 the memory boundary, backend-agnostic, and **proves the effect end to end**: the
 benchmark below shows the identical agent on the identical memory going from 240
 compliance violations, 100% poisoning success and 72.6% silently corrupted steps
@@ -93,7 +93,7 @@ whether governance is on:
 | Arm | Task success | Silent (compounding) errors | Poisoning success | Compliance violations | Benign accuracy |
 | --- | ---: | ---: | ---: | ---: | ---: |
 | ungoverned memory | 0.375 | 72.6% of steps | 100% | 240 | 1.000 |
-| **+ Engram governance** | **0.893** | **0.0%** | **0%** | **0** | **1.000** |
+| **+ Provem governance** | **0.893** | **0.0%** | **0%** | **0** | **1.000** |
 
 Paired exact McNemar p ≈ 5×10⁻¹⁵⁰; governance never loses a task the ungoverned
 arm wins; benign accuracy stays 1.000 (calibrated, not blanket abstention). With
@@ -115,7 +115,7 @@ swallowed 12–23% of answers at the token cap was found and fixed **symmetrical
 for both sides** before these numbers (full disclosure in
 [`docs/lager_optimization_log.md`](docs/lager_optimization_log.md)).
 
-| Scoring regime | **Engram (dense)** | Mem0 | Paired significance |
+| Scoring regime | **Provem (dense)** | Mem0 | Paired significance |
 |---|---|---|---|
 | Strict binary judge (gpt-5) | **0.614** | 0.509 | p = 7.2×10⁻¹⁴ |
 | Independent cross-vendor judge (claude-opus-5) | **0.502** | 0.419 | p = 5.1×10⁻¹⁰ |
@@ -138,7 +138,7 @@ so we present three separately-valid rankings instead.
 
 | Rank | System | Strict judge | Mem0's own judge | Abstention |
 |---|---|---|---|---|
-| 1 | **Engram (dense tier)** | **0.614** | **0.772** | 0.863 |
+| 1 | **Provem (dense tier)** | **0.614** | **0.772** | 0.863 |
 | 2 | Mem0 platform | 0.509 | 0.722 | 0.848 |
 
 Identical questions, answerer, and judge for both rows; paired McNemar
@@ -155,7 +155,7 @@ p = 7×10⁻¹⁴ (strict) / 4×10⁻⁵ (Mem0's judge). We rank only what we me
 | OpenAI Memory | 52.8 | | **Mem0** | **48.9** |
 | Zep | 42.3 | | | |
 
-¹ Unrelated academic system that happens to share our name.
+¹ Unrelated academic system (arXiv 2511.12960), no relation to this project.
 
 **The anchor that connects the tables:** our strict-judge Mem0 measurement
 (0.509) matches LoCoMo-Refined's strict Mem0 (48.9) almost exactly, and under
@@ -240,3 +240,6 @@ profiles. **Not** externally security-audited, no managed hosting, no SLA — th
 enterprise wrapper (gateway auth/SSO, hosting, certifications) is deliberately
 out of scope for the core and documented in the trust model. Roadmap: LongMemEval
 port, local-embeddings tier, cross-session fact rollups, judge-diverse human eval.
+
+---
+*Formerly developed under the working name "Engram"; renamed to avoid collision with unrelated 2026 products of that name.*
