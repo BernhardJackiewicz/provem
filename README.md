@@ -110,27 +110,51 @@ Per category (strict judge): temporal **0.614 vs 0.442**, single-hop
 (statistical tie, n=96). Holdout conversations never used for tuning show the
 *larger* win (+11.4 pts, p = 1.7×10⁻⁸).
 
-### How this squares with published numbers (read before quoting)
+### The LoCoMo landscape (read before quoting any of it)
 
 LoCoMo scores are **not comparable across papers** — they move ±30 points with
-the judge prompt, retrieval depth, and answerer. Context for our Mem0
-measurement:
+the judge prompt, retrieval depth, and answerer. Merging them into one
+leaderboard is exactly the methodological sin the vendors accuse each other of,
+so we present three separately-valid rankings instead.
 
-| Source | Mem0 score | Setup |
-|---|---|---|
-| Mem0 paper (self, 2025) | 66.9 | own pipeline, gpt-4o-mini judge instructed to "be generous" |
-| Mem0 platform (self, 2026) | 82.7 / 91.6 | top-50/200 memories, gpt-5 CoT answerer, judge with partial credit + 14-day date tolerance |
-| ENGRAM paper (independent, k=20) | 64.7 | uniform gpt-4o-mini pipeline |
-| LoCoMo-Refined (independent, strict human-validated judge) | **48.9** | strict re-scoring |
-| **This repo, strict judge, k=20** | **0.509** | matches the independent strict measurement |
-| **This repo, Mem0's own judge prompt** | **0.722** | lands between independent (64.7) and Mem0's k=50 self-report (82.7); residual gap = k=20 vs k=50 + answerer tier |
+**Ranking 1 — measured in this repo, same harness (the only ranking we claim):**
 
-Our measurement reproduces what independent evaluations find; vendor
-self-reports (Mem0 82–92, Zep 75–94.7 — after Zep retracted an earlier 84%)
-are explained by lenient judges, deeper retrieval, and stronger answerers. The
-paired *differences* in our table are the methodologically clean numbers: both
-systems, same questions, same answerer, same judge. Sources and the full dispute
-history: [`docs/ship_report.md`](docs/ship_report.md).
+| Rank | System | Strict judge | Mem0's own judge | Abstention |
+|---|---|---|---|---|
+| 1 | **Engram (dense tier)** | **0.614** | **0.772** | 0.863 |
+| 2 | Mem0 platform | 0.509 | 0.722 | 0.848 |
+
+Identical questions, answerer, and judge for both rows; paired McNemar
+p = 7×10⁻¹⁴ (strict) / 4×10⁻⁵ (Mem0's judge). We rank only what we measured.
+
+**Ranking 2 — independent third-party evaluations (quoted verbatim, their setups):**
+
+| ENGRAM paper (arXiv 2511.12960)¹, k=20, gpt-4o-mini | J | | LoCoMo-Refined (strict judge, 86% human agreement) | score |
+|---|---|---|---|---|
+| ENGRAM (academic system¹) | 77.6 | | MemoraX AI | 82.7 |
+| MemOS | 73.0 | | MemOS | 63.6 |
+| **Mem0** | **64.7** | | MemPalace | 58.7 |
+| LangMem | 55.3 | | EverMemOS | 58.3 |
+| OpenAI Memory | 52.8 | | **Mem0** | **48.9** |
+| Zep | 42.3 | | | |
+
+¹ Unrelated academic system that happens to share our name.
+
+**The anchor that connects the tables:** our strict-judge Mem0 measurement
+(0.509) matches LoCoMo-Refined's strict Mem0 (48.9) almost exactly, and under
+Mem0's own judge our Mem0 lands at 0.722 — inside its published band. Our
+harness reproduces what independent evaluations find; we did not measure Zep,
+MemOS, or the others head-to-head, so we make no claims against them.
+
+**Ranking 3 — vendor self-reports (marketing conditions, listed for completeness):**
+Zep 94.7 (gpt-5.4 CoT reader/judge; after retracting an earlier 84% figure) ·
+Mem0 92.5 / 91.6 (top-200 memories, gpt-5 CoT answerer, judge with partial
+credit + 14-day date tolerance) · MemMachine 91.7 · Letta 74.0. Each was
+produced by the vendor under conditions of its choosing; none is comparable to
+any other number on this page.
+
+Sources and the full dispute history (including who retracted what):
+[`docs/ship_report.md`](docs/ship_report.md).
 
 ## What the governance layer does
 

@@ -107,3 +107,28 @@ both axes.** Concretely:
 **Bottom line: shippable.** The lock is proven, the warehouse now beats the market
 reference on the standard benchmark with cross-vendor significance, every limitation
 above is documented and none of them reverses the sign of the result.
+
+## Appendix: published-number sources (for the README landscape section)
+
+- Mem0 paper (self): J=66.88 (Mem0), 68.44 (graph), Zep-as-measured 65.99, LangMem 58.10,
+  OpenAI Memory 52.90, full-context 72.90 — gpt-4o-mini answerer+judge ("be generous"),
+  categories 1–4. https://arxiv.org/abs/2504.19413
+- Mem0 platform 2026 (self): 82.66 (top_50) / 91.56 (top_200), gpt-5 CoT answerer, gpt-5 judge
+  with partial credit + 14-day date tolerance; 92.5 on marketing pages.
+  https://github.com/mem0ai/memory-benchmarks (results/platform/*.json)
+- Zep (self): 75.14 rebuttal figure after retracting an earlier 84% ("we erred");
+  94.7 current research page (gpt-5.4 CoT reader/judge).
+  https://blog.getzep.com/lies-damn-lies-statistics-is-mem0-really-sota-in-agent-memory/ ,
+  https://www.getzep.com/research/
+- Independent ENGRAM paper (unrelated academic system): uniform k=20 gpt-4o-mini pipeline —
+  ENGRAM 77.55, MemOS 72.99, Mem0 64.73, LangMem 55.28, OpenAI 52.81, Zep 42.29.
+  https://arxiv.org/abs/2511.12960
+- Independent LoCoMo-Refined strict re-scores (refined judge, 86.33% human agreement):
+  MemoraX 82.65, MemOS 63.60, MemPalace 58.68, EverMemOS 58.25, Mem0 48.91.
+  https://github.com/mem-eval-suite/LoCoMo_refined
+- MemMachine (self, Mem0-framework judge): 0.9169. https://arxiv.org/abs/2604.04853
+- Letta (self): 74.0. https://www.letta.com/blog/benchmarking-ai-agent-memory/
+- Original LoCoMo paper (different metric, F1): GPT-4-turbo 32.1, human 87.9 — not comparable
+  to any J-style number above. https://arxiv.org/abs/2402.17753
+- Judge sensitivity: multi-judge study finds absolute levels differ strongly per judge while
+  rankings mostly hold; Claude judges strictest. https://arxiv.org/abs/2604.12376
