@@ -303,5 +303,3 @@ enterprise wrapper (gateway auth/SSO, hosting, certifications) is deliberately
 out of scope for the core and documented in the trust model. Roadmap: LongMemEval
 port, local-embeddings tier, cross-session fact rollups, judge-diverse human eval.
 
----
-*Formerly developed under the working name "Engram"; renamed to avoid collision with unrelated 2026 products of that name.*
