@@ -19,6 +19,7 @@ are never written to any file.
 """
 import argparse
 import concurrent.futures
+import copy
 import json
 import os
 import re
@@ -271,7 +272,13 @@ def dated_content(ep):
     ts = getattr(ep, "timestamp", None)
     if ts is None:
         return ep.content
-    return "%d %s %d | %s" % (ts.day, ts.strftime("%B"), ts.year, ep.content)
+    prefix = "%d %s %d | " % (ts.day, ts.strftime("%B"), ts.year)
+    if ep.content.startswith(prefix):
+        # loud guard, not a silent mask: reaching this means a caller mutated
+        # episode content in place (the v1 double-prefix bug on the Mem0 arm)
+        print("!! dated_content double-prefix guard tripped: episode %s" % getattr(ep, "id", "?"), flush=True)
+        return ep.content
+    return prefix + ep.content
 
 
 # ---------------------------------------------------------------- our memory
@@ -288,17 +295,23 @@ def build_ours(sample, use_dates, features=frozenset()):
     annotate = None
     if "temporal" in features:
         from cognitive_memory.temporal import annotate_relative_dates as annotate
+    # Never mutate sample.episodes: mem0_ingest applies dated_content itself,
+    # and the v1 campaign's in-place mutation here double-prefixed the date on
+    # everything Mem0 ingested. The local arm works on shallow copies.
+    local_eps = []
     for ep in sample.episodes:
+        ep_local = copy.copy(ep)
         if use_dates:
-            ep.content = dated_content(ep)
+            ep_local.content = dated_content(ep_local)
         if annotate is not None:
-            ep.content = annotate(ep.content, getattr(ep, "timestamp", None))
-        sysm.ingest(ep)
+            ep_local.content = annotate(ep_local.content, getattr(ep_local, "timestamp", None))
+        sysm.ingest(ep_local)
+        local_eps.append(ep_local)
     if "dense" in features:
         from cognitive_memory.embeddings import CachedEmbedder, DiskVectorCache, OpenAIEmbeddingProvider
         sysm.embedder = CachedEmbedder(OpenAIEmbeddingProvider(), DiskVectorCache(VEC_CACHE))
-        ids = [str(ep.id) for ep in sample.episodes]
-        vectors = sysm.embedder.embed([ep.content for ep in sample.episodes])
+        ids = [str(ep.id) for ep in local_eps]
+        vectors = sysm.embedder.embed([ep.content for ep in local_eps])
         sysm.dense_index = list(zip(ids, vectors))
     return sysm
 
@@ -475,12 +488,18 @@ def mem0_ingest(client, uid, sample, use_dates, wait, settle_stable=20, poll=10)
         content = dated_content(ep) if use_dates else ep.content
         sessions.setdefault(sid, []).append(content)
     n_add = 0
+    failed = []
     for sid, contents in sessions.items():
         msgs = [{"role": "user" if i % 2 == 0 else "assistant", "content": c} for i, c in enumerate(contents)]
         try:
             client.add(msgs, user_id=uid, version="v2"); n_add += 1
         except Exception as e:
             print("   add FAIL %s: %s" % (sid, str(e)[:120]), flush=True)
+            failed.append(sid)
+    if failed:
+        # a partially ingested store would silently deflate the Mem0 arm
+        raise RuntimeError("mem0_ingest: %d/%d session batches failed for %s (%s) - aborting instead of evaluating a partial store"
+                           % (len(failed), len(sessions), uid, ",".join(failed)))
     # settle: poll until count is stable for `settle_stable`s, capped at `wait`s
     t0 = time.time(); last = -1; stable_since = None
     while time.time() - t0 < wait:
@@ -615,12 +634,13 @@ def main():
     features = frozenset(f.strip() for f in args.ours_features.split(",") if f.strip())
     if features:
         print("ours features: %s" % ",".join(sorted(features)), flush=True)
-    sys_list = [s.strip() for s in args.systems.split(",")] if args.systems else None
-    if sys_list == ["ours"]:
-        args.skip_mem0 = True
+    sys_list = [s.strip() for s in args.systems.split(",") if s.strip()] if args.systems else None
+    if sys_list and not set(sys_list) <= {"ours", "mem0"}:
+        raise SystemExit("--systems accepts a comma list of: ours, mem0")
+    systems = sys_list if sys_list else (["ours"] if args.skip_mem0 else ["ours", "mem0"])
 
     client = None
-    if not args.skip_mem0:
+    if "mem0" in systems:
         from mem0 import MemoryClient
         client = MemoryClient(api_key=os.environ["MEM0_API_KEY"])
 
@@ -684,14 +704,13 @@ def main():
         return {"conv": ci, "qid": q.question_id, "system": system, "category": q.category,
                 "abstain": is_ab, "predicted": pred, "correct": bool(correct)}
 
-    systems = ["ours"] if args.skip_mem0 else ["ours", "mem0"]
     for ci in idxs:
         sample = samples[ci]
         questions = [q for q in sample.questions if args.include_abstain or not q.expected_abstain]
         if not questions:
             continue
         print("\n=== conv %d (%s): %d episodes, %d QA ===" % (ci, sample.sample_id, len(sample.episodes), len(questions)), flush=True)
-        ours = build_ours(sample, use_dates, features)
+        ours = build_ours(sample, use_dates, features) if "ours" in systems else None
         uid = "%s_conv%d" % (args.uid_prefix, ci)
         if client is not None:
             if not mem0_has(client, uid):

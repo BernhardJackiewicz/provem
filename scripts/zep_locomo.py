@@ -80,7 +80,21 @@ def ingest(client, sample, ci, uid_prefix):
     except Exception:
         state = set()
     added = 0
-    for sid, eps in sorted(_sessions(sample).items()):
+    # chronological session order (v1 sorted lexically: D1, D10, ..., D19, D2 —
+    # wrong arrival order for a temporal knowledge graph); numeric session id
+    # breaks ties deterministically
+    sessions = _sessions(sample)
+    for sid, eps in sessions.items():
+        if not any(getattr(ep, "timestamp", None) for ep in eps):
+            raise RuntimeError("session %s has no timestamps; cannot order chronologically" % sid)
+
+    def _session_key(item):
+        sid, eps = item
+        digits = "".join(ch for ch in sid if ch.isdigit())
+        return (min(ep.timestamp for ep in eps if getattr(ep, "timestamp", None)),
+                int(digits) if digits else 0)
+
+    for sid, eps in sorted(sessions.items(), key=_session_key):
         thread_id = "%s_%s" % (user_id, sid.lower().replace(":", "_"))
         if thread_id in state:
             continue
@@ -131,6 +145,36 @@ def ingest(client, sample, ci, uid_prefix):
     return user_id, owner, added
 
 
+def graph_complete(client, user_id, expected, timeout=7200, poll=60, stall=1800):
+    """Poll until every ingested episode is processed into the graph.
+
+    The v1 run evaluated with 94/5,882 episodes unprocessed; this gate makes
+    that impossible: eval hard-fails on timeout or a stalled processed-count
+    instead of quietly scoring an incomplete graph.
+    """
+    t0 = time.time()
+    last_processed = -1
+    last_change = time.time()
+    while True:
+        resp = client.graph.episode.get_by_user_id(user_id, lastn=max(expected + 50, 100))
+        eps = getattr(resp, "episodes", None) or []
+        processed = sum(1 for e in eps if getattr(e, "processed", False))
+        print("  %s: %d/%d episodes present, %d processed" % (user_id, len(eps), expected, processed), flush=True)
+        if len(eps) >= expected and processed >= expected:
+            return processed
+        now = time.time()
+        if processed != last_processed:
+            last_processed = processed
+            last_change = now
+        if now - last_change > stall:
+            raise RuntimeError("graph_complete STALLED for %s: %d/%d processed, no progress for %ds"
+                               % (user_id, processed, expected, stall))
+        if now - t0 > timeout:
+            raise RuntimeError("graph_complete TIMEOUT for %s: %d/%d processed after %ds"
+                               % (user_id, processed, expected, timeout))
+        time.sleep(poll)
+
+
 def zep_context(client, user_id, question, k=20):
     """Parallel edge+node searches (Zep checklist point 3), composed context."""
     results = {}
@@ -176,7 +220,9 @@ def zep_context(client, user_id, question, k=20):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--mode", choices=["ingest", "eval", "probe"], required=True)
+    ap.add_argument("--mode", choices=["ingest", "wait", "eval", "probe"], required=True)
+    ap.add_argument("--wait-timeout", type=int, default=7200)
+    ap.add_argument("--wait-poll", type=int, default=60)
     ap.add_argument("--convs", default=None)
     ap.add_argument("--uid-prefix", default="provem_zep")
     ap.add_argument("--top-k", type=int, default=20)
@@ -200,6 +246,14 @@ def main():
         print("INGEST FIRED (Zep builds the graph asynchronously)", flush=True)
         return
 
+    if args.mode == "wait":
+        for ci in idxs:
+            uid = "%s_conv%d" % (args.uid_prefix, ci)
+            n = graph_complete(client, uid, len(samples[ci].episodes),
+                               timeout=args.wait_timeout, poll=args.wait_poll)
+            print("conv%d: graph complete (%d episodes processed)" % (ci, n), flush=True)
+        return
+
     if args.mode == "probe":
         for ci in idxs[:1]:
             uid = "%s_conv%d" % (args.uid_prefix, ci)
@@ -209,7 +263,11 @@ def main():
             print("CTX (%d chars):" % len(ctx), ctx[:500])
         return
 
-    # eval
+    # eval — unconditional completeness gate first: never score a partial graph
+    for ci in idxs:
+        uid = "%s_conv%d" % (args.uid_prefix, ci)
+        graph_complete(client, uid, len(samples[ci].episodes),
+                       timeout=args.wait_timeout, poll=args.wait_poll)
     done = set()
     if os.path.exists(args.out):
         for line in open(args.out):
