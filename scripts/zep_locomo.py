@@ -98,10 +98,25 @@ def ingest(client, sample, ci, uid_prefix):
         thread_id = "%s_%s" % (user_id, sid.lower().replace(":", "_"))
         if thread_id in state:
             continue
-        try:
-            client.thread.create(thread_id=thread_id, user_id=user_id)
-        except Exception:
-            pass
+        # Create the thread with retries: a transient create failure that gets
+        # swallowed leaves add_messages to fail with "thread not found". Only an
+        # already-exists conflict is safe to ignore.
+        created = False
+        for attempt in range(8):
+            try:
+                client.thread.create(thread_id=thread_id, user_id=user_id)
+                created = True
+                break
+            except Exception as err:
+                msg = str(err)
+                if "already exists" in msg.lower() or "status_code: 409" in msg:
+                    created = True
+                    break
+                if "status_code: 429" in msg or "status_code: 5" in msg:
+                    time.sleep(min(3 * 2 ** attempt, 120)); continue
+                time.sleep(min(3 * 2 ** attempt, 60))
+        if not created:
+            raise RuntimeError("thread.create failed after retries (%s)" % thread_id)
         batch = []
         for ep in eps:
             speaker, text = _speaker_and_text(ep.content)
