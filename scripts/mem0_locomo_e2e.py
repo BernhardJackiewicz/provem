@@ -20,6 +20,7 @@ are never written to any file.
 import argparse
 import concurrent.futures
 import copy
+import http.client
 import json
 import os
 import re
@@ -98,7 +99,7 @@ def _price(model, in_tok, out_tok):
     return (in_tok * pin + out_tok * pout) / 1_000_000.0
 
 
-def openai_chat(model, messages, max_tokens=256, retries=5, reasoning_effort="minimal"):
+def openai_chat(model, messages, max_tokens=256, retries=8, reasoning_effort="minimal"):
     """Minimal stdlib Chat Completions call. Returns (text, usage_dict).
 
     Omits temperature (gpt-5* only accept the default). Sets reasoning_effort so
@@ -152,8 +153,11 @@ def openai_chat(model, messages, max_tokens=256, retries=5, reasoning_effort="mi
                 if attempt < retries - 1:
                     continue
             raise RuntimeError("OpenAI %s" % last)
-        except (urllib.error.URLError, TimeoutError) as e:
-            last = str(e); time.sleep(2 ** attempt)
+        except (urllib.error.URLError, http.client.HTTPException, OSError) as e:
+            # transient transport failures (read timeout, connection reset by
+            # peer, remote disconnect) are OSError/HTTPException, not URLError —
+            # retry them too so one network blip cannot kill a multi-hour run
+            last = "%s: %s" % (type(e).__name__, e); time.sleep(2 ** attempt)
     raise RuntimeError("OpenAI failed after retries: %s" % last)
 
 

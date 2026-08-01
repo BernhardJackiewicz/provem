@@ -100,6 +100,45 @@ whose value is rewritten, retrievable by the victim's own later queries — the
 essential mechanism of the real attack, minus the LLM-elicitation and
 progressive-shortening steps used to plant it in a live system.
 
+### Extra attack families (reported separately from the headline mixture)
+
+Two further families are run and reported on their own — they are **not** part
+of the fixed headline mixture (so the headline numbers stay comparable across
+runs). They answer two fair criticisms of the mixture above: that the poisoning
+family's win could be a labeling artifact, and that a determined attacker on the
+user's own channel might defeat provenance entirely. Run them with:
+
+```bash
+PYTHONPATH=src python3 -m cognitive_memory reliability --attack-families --seeds 1,2,3,4,5,6,7,8,9,10 --scenarios 40
+```
+
+| Family | Arm | Attack steps | Poison served | Contained | Benign (dormant) acc |
+| --- | --- | ---: | ---: | ---: | ---: |
+| `trigger` | ungoverned | 400 | 400 (1.000) | 0.000 | 400/400 (1.000) |
+| `trigger` | **governed** | 400 | **0 (0.000)** | **1.000** | 246/400 (0.615) |
+| `same_channel` | ungoverned | 1190 | 1190 (1.000) | 0.000 | — |
+| `same_channel` | **governed** | 1190 | **1190 (1.000)** | **0.000** | — |
+
+- **`trigger` (AgentPoison, arXiv:2407.12784)** — a poison on an *untrusted*
+  channel that dominates retrieval only when a rare trigger phrase is present in
+  the query, and lies dormant otherwise. Governance contains it **100%** (it
+  never serves the poison value) by resolving on provenance trust, not by
+  reading any label — so this is not the tautology the poisoning family could be
+  accused of. The cost is honest: on the 40% of scenarios where the attacker
+  forges *near-equal* trust, governance abstains on the dormant benign step too
+  rather than coin-flip between two near-equal-trust values, which is why the
+  dormant benign accuracy is 0.615 and not 1.0. Ungoverned keeps 100% dormant
+  accuracy but is poisoned 100% of the time the trigger fires. That is the
+  calibrated-abstention trade-off, shown, not hidden.
+- **`same_channel` (the boundary)** — the MINJA poison arrives through the
+  **same fully-trusted channel** as the user (`source="user"`, equal trust,
+  written later), indistinguishable from a genuine update. Provenance/trust
+  governance has no signal: latest-wins supersession serves the poison, so
+  **both arms fail 100%**. This is the honest limit of a provenance layer —
+  defending same-channel injection needs write-side content detection or human
+  review (a different mechanism, only weakly exercised by the `injection`
+  family), and we say so plainly rather than omit the case.
+
 ## Governance mechanisms under test
 
 The governed wrapper (`GovernedMemory`, backend-agnostic) adds:

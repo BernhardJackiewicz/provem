@@ -41,6 +41,8 @@ def run_reliability(args: argparse.Namespace) -> int:
     from .reliability_suite import (
         format_e2e_report,
         format_report,
+        render_attack_families_report,
+        run_attack_families_benchmark,
         run_end_to_end_benchmark,
         run_reliability_benchmark,
     )
@@ -52,6 +54,24 @@ def run_reliability(args: argparse.Namespace) -> int:
         return 2
     if not seeds:
         seeds = [1, 2, 3, 4, 5]
+
+    if getattr(args, "attack_families", False):
+        res = run_attack_families_benchmark(seeds=seeds, scenarios_per_seed=args.scenarios)
+        if args.json:
+            print(json.dumps([
+                {
+                    "family": r.family,
+                    "ungoverned_poison_served": r.poison_served_rate("ungoverned"),
+                    "governed_poison_served": r.poison_served_rate("governed"),
+                    "governed_contained": r.contained_rate("governed"),
+                    "governed": r.governed,
+                    "ungoverned": r.ungoverned,
+                }
+                for r in res
+            ], indent=2))
+        else:
+            print(render_attack_families_report(res))
+        return 0
 
     if args.end_to_end:
         try:
@@ -743,6 +763,11 @@ def build_parser() -> argparse.ArgumentParser:
         "--skills",
         default="0.99,0.95,0.90",
         help="Comma-separated agent per-step skill levels for --end-to-end (default: 0.99,0.95,0.90)",
+    )
+    reliability.add_argument(
+        "--attack-families",
+        action="store_true",
+        help="Run the extra trigger + same_channel attack families (reported separately)",
     )
     reliability.add_argument("--json", action="store_true", help="Print machine-readable headline JSON")
     reliability.set_defaults(func=run_reliability)

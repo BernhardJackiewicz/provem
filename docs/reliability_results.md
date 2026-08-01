@@ -37,6 +37,15 @@ PYTHONPATH=src python3 -m cognitive_memory reliability --seeds 1,2,3,4,5,6,7,8,9
   scripted steps — repetition of one error, not error propagation through
   agent state; governance contains it to zero.
 
+## Extra attack families (trigger + same_channel)
+
+Run separately from the headline mixture (`--attack-families`) and reported in
+full in [`agentic_reliability_benchmark.md`](agentic_reliability_benchmark.md):
+governance contains the AgentPoison-style `trigger` family 100% via provenance
+trust (at an honest abstention cost on the near-equal-trust dormant step), and
+**does not** contain the `same_channel` family — a poison on the same trusted
+channel defeats both arms 100%. The boundary is stated, not hidden.
+
 ## End-to-end task success (stochastic agent)
 
 The table above fixes the agent to isolate the memory contribution. This second

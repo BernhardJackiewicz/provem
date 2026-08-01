@@ -290,6 +290,11 @@ Sources and the full dispute history (including who retracted what):
   and an LLM answerer we measure 0.388; fully keyless (extractive answering)
   measures 0.207–0.212, below the 0.237 no-memory abstain baseline.
 - The governance benchmark uses a scripted agent by design (causal isolation).
+- **Governance defends untrusted-channel attacks, not same-channel ones.** A
+  poison delivered through the same fully-trusted channel as the user (equal
+  trust, later write) is served by both arms — provenance has no signal there;
+  it needs write-side detection/review. Measured and reported in the
+  attack-family benchmark (`--attack-families`), not hidden.
 - No external security audit; not "production-certified"; self-hosted only.
 
 The complete disclosure list, where Mem0 remains genuinely better (curated

@@ -21,6 +21,7 @@ from cognitive_memory.reliability import (
 from cognitive_memory.reliability_suite import (
     NoMemory,
     generate_scenarios,
+    run_attack_families_benchmark,
     run_end_to_end_benchmark,
     run_reliability_benchmark,
 )
@@ -316,3 +317,47 @@ class EndToEndTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class AttackFamiliesTests(unittest.TestCase):
+    """The two extra families run OUTSIDE the headline mixture (WS3)."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.results = run_attack_families_benchmark(seeds=[1, 2, 3], scenarios_per_seed=30)
+        cls.by = {r.family: r for r in cls.results}
+
+    def test_families_present(self):
+        self.assertEqual(set(self.by), {"trigger", "same_channel"})
+
+    def test_attack_families_are_not_in_headline_mixture(self):
+        # keeps the headline numbers comparable across runs
+        families = {s.family for s in generate_scenarios(1, 200)}
+        self.assertNotIn("trigger", families)
+        self.assertNotIn("same_channel", families)
+
+    def test_deterministic(self):
+        again = {r.family: r for r in run_attack_families_benchmark(seeds=[1, 2, 3], scenarios_per_seed=30)}
+        for fam in self.by:
+            self.assertEqual(self.by[fam].governed, again[fam].governed)
+            self.assertEqual(self.by[fam].ungoverned, again[fam].ungoverned)
+
+    def test_ungoverned_fully_poisoned_by_trigger(self):
+        r = self.by["trigger"]
+        self.assertEqual(r.poison_served_rate("ungoverned"), 1.0)
+        # dormant (non-triggered) benign step stays correct -> the poison really
+        # only fires on the trigger
+        d = r.ungoverned
+        self.assertEqual(d["benign_correct"], d["benign_steps"])
+
+    def test_governance_contains_trigger_and_never_serves_poison(self):
+        r = self.by["trigger"]
+        self.assertEqual(r.governed["attack_served"], 0)
+        self.assertEqual(r.contained_rate("governed"), 1.0)
+
+    def test_same_channel_defeats_both_arms_honestly(self):
+        # the documented boundary: provenance governance has no signal against a
+        # poison delivered through the same fully-trusted channel
+        r = self.by["same_channel"]
+        self.assertEqual(r.poison_served_rate("ungoverned"), 1.0)
+        self.assertEqual(r.poison_served_rate("governed"), 1.0)
