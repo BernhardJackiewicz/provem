@@ -86,6 +86,15 @@ STATIC = {
 
 
 def sha256(path):
+    # A Git-LFS pointer file carries the real content's sha256 as its oid;
+    # verifying against it lets --check pass in clones that have not run
+    # `git lfs pull` (the pointer proves what the content would be).
+    with open(path, "rb") as fh:
+        head = fh.read(200)
+    if head.startswith(b"version https://git-lfs"):
+        for line in head.decode("utf-8", "replace").splitlines():
+            if line.startswith("oid sha256:"):
+                return line.split("oid sha256:", 1)[1].strip()
     h = hashlib.sha256()
     with open(path, "rb") as fh:
         for chunk in iter(lambda: fh.read(1 << 20), b""):

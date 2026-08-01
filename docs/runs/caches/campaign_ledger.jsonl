@@ -1,0 +1,25 @@
+{"ts": "2026-07-30T18:08:10", "tag": "iter0_baseline_replay", "features": [], "convs": [0, 2, 4, 6, 8], "eur": 0.0, "calls": 0}
+{"ts": "2026-07-30T18:20:00", "tag": "iter1_window_partial(crashed:openai-quota)", "features": ["window"], "convs": [0, 2, 4, 6, 8], "eur": 1.431, "calls": 952, "note": "estimated; run crashed on OpenAI account quota, cache entries persist"}
+{"ts": "2026-07-31T00:23:51", "tag": "iter3_temporal", "features": ["temporal"], "convs": [0, 2, 4, 6, 8], "eur": 0.6493, "calls": 914}
+{"ts": "2026-07-31T00:25:37", "tag": "iter2_window_prev", "features": ["window_prev"], "convs": [0, 2, 4, 6, 8], "eur": 1.0219, "calls": 1210}
+{"ts": "2026-07-31T00:33:32", "tag": "iter4_window_next", "features": ["window_next"], "convs": [0, 2, 4, 6, 8], "eur": 1.0159, "calls": 1166}
+{"ts": "2026-07-31T00:38:43", "tag": "iter5_dense", "features": ["dense"], "convs": [0, 2, 4, 6, 8], "eur": 0.959, "calls": 1304}
+{"ts": "2026-07-31T00:49:48", "tag": "iter6_dense_strict", "features": ["dense", "strict"], "convs": [0, 2, 4, 6, 8], "eur": 0.9259, "calls": 1151}
+{"ts": "2026-07-31T01:03:27", "tag": "iter7_dense_strict2", "features": ["dense", "strict2"], "convs": [0, 2, 4, 6, 8], "eur": 0.9897, "calls": 1191}
+{"ts": "2026-07-31T01:15:46", "tag": "iter8_dense_strict3", "features": ["dense", "strict3"], "convs": [0, 2, 4, 6, 8], "eur": 0.9804, "calls": 1161}
+{"ts": "2026-07-31T01:30:15", "tag": "iter9_dense_strict4", "features": ["dense", "strict4"], "convs": [0, 2, 4, 6, 8], "eur": 0.9624, "calls": 1147}
+{"ts": "2026-07-31T01:32:47", "tag": "full_checkpoint_dense_strict3", "features": ["dense", "strict3"], "convs": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9], "eur": 1.0296, "calls": 1296}
+{"ts": "2026-07-31T01:45:22", "tag": "full_checkpoint_dense_strict4", "features": ["dense", "strict4"], "convs": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9], "eur": 0.9598, "calls": 1199}
+{"ts": "2026-07-31T10:49:35", "tag": "c2_iter1_agg", "features": ["agg", "dense", "strict4"], "convs": [0, 2, 4, 6, 8], "eur": 0.1133, "calls": 114}
+{"ts": "2026-07-31T11:13:59", "tag": "c2_ours_emptyfix", "features": ["dense", "strict4"], "convs": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9], "eur": 1.2754, "calls": 957}
+{"ts": "2026-07-31T11:35:26", "tag": "c2_iter3_strict5", "features": ["dense", "strict5"], "convs": [0, 2, 4, 6, 8], "eur": 1.8019, "calls": 1679}
+{"ts": "2026-07-31T11:54:26", "tag": "c2_v2_neutral", "features": ["dense"], "convs": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9], "eur": 1.871, "calls": 1888}
+{"ts": "2026-07-31T11:58:54", "tag": "c2_full_strict5", "features": ["dense", "strict5"], "convs": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9], "eur": 1.8705, "calls": 1717}
+{"ts": "2026-07-31T12:07:51", "tag": "c2_iter4_aggstack", "features": ["agg", "aggdiv", "aggfan", "dense", "strict5"], "convs": [0, 2, 4, 6, 8], "eur": 0.3035, "calls": 239}
+{"ts": "2026-07-31T12:13:49", "tag": "c2_iter6_aggfan", "features": ["agg", "aggfan", "dense", "strict5"], "convs": [0, 2, 4, 6, 8], "eur": 0.2107, "calls": 158}
+{"ts": "2026-07-31T12:14:57", "tag": "c2_iter5_aggonly", "features": ["agg", "dense", "strict5"], "convs": [0, 2, 4, 6, 8], "eur": 0.2953, "calls": 224}
+{"ts": "2026-07-31T12:23:02", "tag": "c2_full_final", "features": ["agg", "aggfan", "dense", "strict5"], "convs": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9], "eur": 0.3762, "calls": 286}
+{"ts": "2026-07-31T12:27:22", "tag": "c2_full_final2", "features": ["agg", "aggfan", "dense", "strict5", "temporalroute"], "convs": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9], "eur": 0.0, "calls": 0}
+{"ts": "2026-07-31T23:59:00", "tag": "mem0_judge_bridge", "features": [], "convs": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9], "eur": 5.16, "calls": 3080, "note": "Mem0 official judge over both systems' stored predictions"}
+{"ts": "2026-08-01T02:30:00", "tag": "zep_eval_full", "eur": 3.05, "calls": 1900, "note": "zep arm answerer+strict judge"}
+{"ts": "2026-08-01T03:10:00", "tag": "zep_judges_topup", "eur": 2.6, "calls": 2301, "note": "opus (anthropic ~0.4 separat) + mem0-judge gpt-5 \u00fcber zep predictions"}

@@ -7,6 +7,7 @@ __pycache__/
 .DS_Store
 .env
 .venv/
+.venv-bench/
 venv/
 .idea/
 .vscode/
@@ -21,11 +22,15 @@ transcripts/*
 !transcripts/README.md
 *.transcript-report.json
 
-# External-reliability raw failure exports (may contain payload text)
-docs/runs/*.jsonl
+# Scratch outputs from fresh runs (never tracked)
+docs/runs/local/
 docs/runs/*.err
 
-# LoCoMo per-QA run dumps (large, reproducible; canonical numbers live in docs/locomo_results.md)
+# LoCoMo per-QA diagnostic dumps (6-7 MB each, reproducible from the harness;
+# canonical numbers live in docs/locomo_results.md)
 docs/runs/locomo_*.json
-.venv-bench/
-docs/runs/local/
+
+# NOTE: the frozen run artifacts (docs/runs/*.jsonl, docs/runs/iter/,
+# docs/runs/caches/) ARE tracked — they back the EUR-0 replay in
+# scripts/verify_repro.sh; vector_cache.jsonl goes through Git LFS
+# (see .gitattributes). docs/runs/manifest.json pins their hashes.

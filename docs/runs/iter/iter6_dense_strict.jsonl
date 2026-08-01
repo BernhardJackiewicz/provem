@@ -1,0 +1,1020 @@
+{"conv": 0, "qid": "conv-26_q004", "system": "ours", "category": "1", "abstain": false, "predicted": "Adoption agencies", "correct": true}
+{"conv": 0, "qid": "conv-26_q003", "system": "ours", "category": "3", "abstain": false, "predicted": "Counseling and mental health", "correct": false}
+{"conv": 0, "qid": "conv-26_q002", "system": "ours", "category": "2", "abstain": false, "predicted": "Last year.", "correct": false}
+{"conv": 0, "qid": "conv-26_q008", "system": "ours", "category": "1", "abstain": false, "predicted": "Single", "correct": true}
+{"conv": 0, "qid": "conv-26_q001", "system": "ours", "category": "2", "abstain": false, "predicted": "", "correct": false}
+{"conv": 0, "qid": "conv-26_q009", "system": "ours", "category": "2", "abstain": false, "predicted": "NO ANSWER", "correct": false}
+{"conv": 0, "qid": "conv-26_q010", "system": "ours", "category": "2", "abstain": false, "predicted": "", "correct": false}
+{"conv": 0, "qid": "conv-26_q006", "system": "ours", "category": "2", "abstain": false, "predicted": "", "correct": false}
+{"conv": 0, "qid": "conv-26_q007", "system": "ours", "category": "2", "abstain": false, "predicted": "Next month (June 2023)", "correct": true}
+{"conv": 0, "qid": "conv-26_q011", "system": "ours", "category": "2", "abstain": false, "predicted": "4 years", "correct": true}
+{"conv": 0, "qid": "conv-26_q005", "system": "ours", "category": "1", "abstain": false, "predicted": "Caroline is transgender.", "correct": true}
+{"conv": 0, "qid": "conv-26_q015", "system": "ours", "category": "3", "abstain": false, "predicted": "NO ANSWER", "correct": false}
+{"conv": 0, "qid": "conv-26_q013", "system": "ours", "category": "2", "abstain": false, "predicted": "Ten years ago.", "correct": true}
+{"conv": 0, "qid": "conv-26_q012", "system": "ours", "category": "1", "abstain": false, "predicted": "Her home country", "correct": false}
+{"conv": 0, "qid": "conv-26_q018", "system": "ours", "category": "2", "abstain": false, "predicted": "July 2023", "correct": true}
+{"conv": 0, "qid": "conv-26_q017", "system": "ours", "category": "2", "abstain": false, "predicted": "", "correct": false}
+{"conv": 0, "qid": "conv-26_q014", "system": "ours", "category": "1", "abstain": false, "predicted": "Counseling or mental health work", "correct": false}
+{"conv": 0, "qid": "conv-26_q016", "system": "ours", "category": "1", "abstain": false, "predicted": "", "correct": false}
+{"conv": 0, "qid": "conv-26_q023", "system": "ours", "category": "3", "abstain": false, "predicted": "NO ANSWER", "correct": false}
+{"conv": 0, "qid": "conv-26_q019", "system": "ours", "category": "1", "abstain": false, "predicted": "Forest, mountains, beach.", "correct": true}
+{"conv": 0, "qid": "conv-26_q021", "system": "ours", "category": "2", "abstain": false, "predicted": "5 July 2023", "correct": true}
+{"conv": 0, "qid": "conv-26_q020", "system": "ours", "category": "1", "abstain": false, "predicted": "Getting their hands dirty and making something with clay.", "correct": false}
+{"conv": 0, "qid": "conv-26_q027", "system": "ours", "category": "2", "abstain": false, "predicted": "NO ANSWER", "correct": false}
+{"conv": 0, "qid": "conv-26_q024", "system": "ours", "category": "1", "abstain": false, "predicted": "Charlotte's Web", "correct": false}
+{"conv": 0, "qid": "conv-26_q028", "system": "ours", "category": "3", "abstain": false, "predicted": "NO ANSWER.", "correct": false}
+{"conv": 0, "qid": "conv-26_q022", "system": "ours", "category": "2", "abstain": false, "predicted": "", "correct": false}
+{"conv": 0, "qid": "conv-26_q025", "system": "ours", "category": "1", "abstain": false, "predicted": "Running.", "correct": true}
+{"conv": 0, "qid": "conv-26_q031", "system": "ours", "category": "3", "abstain": false, "predicted": "NO ANSWER", "correct": false}
+{"conv": 0, "qid": "conv-26_q026", "system": "ours", "category": "2", "abstain": false, "predicted": "10 July 2023", "correct": true}
+{"conv": 0, "qid": "conv-26_q029", "system": "ours", "category": "2", "abstain": false, "predicted": "", "correct": false}
+{"conv": 0, "qid": "conv-26_q030", "system": "ours", "category": "2", "abstain": false, "predicted": "", "correct": false}
+{"conv": 0, "qid": "conv-26_q032", "system": "ours", "category": "2", "abstain": false, "predicted": "", "correct": false}
+{"conv": 0, "qid": "conv-26_q033", "system": "ours", "category": "1", "abstain": false, "predicted": "", "correct": false}
+{"conv": 0, "qid": "conv-26_q034", "system": "ours", "category": "2", "abstain": false, "predicted": "", "correct": false}
+{"conv": 0, "qid": "conv-26_q035", "system": "ours", "category": "1", "abstain": false, "predicted": "", "correct": false}
+{"conv": 0, "qid": "conv-26_q036", "system": "ours", "category": "2", "abstain": false, "predicted": "", "correct": false}
+{"conv": 0, "qid": "conv-26_q041", "system": "ours", "category": "1", "abstain": false, "predicted": "NO ANSWER", "correct": false}
+{"conv": 0, "qid": "conv-26_q038", "system": "ours", "category": "1", "abstain": false, "predicted": "A horse painting", "correct": false}
+{"conv": 0, "qid": "conv-26_q037", "system": "ours", "category": "2", "abstain": false, "predicted": "Last weekend (message dated 17 July 2023)", "correct": true}
+{"conv": 0, "qid": "conv-26_q039", "system": "ours", "category": "1", "abstain": false, "predicted": "", "correct": false}
+{"conv": 0, "qid": "conv-26_q040", "system": "ours", "category": "1", "abstain": false, "predicted": "", "correct": false}
+{"conv": 0, "qid": "conv-26_q045", "system": "ours", "category": "2", "abstain": false, "predicted": "13 August 2023", "correct": false}
+{"conv": 0, "qid": "conv-26_q043", "system": "ours", "category": "3", "abstain": false, "predicted": "NO ANSWER", "correct": false}
+{"conv": 0, "qid": "conv-26_q051", "system": "ours", "category": "3", "abstain": false, "predicted": "NO ANSWER", "correct": false}
+{"conv": 0, "qid": "conv-26_q046", "system": "ours", "category": "2", "abstain": false, "predicted": "", "correct": false}
+{"conv": 0, "qid": "conv-26_q044", "system": "ours", "category": "1", "abstain": false, "predicted": "Paintings and drawings", "correct": false}
+{"conv": 0, "qid": "conv-26_q042", "system": "ours", "category": "2", "abstain": false, "predicted": "", "correct": false}
+{"conv": 0, "qid": "conv-26_q047", "system": "ours", "category": "3", "abstain": false, "predicted": "NO ANSWER", "correct": false}
+{"conv": 0, "qid": "conv-26_q048", "system": "ours", "category": "1", "abstain": false, "predicted": "", "correct": false}
+{"conv": 0, "qid": "conv-26_q050", "system": "ours", "category": "2", "abstain": false, "predicted": "", "correct": false}
+{"conv": 0, "qid": "conv-26_q049", "system": "ours", "category": "1", "abstain": false, "predicted": "", "correct": false}
+{"conv": 0, "qid": "conv-26_q053", "system": "ours", "category": "1", "abstain": false, "predicted": "Luna, Oliver, and Bailey", "correct": true}
+{"conv": 0, "qid": "conv-26_q054", "system": "ours", "category": "2", "abstain": false, "predicted": "23 August 2023", "correct": false}
+{"conv": 0, "qid": "conv-26_q052", "system": "ours", "category": "1", "abstain": false, "predicted": "", "correct": false}
+{"conv": 0, "qid": "conv-26_q058", "system": "ours", "category": "2", "abstain": false, "predicted": "17 August 2023", "correct": false}
+{"conv": 0, "qid": "conv-26_q060", "system": "ours", "category": "3", "abstain": false, "predicted": "NO ANSWER", "correct": false}
+{"conv": 0, "qid": "conv-26_q057", "system": "ours", "category": "1", "abstain": false, "predicted": "The rainbow flag and the eagle.", "correct": false}
+{"conv": 0, "qid": "conv-26_q061", "system": "ours", "category": "1", "abstain": false, "predicted": "Clarinet and violin.", "correct": true}
+{"conv": 0, "qid": "conv-26_q055", "system": "ours", "category": "2", "abstain": false, "predicted": "", "correct": false}
+{"conv": 0, "qid": "conv-26_q056", "system": "ours", "category": "1", "abstain": false, "predicted": "", "correct": false}
+{"conv": 0, "qid": "conv-26_q059", "system": "ours", "category": "2", "abstain": false, "predicted": "", "correct": false}
+{"conv": 0, "qid": "conv-26_q062", "system": "ours", "category": "1", "abstain": false, "predicted": "", "correct": false}
+{"conv": 0, "qid": "conv-26_q065", "system": "ours", "category": "3", "abstain": false, "predicted": "NO ANSWER", "correct": false}
+{"conv": 0, "qid": "conv-26_q064", "system": "ours", "category": "2", "abstain": false, "predicted": "", "correct": false}
+{"conv": 0, "qid": "conv-26_q063", "system": "ours", "category": "2", "abstain": false, "predicted": "27 August 2023", "correct": true}
+{"conv": 0, "qid": "conv-26_q066", "system": "ours", "category": "1", "abstain": false, "predicted": "", "correct": false}
+{"conv": 0, "qid": "conv-26_q067", "system": "ours", "category": "1", "abstain": false, "predicted": "", "correct": false}
+{"conv": 0, "qid": "conv-26_q069", "system": "ours", "category": "2", "abstain": false, "predicted": "NO ANSWER", "correct": false}
+{"conv": 0, "qid": "conv-26_q073", "system": "ours", "category": "2", "abstain": false, "predicted": "Last year.", "correct": false}
+{"conv": 0, "qid": "conv-26_q072", "system": "ours", "category": "1", "abstain": false, "predicted": "NO ANSWER", "correct": false}
+{"conv": 0, "qid": "conv-26_q068", "system": "ours", "category": "2", "abstain": false, "predicted": "The weekend before 13 September 2023.", "correct": true}
+{"conv": 0, "qid": "conv-26_q076", "system": "ours", "category": "1", "abstain": false, "predicted": "NO ANSWER", "correct": false}
+{"conv": 0, "qid": "conv-26_q071", "system": "ours", "category": "1", "abstain": false, "predicted": "", "correct": false}
+{"conv": 0, "qid": "conv-26_q070", "system": "ours", "category": "3", "abstain": false, "predicted": "", "correct": false}
+{"conv": 0, "qid": "conv-26_q074", "system": "ours", "category": "2", "abstain": false, "predicted": "", "correct": false}
+{"conv": 0, "qid": "conv-26_q075", "system": "ours", "category": "2", "abstain": false, "predicted": "The weekend before 20 October 2023.", "correct": true}
+{"conv": 0, "qid": "conv-26_q079", "system": "ours", "category": "1", "abstain": false, "predicted": "Figurines", "correct": false}
+{"conv": 0, "qid": "conv-26_q082", "system": "ours", "category": "3", "abstain": false, "predicted": "NO ANSWER", "correct": false}
+{"conv": 0, "qid": "conv-26_q078", "system": "ours", "category": "3", "abstain": false, "predicted": "NO ANSWER", "correct": false}
+{"conv": 0, "qid": "conv-26_q077", "system": "ours", "category": "1", "abstain": false, "predicted": "", "correct": false}
+{"conv": 0, "qid": "conv-26_q083", "system": "ours", "category": "4", "abstain": false, "predicted": "Mental health", "correct": true}
+{"conv": 0, "qid": "conv-26_q080", "system": "ours", "category": "2", "abstain": false, "predicted": "NO ANSWER", "correct": false}
+{"conv": 0, "qid": "conv-26_q081", "system": "ours", "category": "2", "abstain": false, "predicted": "21 October 2023", "correct": true}
+{"conv": 0, "qid": "conv-26_q084", "system": "ours", "category": "4", "abstain": false, "predicted": "She realized that self-care is really important.", "correct": true}
+{"conv": 0, "qid": "conv-26_q085", "system": "ours", "category": "4", "abstain": false, "predicted": "", "correct": false}
+{"conv": 0, "qid": "conv-26_q093", "system": "ours", "category": "4", "abstain": false, "predicted": "Sweden", "correct": true}
+{"conv": 0, "qid": "conv-26_q086", "system": "ours", "category": "4", "abstain": false, "predicted": "", "correct": false}
+{"conv": 0, "qid": "conv-26_q087", "system": "ours", "category": "4", "abstain": false, "predicted": "LGBTQ+ folks", "correct": true}
+{"conv": 0, "qid": "conv-26_q092", "system": "ours", "category": "4", "abstain": false, "predicted": "Love, faith and strength.", "correct": true}
+{"conv": 0, "qid": "conv-26_q091", "system": "ours", "category": "4", "abstain": false, "predicted": "NO ANSWER", "correct": false}
+{"conv": 0, "qid": "conv-26_q094", "system": "ours", "category": "4", "abstain": false, "predicted": "A necklace.", "correct": true}
+{"conv": 0, "qid": "conv-26_q098", "system": "ours", "category": "4", "abstain": false, "predicted": "An LGBTQ+ counseling workshop.", "correct": true}
+{"conv": 0, "qid": "conv-26_q088", "system": "ours", "category": "4", "abstain": false, "predicted": "Because they help LGBTQ+ folks with adoption and their inclusivity and support spoke to her.", "correct": true}
+{"conv": 0, "qid": "conv-26_q090", "system": "ours", "category": "4", "abstain": false, "predicted": "", "correct": false}
+{"conv": 0, "qid": "conv-26_q089", "system": "ours", "category": "4", "abstain": false, "predicted": "", "correct": false}
+{"conv": 0, "qid": "conv-26_q099", "system": "ours", "category": "4", "abstain": false, "predicted": "Different therapeutic methods and how to best work with trans people.", "correct": true}
+{"conv": 0, "qid": "conv-26_q097", "system": "ours", "category": "4", "abstain": false, "predicted": "Working with trans people \u2014 helping them accept themselves and supporting their mental health.", "correct": true}
+{"conv": 0, "qid": "conv-26_q101", "system": "ours", "category": "4", "abstain": false, "predicted": "A safe, inviting place for people to grow.", "correct": true}
+{"conv": 0, "qid": "conv-26_q095", "system": "ours", "category": "4", "abstain": false, "predicted": "", "correct": false}
+{"conv": 0, "qid": "conv-26_q096", "system": "ours", "category": "4", "abstain": false, "predicted": "", "correct": false}
+{"conv": 0, "qid": "conv-26_q104", "system": "ours", "category": "4", "abstain": false, "predicted": "Charlotte's Web", "correct": true}
+{"conv": 0, "qid": "conv-26_q103", "system": "ours", "category": "4", "abstain": false, "predicted": "Kids' books \u2014 classics, stories from different cultures, and educational books.", "correct": true}
+{"conv": 0, "qid": "conv-26_q105", "system": "ours", "category": "4", "abstain": false, "predicted": "NO ANSWER", "correct": false}
+{"conv": 0, "qid": "conv-26_q102", "system": "ours", "category": "4", "abstain": false, "predicted": "Yes", "correct": true}
+{"conv": 0, "qid": "conv-26_q107", "system": "ours", "category": "4", "abstain": false, "predicted": "NO ANSWER", "correct": false}
+{"conv": 0, "qid": "conv-26_q100", "system": "ours", "category": "4", "abstain": false, "predicted": "Her own struggles with mental health and the helpful support she received, which made her want to help others.", "correct": false}
+{"conv": 0, "qid": "conv-26_q106", "system": "ours", "category": "4", "abstain": false, "predicted": "She felt connected and gained a lot of hope for her own path.", "correct": false}
+{"conv": 0, "qid": "conv-26_q110", "system": "ours", "category": "4", "abstain": false, "predicted": "Their own pots.", "correct": true}
+{"conv": 0, "qid": "conv-26_q109", "system": "ours", "category": "4", "abstain": false, "predicted": "Her headspace.", "correct": true}
+{"conv": 0, "qid": "conv-26_q108", "system": "ours", "category": "4", "abstain": false, "predicted": "To de-stress and clear her mind.", "correct": true}
+{"conv": 0, "qid": "conv-26_q115", "system": "ours", "category": "4", "abstain": false, "predicted": "Warmth and happiness", "correct": true}
+{"conv": 0, "qid": "conv-26_q111", "system": "ours", "category": "4", "abstain": false, "predicted": "NO ANSWER", "correct": false}
+{"conv": 0, "qid": "conv-26_q112", "system": "ours", "category": "4", "abstain": false, "predicted": "Painting", "correct": true}
+{"conv": 0, "qid": "conv-26_q114", "system": "ours", "category": "4", "abstain": false, "predicted": "So many people who wanted to create loving homes for children in need.", "correct": true}
+{"conv": 0, "qid": "conv-26_q113", "system": "ours", "category": "4", "abstain": false, "predicted": "", "correct": false}
+{"conv": 0, "qid": "conv-26_q119", "system": "ours", "category": "4", "abstain": false, "predicted": "The Perseid meteor shower", "correct": true}
+{"conv": 0, "qid": "conv-26_q118", "system": "ours", "category": "4", "abstain": false, "predicted": "Usually only once or twice a year.", "correct": true}
+{"conv": 0, "qid": "conv-26_q121", "system": "ours", "category": "4", "abstain": false, "predicted": "Her daughter", "correct": true}
+{"conv": 0, "qid": "conv-26_q124", "system": "ours", "category": "4", "abstain": false, "predicted": "Oscar, a guinea pig.", "correct": true}
+{"conv": 0, "qid": "conv-26_q117", "system": "ours", "category": "4", "abstain": false, "predicted": "", "correct": false}
+{"conv": 0, "qid": "conv-26_q116", "system": "ours", "category": "4", "abstain": false, "predicted": "They bring joy, represent growth and beauty, remind her to appreciate small moments, and were part of her wedding\u2014reminding her of that day.", "correct": false}
+{"conv": 0, "qid": "conv-26_q122", "system": "ours", "category": "4", "abstain": false, "predicted": "NO ANSWER", "correct": false}
+{"conv": 0, "qid": "conv-26_q120", "system": "ours", "category": "4", "abstain": false, "predicted": "At one with the universe and awe-inspired.", "correct": true}
+{"conv": 0, "qid": "conv-26_q127", "system": "ours", "category": "4", "abstain": false, "predicted": "Horseback riding.", "correct": true}
+{"conv": 0, "qid": "conv-26_q131", "system": "ours", "category": "4", "abstain": false, "predicted": "Bach and Mozart", "correct": true}
+{"conv": 0, "qid": "conv-26_q123", "system": "ours", "category": "4", "abstain": false, "predicted": "", "correct": false}
+{"conv": 0, "qid": "conv-26_q130", "system": "ours", "category": "4", "abstain": false, "predicted": "\"Brave\" by Sara Bareilles", "correct": true}
+{"conv": 0, "qid": "conv-26_q129", "system": "ours", "category": "4", "abstain": false, "predicted": "A cool rainbow sidewalk for Pride Month.", "correct": true}
+{"conv": 0, "qid": "conv-26_q132", "system": "ours", "category": "4", "abstain": false, "predicted": "Ed Sheeran", "correct": true}
+{"conv": 0, "qid": "conv-26_q133", "system": "ours", "category": "4", "abstain": false, "predicted": "NO ANSWER", "correct": false}
+{"conv": 0, "qid": "conv-26_q134", "system": "ours", "category": "4", "abstain": false, "predicted": "NO ANSWER", "correct": false}
+{"conv": 0, "qid": "conv-26_q128", "system": "ours", "category": "4", "abstain": false, "predicted": "", "correct": false}
+{"conv": 0, "qid": "conv-26_q126", "system": "ours", "category": "4", "abstain": false, "predicted": "In my slipper.", "correct": false}
+{"conv": 0, "qid": "conv-26_q125", "system": "ours", "category": "4", "abstain": false, "predicted": "A pup (dog) and a kitty \u2014 they also have another cat named Bailey.", "correct": true}
+{"conv": 0, "qid": "conv-26_q136", "system": "ours", "category": "4", "abstain": false, "predicted": "She got hurt and had to take a break from pottery.", "correct": true}
+{"conv": 0, "qid": "conv-26_q141", "system": "ours", "category": "4", "abstain": false, "predicted": "NO ANSWER", "correct": false}
+{"conv": 0, "qid": "conv-26_q137", "system": "ours", "category": "4", "abstain": false, "predicted": "She\u2019s reading the book Caroline recommended and painting.", "correct": true}
+{"conv": 0, "qid": "conv-26_q140", "system": "ours", "category": "4", "abstain": false, "predicted": "It was a transgender poetry reading where transgender people shared their stories through poetry.", "correct": true}
+{"conv": 0, "qid": "conv-26_q135", "system": "ours", "category": "4", "abstain": false, "predicted": "Do your research and find an adoption agency or lawyer; gather documents (references, financial info, medical checks) and prepare emotionally for the wait.", "correct": true}
+{"conv": 0, "qid": "conv-26_q138", "system": "ours", "category": "4", "abstain": false, "predicted": "", "correct": false}
+{"conv": 0, "qid": "conv-26_q139", "system": "ours", "category": "4", "abstain": false, "predicted": "", "correct": false}
+{"conv": 0, "qid": "conv-26_q142", "system": "ours", "category": "4", "abstain": false, "predicted": "It stands for freedom and being real \u2014 a reminder to stay true to herself and embrace her womanhood.", "correct": true}
+{"conv": 0, "qid": "conv-26_q144", "system": "ours", "category": "4", "abstain": false, "predicted": "He got into an accident; he was okay.", "correct": true}
+{"conv": 0, "qid": "conv-26_q143", "system": "ours", "category": "4", "abstain": false, "predicted": "", "correct": false}
+{"conv": 0, "qid": "conv-26_q145", "system": "ours", "category": "4", "abstain": false, "predicted": "", "correct": false}
+{"conv": 0, "qid": "conv-26_q150", "system": "ours", "category": "4", "abstain": false, "predicted": "Love", "correct": false}
+{"conv": 0, "qid": "conv-26_q146", "system": "ours", "category": "4", "abstain": false, "predicted": "", "correct": false}
+{"conv": 0, "qid": "conv-26_q148", "system": "ours", "category": "4", "abstain": false, "predicted": "", "correct": false}
+{"conv": 0, "qid": "conv-26_q147", "system": "ours", "category": "4", "abstain": false, "predicted": "They were scared but we reassured them and explained their brother would be OK. They're tough kids.", "correct": true}
+{"conv": 0, "qid": "conv-26_q151", "system": "ours", "category": "4", "abstain": false, "predicted": "", "correct": false}
+{"conv": 0, "qid": "conv-26_q149", "system": "ours", "category": "4", "abstain": false, "predicted": "She said she was thankful and that they enjoyed the Grand Canyon a lot.", "correct": false}
+{"conv": 0, "qid": "conv-26_q154", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 0, "qid": "conv-26_q152", "system": "ours", "category": "4", "abstain": false, "predicted": "", "correct": false}
+{"conv": 0, "qid": "conv-26_q159", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 0, "qid": "conv-26_q156", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 0, "qid": "conv-26_q158", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 0, "qid": "conv-26_q161", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 0, "qid": "conv-26_q160", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 0, "qid": "conv-26_q153", "system": "ours", "category": "5", "abstain": true, "predicted": "", "correct": true}
+{"conv": 0, "qid": "conv-26_q155", "system": "ours", "category": "5", "abstain": true, "predicted": "LGBTQ+ folks", "correct": false}
+{"conv": 0, "qid": "conv-26_q157", "system": "ours", "category": "5", "abstain": true, "predicted": "This new chapter.", "correct": false}
+{"conv": 0, "qid": "conv-26_q162", "system": "ours", "category": "5", "abstain": true, "predicted": "art and self-expression", "correct": false}
+{"conv": 0, "qid": "conv-26_q166", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 0, "qid": "conv-26_q164", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 0, "qid": "conv-26_q163", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 0, "qid": "conv-26_q165", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 0, "qid": "conv-26_q170", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 0, "qid": "conv-26_q168", "system": "ours", "category": "5", "abstain": true, "predicted": "No. Melanie made it.", "correct": false}
+{"conv": 0, "qid": "conv-26_q167", "system": "ours", "category": "5", "abstain": true, "predicted": "", "correct": true}
+{"conv": 0, "qid": "conv-26_q172", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 0, "qid": "conv-26_q171", "system": "ours", "category": "5", "abstain": true, "predicted": "Boost your mood", "correct": false}
+{"conv": 0, "qid": "conv-26_q175", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 0, "qid": "conv-26_q176", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 0, "qid": "conv-26_q173", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 0, "qid": "conv-26_q169", "system": "ours", "category": "5", "abstain": true, "predicted": "", "correct": true}
+{"conv": 0, "qid": "conv-26_q174", "system": "ours", "category": "5", "abstain": true, "predicted": "", "correct": true}
+{"conv": 0, "qid": "conv-26_q180", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 0, "qid": "conv-26_q179", "system": "ours", "category": "5", "abstain": true, "predicted": "No.", "correct": false}
+{"conv": 0, "qid": "conv-26_q177", "system": "ours", "category": "5", "abstain": true, "predicted": "", "correct": true}
+{"conv": 0, "qid": "conv-26_q178", "system": "ours", "category": "5", "abstain": true, "predicted": "", "correct": true}
+{"conv": 0, "qid": "conv-26_q182", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 0, "qid": "conv-26_q185", "system": "ours", "category": "5", "abstain": true, "predicted": "Acoustic guitar", "correct": false}
+{"conv": 0, "qid": "conv-26_q181", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 0, "qid": "conv-26_q186", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 0, "qid": "conv-26_q188", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 0, "qid": "conv-26_q184", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 0, "qid": "conv-26_q187", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 0, "qid": "conv-26_q192", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 0, "qid": "conv-26_q193", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 0, "qid": "conv-26_q183", "system": "ours", "category": "5", "abstain": true, "predicted": "", "correct": true}
+{"conv": 0, "qid": "conv-26_q189", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 0, "qid": "conv-26_q190", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 0, "qid": "conv-26_q191", "system": "ours", "category": "5", "abstain": true, "predicted": "", "correct": true}
+{"conv": 0, "qid": "conv-26_q195", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 0, "qid": "conv-26_q198", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 0, "qid": "conv-26_q197", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 0, "qid": "conv-26_q194", "system": "ours", "category": "5", "abstain": true, "predicted": "", "correct": true}
+{"conv": 0, "qid": "conv-26_q196", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 0, "qid": "conv-26_q199", "system": "ours", "category": "5", "abstain": true, "predicted": "", "correct": true}
+{"conv": 2, "qid": "conv-41_q010", "system": "ours", "category": "1", "abstain": false, "predicted": "Her auntie.", "correct": true}
+{"conv": 2, "qid": "conv-41_q002", "system": "ours", "category": "2", "abstain": false, "predicted": "21 December 2022", "correct": true}
+{"conv": 2, "qid": "conv-41_q003", "system": "ours", "category": "1", "abstain": false, "predicted": "Kickboxing and taekwondo.", "correct": true}
+{"conv": 2, "qid": "conv-41_q007", "system": "ours", "category": "1", "abstain": false, "predicted": "", "correct": false}
+{"conv": 2, "qid": "conv-41_q006", "system": "ours", "category": "2", "abstain": false, "predicted": "", "correct": false}
+{"conv": 2, "qid": "conv-41_q005", "system": "ours", "category": "2", "abstain": false, "predicted": "", "correct": false}
+{"conv": 2, "qid": "conv-41_q001", "system": "ours", "category": "2", "abstain": false, "predicted": "", "correct": false}
+{"conv": 2, "qid": "conv-41_q009", "system": "ours", "category": "3", "abstain": false, "predicted": "He may be experiencing financial strain.", "correct": false}
+{"conv": 2, "qid": "conv-41_q008", "system": "ours", "category": "1", "abstain": false, "predicted": "a little doll", "correct": false}
+{"conv": 2, "qid": "conv-41_q004", "system": "ours", "category": "1", "abstain": false, "predicted": "", "correct": false}
+{"conv": 2, "qid": "conv-41_q018", "system": "ours", "category": "3", "abstain": false, "predicted": "NO ANSWER", "correct": false}
+{"conv": 2, "qid": "conv-41_q016", "system": "ours", "category": "1", "abstain": false, "predicted": "A creative writing class and a poetry class.", "correct": true}
+{"conv": 2, "qid": "conv-41_q013", "system": "ours", "category": "1", "abstain": false, "predicted": "the military aptitude test", "correct": true}
+{"conv": 2, "qid": "conv-41_q011", "system": "ours", "category": "2", "abstain": false, "predicted": "", "correct": false}
+{"conv": 2, "qid": "conv-41_q014", "system": "ours", "category": "2", "abstain": false, "predicted": "", "correct": false}
+{"conv": 2, "qid": "conv-41_q017", "system": "ours", "category": "2", "abstain": false, "predicted": "", "correct": false}
+{"conv": 2, "qid": "conv-41_q015", "system": "ours", "category": "3", "abstain": false, "predicted": "Yes.", "correct": true}
+{"conv": 2, "qid": "conv-41_q019", "system": "ours", "category": "1", "abstain": false, "predicted": "", "correct": false}
+{"conv": 2, "qid": "conv-41_q021", "system": "ours", "category": "2", "abstain": false, "predicted": "10 April 2023", "correct": false}
+{"conv": 2, "qid": "conv-41_q012", "system": "ours", "category": "1", "abstain": false, "predicted": "", "correct": false}
+{"conv": 2, "qid": "conv-41_q022", "system": "ours", "category": "1", "abstain": false, "predicted": "East Coast; Pacific Northwest", "correct": true}
+{"conv": 2, "qid": "conv-41_q028", "system": "ours", "category": "2", "abstain": false, "predicted": "20 May 2023", "correct": false}
+{"conv": 2, "qid": "conv-41_q026", "system": "ours", "category": "1", "abstain": false, "predicted": "NO ANSWER", "correct": false}
+{"conv": 2, "qid": "conv-41_q020", "system": "ours", "category": "1", "abstain": false, "predicted": "", "correct": false}
+{"conv": 2, "qid": "conv-41_q027", "system": "ours", "category": "1", "abstain": false, "predicted": "She joined a nearby church and bought a cross necklace.", "correct": true}
+{"conv": 2, "qid": "conv-41_q023", "system": "ours", "category": "2", "abstain": false, "predicted": "March 2023", "correct": true}
+{"conv": 2, "qid": "conv-41_q024", "system": "ours", "category": "1", "abstain": false, "predicted": "", "correct": false}
+{"conv": 2, "qid": "conv-41_q025", "system": "ours", "category": "2", "abstain": false, "predicted": "", "correct": false}
+{"conv": 2, "qid": "conv-41_q030", "system": "ours", "category": "1", "abstain": false, "predicted": "A ring-toss tournament.", "correct": false}
+{"conv": 2, "qid": "conv-41_q034", "system": "ours", "category": "1", "abstain": false, "predicted": "Aerial yoga and kundalini yoga.", "correct": true}
+{"conv": 2, "qid": "conv-41_q032", "system": "ours", "category": "2", "abstain": false, "predicted": "NO ANSWER", "correct": false}
+{"conv": 2, "qid": "conv-41_q039", "system": "ours", "category": "2", "abstain": false, "predicted": "3 July 2023", "correct": false}
+{"conv": 2, "qid": "conv-41_q031", "system": "ours", "category": "1", "abstain": false, "predicted": "A homeless shelter and a local dog shelter.", "correct": true}
+{"conv": 2, "qid": "conv-41_q029", "system": "ours", "category": "1", "abstain": false, "predicted": "Education; infrastructure; supporting veterans (and their rights); using technology for community good; serving his country and community (public service)", "correct": false}
+{"conv": 2, "qid": "conv-41_q033", "system": "ours", "category": "1", "abstain": false, "predicted": "", "correct": false}
+{"conv": 2, "qid": "conv-41_q035", "system": "ours", "category": "2", "abstain": false, "predicted": "", "correct": false}
+{"conv": 2, "qid": "conv-41_q036", "system": "ours", "category": "1", "abstain": false, "predicted": "Florida", "correct": false}
+{"conv": 2, "qid": "conv-41_q037", "system": "ours", "category": "1", "abstain": false, "predicted": "", "correct": false}
+{"conv": 2, "qid": "conv-41_q038", "system": "ours", "category": "1", "abstain": false, "predicted": "", "correct": false}
+{"conv": 2, "qid": "conv-41_q043", "system": "ours", "category": "1", "abstain": false, "predicted": "West County", "correct": true}
+{"conv": 2, "qid": "conv-41_q042", "system": "ours", "category": "3", "abstain": false, "predicted": "NO ANSWER", "correct": false}
+{"conv": 2, "qid": "conv-41_q040", "system": "ours", "category": "3", "abstain": false, "predicted": "NO ANSWER", "correct": false}
+{"conv": 2, "qid": "conv-41_q041", "system": "ours", "category": "1", "abstain": false, "predicted": "Kyle", "correct": false}
+{"conv": 2, "qid": "conv-41_q046", "system": "ours", "category": "3", "abstain": false, "predicted": "NO ANSWER", "correct": false}
+{"conv": 2, "qid": "conv-41_q045", "system": "ours", "category": "1", "abstain": false, "predicted": "", "correct": false}
+{"conv": 2, "qid": "conv-41_q050", "system": "ours", "category": "1", "abstain": false, "predicted": "NO ANSWER", "correct": false}
+{"conv": 2, "qid": "conv-41_q044", "system": "ours", "category": "2", "abstain": false, "predicted": "The week before 7 July 2023.", "correct": true}
+{"conv": 2, "qid": "conv-41_q047", "system": "ours", "category": "2", "abstain": false, "predicted": "The weekend before 22 July 2023.", "correct": true}
+{"conv": 2, "qid": "conv-41_q054", "system": "ours", "category": "2", "abstain": false, "predicted": "Last year.", "correct": false}
+{"conv": 2, "qid": "conv-41_q048", "system": "ours", "category": "1", "abstain": false, "predicted": "", "correct": false}
+{"conv": 2, "qid": "conv-41_q053", "system": "ours", "category": "1", "abstain": false, "predicted": "Cindy and Laura", "correct": true}
+{"conv": 2, "qid": "conv-41_q049", "system": "ours", "category": "2", "abstain": false, "predicted": "", "correct": false}
+{"conv": 2, "qid": "conv-41_q051", "system": "ours", "category": "3", "abstain": false, "predicted": "", "correct": false}
+{"conv": 2, "qid": "conv-41_q052", "system": "ours", "category": "2", "abstain": false, "predicted": "About a year ago (as of 3 August 2023).", "correct": true}
+{"conv": 2, "qid": "conv-41_q055", "system": "ours", "category": "2", "abstain": false, "predicted": "Yesterday.", "correct": false}
+{"conv": 2, "qid": "conv-41_q057", "system": "ours", "category": "2", "abstain": false, "predicted": "", "correct": false}
+{"conv": 2, "qid": "conv-41_q060", "system": "ours", "category": "2", "abstain": false, "predicted": "Last summer.", "correct": false}
+{"conv": 2, "qid": "conv-41_q061", "system": "ours", "category": "1", "abstain": false, "predicted": "Coco and Shadow", "correct": true}
+{"conv": 2, "qid": "conv-41_q058", "system": "ours", "category": "1", "abstain": false, "predicted": "", "correct": false}
+{"conv": 2, "qid": "conv-41_q056", "system": "ours", "category": "2", "abstain": false, "predicted": "", "correct": false}
+{"conv": 2, "qid": "conv-41_q063", "system": "ours", "category": "1", "abstain": false, "predicted": "1", "correct": false}
+{"conv": 2, "qid": "conv-41_q062", "system": "ours", "category": "2", "abstain": false, "predicted": "", "correct": false}
+{"conv": 2, "qid": "conv-41_q059", "system": "ours", "category": "2", "abstain": false, "predicted": "", "correct": false}
+{"conv": 2, "qid": "conv-41_q068", "system": "ours", "category": "4", "abstain": false, "predicted": "It enabled needed repairs and renovations, making the learning environment safer and more modern for students.", "correct": true}
+{"conv": 2, "qid": "conv-41_q066", "system": "ours", "category": "4", "abstain": false, "predicted": "Improving education and infrastructure", "correct": true}
+{"conv": 2, "qid": "conv-41_q070", "system": "ours", "category": "4", "abstain": false, "predicted": "NO ANSWER", "correct": false}
+{"conv": 2, "qid": "conv-41_q069", "system": "ours", "category": "4", "abstain": false, "predicted": "NO ANSWER", "correct": false}
+{"conv": 2, "qid": "conv-41_q064", "system": "ours", "category": "2", "abstain": false, "predicted": "", "correct": false}
+{"conv": 2, "qid": "conv-41_q071", "system": "ours", "category": "4", "abstain": false, "predicted": "Pizza", "correct": true}
+{"conv": 2, "qid": "conv-41_q065", "system": "ours", "category": "3", "abstain": false, "predicted": "", "correct": false}
+{"conv": 2, "qid": "conv-41_q072", "system": "ours", "category": "4", "abstain": false, "predicted": "A service-focused online group.", "correct": true}
+{"conv": 2, "qid": "conv-41_q067", "system": "ours", "category": "4", "abstain": false, "predicted": "Growing up seeing how lack of education and crumbling infrastructure affected his neighborhood.", "correct": true}
+{"conv": 2, "qid": "conv-41_q076", "system": "ours", "category": "4", "abstain": false, "predicted": "She went through a divorce, lost her job, and ended up homeless.", "correct": true}
+{"conv": 2, "qid": "conv-41_q079", "system": "ours", "category": "4", "abstain": false, "predicted": "Kyle", "correct": true}
+{"conv": 2, "qid": "conv-41_q074", "system": "ours", "category": "4", "abstain": false, "predicted": "Her aunt.", "correct": true}
+{"conv": 2, "qid": "conv-41_q078", "system": "ours", "category": "4", "abstain": false, "predicted": "A beginner's yoga class.", "correct": true}
+{"conv": 2, "qid": "conv-41_q080", "system": "ours", "category": "4", "abstain": false, "predicted": "A few times a week.", "correct": true}
+{"conv": 2, "qid": "conv-41_q073", "system": "ours", "category": "4", "abstain": false, "predicted": "", "correct": false}
+{"conv": 2, "qid": "conv-41_q083", "system": "ours", "category": "4", "abstain": false, "predicted": "NO ANSWER", "correct": false}
+{"conv": 2, "qid": "conv-41_q077", "system": "ours", "category": "4", "abstain": false, "predicted": "", "correct": false}
+{"conv": 2, "qid": "conv-41_q081", "system": "ours", "category": "4", "abstain": false, "predicted": "A painting", "correct": false}
+{"conv": 2, "qid": "conv-41_q086", "system": "ours", "category": "4", "abstain": false, "predicted": "A career fair at a local school", "correct": true}
+{"conv": 2, "qid": "conv-41_q075", "system": "ours", "category": "4", "abstain": false, "predicted": "Because the girl was sitting alone and seemed sad, so she sat with her to give comfort and a listening ear.", "correct": false}
+{"conv": 2, "qid": "conv-41_q084", "system": "ours", "category": "4", "abstain": false, "predicted": "Education and infrastructure", "correct": true}
+{"conv": 2, "qid": "conv-41_q089", "system": "ours", "category": "4", "abstain": false, "predicted": "Politics and the government.", "correct": true}
+{"conv": 2, "qid": "conv-41_q085", "system": "ours", "category": "4", "abstain": false, "predicted": "A 5K charity run for a homeless shelter.", "correct": true}
+{"conv": 2, "qid": "conv-41_q082", "system": "ours", "category": "4", "abstain": false, "predicted": "On a trip to England \u2014 in London.", "correct": true}
+{"conv": 2, "qid": "conv-41_q088", "system": "ours", "category": "4", "abstain": false, "predicted": "The coast up in the Pacific Northwest.", "correct": true}
+{"conv": 2, "qid": "conv-41_q087", "system": "ours", "category": "4", "abstain": false, "predicted": "Getting his car fixed after it broke down.", "correct": false}
+{"conv": 2, "qid": "conv-41_q093", "system": "ours", "category": "4", "abstain": false, "predicted": "A few times a week.", "correct": false}
+{"conv": 2, "qid": "conv-41_q096", "system": "ours", "category": "4", "abstain": false, "predicted": "They made dinner together.", "correct": true}
+{"conv": 2, "qid": "conv-41_q094", "system": "ours", "category": "4", "abstain": false, "predicted": "More energy and gains in strength and endurance.", "correct": true}
+{"conv": 2, "qid": "conv-41_q091", "system": "ours", "category": "4", "abstain": false, "predicted": "", "correct": false}
+{"conv": 2, "qid": "conv-41_q090", "system": "ours", "category": "4", "abstain": false, "predicted": "", "correct": false}
+{"conv": 2, "qid": "conv-41_q097", "system": "ours", "category": "4", "abstain": false, "predicted": "She joined a nearby church.", "correct": true}
+{"conv": 2, "qid": "conv-41_q092", "system": "ours", "category": "2", "abstain": false, "predicted": "A convention.", "correct": false}
+{"conv": 2, "qid": "conv-41_q098", "system": "ours", "category": "4", "abstain": false, "predicted": "To feel closer to a community and her faith.", "correct": true}
+{"conv": 2, "qid": "conv-41_q095", "system": "ours", "category": "4", "abstain": false, "predicted": "Salads, sandwiches, and homemade desserts \u2014 her favorite was a banana split sundae.", "correct": true}
+{"conv": 2, "qid": "conv-41_q104", "system": "ours", "category": "4", "abstain": false, "predicted": "Max", "correct": true}
+{"conv": 2, "qid": "conv-41_q105", "system": "ours", "category": "4", "abstain": false, "predicted": "10 years", "correct": true}
+{"conv": 2, "qid": "conv-41_q103", "system": "ours", "category": "4", "abstain": false, "predicted": "the chili cook-off", "correct": true}
+{"conv": 2, "qid": "conv-41_q100", "system": "ours", "category": "4", "abstain": false, "predicted": "They invited some veterans to share their stories.", "correct": false}
+{"conv": 2, "qid": "conv-41_q102", "system": "ours", "category": "4", "abstain": false, "predicted": "A fundraiser", "correct": true}
+{"conv": 2, "qid": "conv-41_q099", "system": "ours", "category": "4", "abstain": false, "predicted": "", "correct": false}
+{"conv": 2, "qid": "conv-41_q108", "system": "ours", "category": "4", "abstain": false, "predicted": "Volunteering at a local dog shelter once a month.", "correct": true}
+{"conv": 2, "qid": "conv-41_q107", "system": "ours", "category": "4", "abstain": false, "predicted": "Responsibility and compassion", "correct": true}
+{"conv": 2, "qid": "conv-41_q106", "system": "ours", "category": "4", "abstain": false, "predicted": "", "correct": false}
+{"conv": 2, "qid": "conv-41_q110", "system": "ours", "category": "4", "abstain": false, "predicted": "Free and light.", "correct": true}
+{"conv": 2, "qid": "conv-41_q101", "system": "ours", "category": "4", "abstain": false, "predicted": "Great, awesome, heartwarming.", "correct": false}
+{"conv": 2, "qid": "conv-41_q112", "system": "ours", "category": "4", "abstain": false, "predicted": "Kundalini yoga", "correct": true}
+{"conv": 2, "qid": "conv-41_q113", "system": "ours", "category": "4", "abstain": false, "predicted": "assistant manager", "correct": true}
+{"conv": 2, "qid": "conv-41_q111", "system": "ours", "category": "4", "abstain": false, "predicted": "She joined a gym last week.", "correct": true}
+{"conv": 2, "qid": "conv-41_q114", "system": "ours", "category": "4", "abstain": false, "predicted": "Self-doubt", "correct": true}
+{"conv": 2, "qid": "conv-41_q109", "system": "ours", "category": "4", "abstain": false, "predicted": "", "correct": false}
+{"conv": 2, "qid": "conv-41_q116", "system": "ours", "category": "4", "abstain": false, "predicted": "a live music event", "correct": true}
+{"conv": 2, "qid": "conv-41_q118", "system": "ours", "category": "4", "abstain": false, "predicted": "A marching event for veterans' rights", "correct": true}
+{"conv": 2, "qid": "conv-41_q115", "system": "ours", "category": "4", "abstain": false, "predicted": "", "correct": false}
+{"conv": 2, "qid": "conv-41_q120", "system": "ours", "category": "4", "abstain": false, "predicted": "At least once a week.", "correct": true}
+{"conv": 2, "qid": "conv-41_q122", "system": "ours", "category": "4", "abstain": false, "predicted": "Lots of homes were ruined.", "correct": true}
+{"conv": 2, "qid": "conv-41_q119", "system": "ours", "category": "4", "abstain": false, "predicted": "Remembering how much veterans sacrifice for us and wanting to show support.", "correct": true}
+{"conv": 2, "qid": "conv-41_q117", "system": "ours", "category": "4", "abstain": false, "predicted": "Because her cousin went through a divorce, lost her job, and became homeless, forcing her to leave and find a new place in a hurry.", "correct": false}
+{"conv": 2, "qid": "conv-41_q124", "system": "ours", "category": "4", "abstain": false, "predicted": "Have dinner with some friends from the gym.", "correct": true}
+{"conv": 2, "qid": "conv-41_q121", "system": "ours", "category": "4", "abstain": false, "predicted": "A flood.", "correct": true}
+{"conv": 2, "qid": "conv-41_q123", "system": "ours", "category": "4", "abstain": false, "predicted": "", "correct": false}
+{"conv": 2, "qid": "conv-41_q126", "system": "ours", "category": "4", "abstain": false, "predicted": "He appreciates what we have and the need to give back.", "correct": false}
+{"conv": 2, "qid": "conv-41_q125", "system": "ours", "category": "4", "abstain": false, "predicted": "They chilled under the trees, played games, and ate yummy food.", "correct": false}
+{"conv": 2, "qid": "conv-41_q127", "system": "ours", "category": "4", "abstain": false, "predicted": "He appreciated what we have and the need to give back.", "correct": true}
+{"conv": 2, "qid": "conv-41_q128", "system": "ours", "category": "4", "abstain": false, "predicted": "Because hearing veteran Samuel's stories and seeing their resilience filled him with hope.", "correct": true}
+{"conv": 2, "qid": "conv-41_q134", "system": "ours", "category": "4", "abstain": false, "predicted": "He took his kids to a military memorial.", "correct": false}
+{"conv": 2, "qid": "conv-41_q129", "system": "ours", "category": "4", "abstain": false, "predicted": "Hiking.", "correct": true}
+{"conv": 2, "qid": "conv-41_q133", "system": "ours", "category": "4", "abstain": false, "predicted": "After witnessing a family struggling on the streets, she reached out to the shelter and asked if they needed any volunteers, and they said yes.", "correct": true}
+{"conv": 2, "qid": "conv-41_q136", "system": "ours", "category": "4", "abstain": false, "predicted": "To remember and appreciate those who served.", "correct": true}
+{"conv": 2, "qid": "conv-41_q135", "system": "ours", "category": "4", "abstain": false, "predicted": "It really made an impact on my kids.", "correct": false}
+{"conv": 2, "qid": "conv-41_q131", "system": "ours", "category": "4", "abstain": false, "predicted": "Weight training", "correct": true}
+{"conv": 2, "qid": "conv-41_q138", "system": "ours", "category": "4", "abstain": false, "predicted": "He lost his job at the mechanical engineering company.", "correct": true}
+{"conv": 2, "qid": "conv-41_q137", "system": "ours", "category": "4", "abstain": false, "predicted": "", "correct": false}
+{"conv": 2, "qid": "conv-41_q142", "system": "ours", "category": "4", "abstain": false, "predicted": "a local organization that helps victims of domestic abuse", "correct": true}
+{"conv": 2, "qid": "conv-41_q139", "system": "ours", "category": "4", "abstain": false, "predicted": "Community work.", "correct": true}
+{"conv": 2, "qid": "conv-41_q140", "system": "ours", "category": "4", "abstain": false, "predicted": "He helped renovate a rundown community center back home.", "correct": true}
+{"conv": 2, "qid": "conv-41_q130", "system": "ours", "category": "4", "abstain": false, "predicted": "", "correct": false}
+{"conv": 2, "qid": "conv-41_q132", "system": "ours", "category": "4", "abstain": false, "predicted": "Dropped off baked goods at the homeless shelter.", "correct": false}
+{"conv": 2, "qid": "conv-41_q141", "system": "ours", "category": "4", "abstain": false, "predicted": "Veterans and their families", "correct": true}
+{"conv": 2, "qid": "conv-41_q143", "system": "ours", "category": "4", "abstain": false, "predicted": "She received a medal.", "correct": true}
+{"conv": 2, "qid": "conv-41_q144", "system": "ours", "category": "4", "abstain": false, "predicted": "Coco", "correct": true}
+{"conv": 2, "qid": "conv-41_q152", "system": "ours", "category": "4", "abstain": false, "predicted": "A brand new fire truck.", "correct": true}
+{"conv": 2, "qid": "conv-41_q147", "system": "ours", "category": "4", "abstain": false, "predicted": "Because he doesn't feel like he's making much of an impact.", "correct": true}
+{"conv": 2, "qid": "conv-41_q145", "system": "ours", "category": "4", "abstain": false, "predicted": "Camping.", "correct": true}
+{"conv": 2, "qid": "conv-41_q153", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 2, "qid": "conv-41_q150", "system": "ours", "category": "4", "abstain": false, "predicted": "Volunteering as a mentor for a local school.", "correct": true}
+{"conv": 2, "qid": "conv-41_q146", "system": "ours", "category": "4", "abstain": false, "predicted": "", "correct": false}
+{"conv": 2, "qid": "conv-41_q151", "system": "ours", "category": "4", "abstain": false, "predicted": "", "correct": false}
+{"conv": 2, "qid": "conv-41_q154", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 2, "qid": "conv-41_q148", "system": "ours", "category": "4", "abstain": false, "predicted": "Shadow", "correct": true}
+{"conv": 2, "qid": "conv-41_q149", "system": "ours", "category": "4", "abstain": false, "predicted": "", "correct": false}
+{"conv": 2, "qid": "conv-41_q159", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 2, "qid": "conv-41_q156", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 2, "qid": "conv-41_q160", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 2, "qid": "conv-41_q162", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 2, "qid": "conv-41_q155", "system": "ours", "category": "5", "abstain": true, "predicted": "", "correct": true}
+{"conv": 2, "qid": "conv-41_q157", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 2, "qid": "conv-41_q164", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 2, "qid": "conv-41_q158", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 2, "qid": "conv-41_q161", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 2, "qid": "conv-41_q163", "system": "ours", "category": "5", "abstain": true, "predicted": "", "correct": true}
+{"conv": 2, "qid": "conv-41_q167", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 2, "qid": "conv-41_q165", "system": "ours", "category": "5", "abstain": true, "predicted": "", "correct": true}
+{"conv": 2, "qid": "conv-41_q170", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 2, "qid": "conv-41_q171", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 2, "qid": "conv-41_q169", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 2, "qid": "conv-41_q168", "system": "ours", "category": "5", "abstain": true, "predicted": "Salads, sandwiches, and homemade desserts \u2014 her favorite was a banana split sundae.", "correct": false}
+{"conv": 2, "qid": "conv-41_q172", "system": "ours", "category": "5", "abstain": true, "predicted": "By remembering him through photos.", "correct": false}
+{"conv": 2, "qid": "conv-41_q174", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 2, "qid": "conv-41_q176", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 2, "qid": "conv-41_q175", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 2, "qid": "conv-41_q166", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 2, "qid": "conv-41_q177", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 2, "qid": "conv-41_q173", "system": "ours", "category": "5", "abstain": true, "predicted": "", "correct": true}
+{"conv": 2, "qid": "conv-41_q181", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 2, "qid": "conv-41_q180", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 2, "qid": "conv-41_q182", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 2, "qid": "conv-41_q179", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 2, "qid": "conv-41_q183", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 2, "qid": "conv-41_q178", "system": "ours", "category": "5", "abstain": true, "predicted": "", "correct": true}
+{"conv": 2, "qid": "conv-41_q185", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 2, "qid": "conv-41_q186", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 2, "qid": "conv-41_q184", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 2, "qid": "conv-41_q187", "system": "ours", "category": "5", "abstain": true, "predicted": "a homeless shelter", "correct": false}
+{"conv": 2, "qid": "conv-41_q192", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 2, "qid": "conv-41_q190", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 2, "qid": "conv-41_q188", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 2, "qid": "conv-41_q189", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 2, "qid": "conv-41_q191", "system": "ours", "category": "5", "abstain": true, "predicted": "She said it \"sounded like you and Max had a great time\" and that \"camping with pets can be so soul-nourishing.\"", "correct": false}
+{"conv": 2, "qid": "conv-41_q193", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 4, "qid": "conv-43_q003", "system": "ours", "category": "1", "abstain": false, "predicted": "Jerseys", "correct": false}
+{"conv": 4, "qid": "conv-43_q007", "system": "ours", "category": "2", "abstain": false, "predicted": "July", "correct": false}
+{"conv": 4, "qid": "conv-43_q009", "system": "ours", "category": "3", "abstain": false, "predicted": "NO ANSWER", "correct": false}
+{"conv": 4, "qid": "conv-43_q004", "system": "ours", "category": "3", "abstain": false, "predicted": "NO ANSWER", "correct": false}
+{"conv": 4, "qid": "conv-43_q006", "system": "ours", "category": "3", "abstain": false, "predicted": "NO ANSWER", "correct": false}
+{"conv": 4, "qid": "conv-43_q008", "system": "ours", "category": "1", "abstain": false, "predicted": "NO ANSWER", "correct": false}
+{"conv": 4, "qid": "conv-43_q002", "system": "ours", "category": "1", "abstain": false, "predicted": "", "correct": false}
+{"conv": 4, "qid": "conv-43_q001", "system": "ours", "category": "1", "abstain": false, "predicted": "", "correct": false}
+{"conv": 4, "qid": "conv-43_q005", "system": "ours", "category": "1", "abstain": false, "predicted": "", "correct": false}
+{"conv": 4, "qid": "conv-43_q010", "system": "ours", "category": "1", "abstain": false, "predicted": "", "correct": false}
+{"conv": 4, "qid": "conv-43_q012", "system": "ours", "category": "1", "abstain": false, "predicted": "NO ANSWER", "correct": false}
+{"conv": 4, "qid": "conv-43_q013", "system": "ours", "category": "2", "abstain": false, "predicted": "NO ANSWER", "correct": false}
+{"conv": 4, "qid": "conv-43_q011", "system": "ours", "category": "2", "abstain": false, "predicted": "", "correct": false}
+{"conv": 4, "qid": "conv-43_q016", "system": "ours", "category": "3", "abstain": false, "predicted": "", "correct": false}
+{"conv": 4, "qid": "conv-43_q015", "system": "ours", "category": "1", "abstain": false, "predicted": "He writes articles about fantasy novels and is writing a fantasy novel.", "correct": false}
+{"conv": 4, "qid": "conv-43_q020", "system": "ours", "category": "3", "abstain": false, "predicted": "NO ANSWER", "correct": false}
+{"conv": 4, "qid": "conv-43_q014", "system": "ours", "category": "1", "abstain": false, "predicted": "He reads fantasy books and gets lost in them.", "correct": true}
+{"conv": 4, "qid": "conv-43_q019", "system": "ours", "category": "1", "abstain": false, "predicted": "Patrick Rothfuss", "correct": false}
+{"conv": 4, "qid": "conv-43_q017", "system": "ours", "category": "2", "abstain": false, "predicted": "", "correct": false}
+{"conv": 4, "qid": "conv-43_q018", "system": "ours", "category": "1", "abstain": false, "predicted": "", "correct": false}
+{"conv": 4, "qid": "conv-43_q021", "system": "ours", "category": "2", "abstain": false, "predicted": "", "correct": false}
+{"conv": 4, "qid": "conv-43_q023", "system": "ours", "category": "2", "abstain": false, "predicted": "On the 15th.", "correct": false}
+{"conv": 4, "qid": "conv-43_q026", "system": "ours", "category": "1", "abstain": false, "predicted": "NO ANSWER", "correct": false}
+{"conv": 4, "qid": "conv-43_q025", "system": "ours", "category": "2", "abstain": false, "predicted": "", "correct": false}
+{"conv": 4, "qid": "conv-43_q029", "system": "ours", "category": "3", "abstain": false, "predicted": "NO ANSWER", "correct": false}
+{"conv": 4, "qid": "conv-43_q024", "system": "ours", "category": "2", "abstain": false, "predicted": "", "correct": false}
+{"conv": 4, "qid": "conv-43_q027", "system": "ours", "category": "1", "abstain": false, "predicted": "", "correct": false}
+{"conv": 4, "qid": "conv-43_q028", "system": "ours", "category": "3", "abstain": false, "predicted": "", "correct": false}
+{"conv": 4, "qid": "conv-43_q033", "system": "ours", "category": "3", "abstain": false, "predicted": "NO ANSWER", "correct": false}
+{"conv": 4, "qid": "conv-43_q030", "system": "ours", "category": "1", "abstain": false, "predicted": "", "correct": false}
+{"conv": 4, "qid": "conv-43_q034", "system": "ours", "category": "2", "abstain": false, "predicted": "Next month.", "correct": false}
+{"conv": 4, "qid": "conv-43_q031", "system": "ours", "category": "1", "abstain": false, "predicted": "", "correct": false}
+{"conv": 4, "qid": "conv-43_q032", "system": "ours", "category": "2", "abstain": false, "predicted": "NO ANSWER", "correct": false}
+{"conv": 4, "qid": "conv-43_q037", "system": "ours", "category": "1", "abstain": false, "predicted": "NO ANSWER", "correct": false}
+{"conv": 4, "qid": "conv-43_q039", "system": "ours", "category": "1", "abstain": false, "predicted": "NO ANSWER", "correct": false}
+{"conv": 4, "qid": "conv-43_q022", "system": "ours", "category": "1", "abstain": false, "predicted": "Seattle, New York City", "correct": false}
+{"conv": 4, "qid": "conv-43_q036", "system": "ours", "category": "1", "abstain": false, "predicted": "", "correct": false}
+{"conv": 4, "qid": "conv-43_q035", "system": "ours", "category": "3", "abstain": false, "predicted": "Pursue endorsements and build his brand.", "correct": false}
+{"conv": 4, "qid": "conv-43_q041", "system": "ours", "category": "2", "abstain": false, "predicted": "NO ANSWER", "correct": false}
+{"conv": 4, "qid": "conv-43_q040", "system": "ours", "category": "2", "abstain": false, "predicted": "NO ANSWER", "correct": false}
+{"conv": 4, "qid": "conv-43_q042", "system": "ours", "category": "1", "abstain": false, "predicted": "Fantasy stories", "correct": false}
+{"conv": 4, "qid": "conv-43_q038", "system": "ours", "category": "2", "abstain": false, "predicted": "The week before 13 October 2023.", "correct": true}
+{"conv": 4, "qid": "conv-43_q045", "system": "ours", "category": "2", "abstain": false, "predicted": "6 November 2023", "correct": false}
+{"conv": 4, "qid": "conv-43_q044", "system": "ours", "category": "1", "abstain": false, "predicted": "His skills, leadership, determination and heart.", "correct": true}
+{"conv": 4, "qid": "conv-43_q046", "system": "ours", "category": "2", "abstain": false, "predicted": "NO ANSWER", "correct": false}
+{"conv": 4, "qid": "conv-43_q043", "system": "ours", "category": "1", "abstain": false, "predicted": "A tasty soup (with sage) and honey garlic chicken with roasted veg", "correct": false}
+{"conv": 4, "qid": "conv-43_q049", "system": "ours", "category": "1", "abstain": false, "predicted": "NO ANSWER", "correct": false}
+{"conv": 4, "qid": "conv-43_q050", "system": "ours", "category": "1", "abstain": false, "predicted": "NO ANSWER", "correct": false}
+{"conv": 4, "qid": "conv-43_q047", "system": "ours", "category": "2", "abstain": false, "predicted": "", "correct": false}
+{"conv": 4, "qid": "conv-43_q053", "system": "ours", "category": "1", "abstain": false, "predicted": "Strength training.", "correct": false}
+{"conv": 4, "qid": "conv-43_q052", "system": "ours", "category": "3", "abstain": false, "predicted": "NO ANSWER", "correct": false}
+{"conv": 4, "qid": "conv-43_q048", "system": "ours", "category": "2", "abstain": false, "predicted": "", "correct": false}
+{"conv": 4, "qid": "conv-43_q051", "system": "ours", "category": "1", "abstain": false, "predicted": "NO ANSWER", "correct": false}
+{"conv": 4, "qid": "conv-43_q054", "system": "ours", "category": "3", "abstain": false, "predicted": "NO ANSWER", "correct": false}
+{"conv": 4, "qid": "conv-43_q059", "system": "ours", "category": "2", "abstain": false, "predicted": "2 August 2023", "correct": false}
+{"conv": 4, "qid": "conv-43_q060", "system": "ours", "category": "1", "abstain": false, "predicted": "A career-high in assists.", "correct": false}
+{"conv": 4, "qid": "conv-43_q055", "system": "ours", "category": "2", "abstain": false, "predicted": "", "correct": false}
+{"conv": 4, "qid": "conv-43_q061", "system": "ours", "category": "2", "abstain": false, "predicted": "NO ANSWER", "correct": false}
+{"conv": 4, "qid": "conv-43_q057", "system": "ours", "category": "2", "abstain": false, "predicted": "", "correct": false}
+{"conv": 4, "qid": "conv-43_q056", "system": "ours", "category": "2", "abstain": false, "predicted": "", "correct": false}
+{"conv": 4, "qid": "conv-43_q063", "system": "ours", "category": "1", "abstain": false, "predicted": "He gives seminars and mentors younger players.", "correct": true}
+{"conv": 4, "qid": "conv-43_q058", "system": "ours", "category": "1", "abstain": false, "predicted": "Piano and violin", "correct": true}
+{"conv": 4, "qid": "conv-43_q062", "system": "ours", "category": "1", "abstain": false, "predicted": "", "correct": false}
+{"conv": 4, "qid": "conv-43_q067", "system": "ours", "category": "3", "abstain": false, "predicted": "NO ANSWER", "correct": false}
+{"conv": 4, "qid": "conv-43_q064", "system": "ours", "category": "2", "abstain": false, "predicted": "Last summer.", "correct": false}
+{"conv": 4, "qid": "conv-43_q069", "system": "ours", "category": "2", "abstain": false, "predicted": "Friday", "correct": false}
+{"conv": 4, "qid": "conv-43_q073", "system": "ours", "category": "4", "abstain": false, "predicted": "Shooting guard", "correct": true}
+{"conv": 4, "qid": "conv-43_q066", "system": "ours", "category": "1", "abstain": false, "predicted": "", "correct": false}
+{"conv": 4, "qid": "conv-43_q065", "system": "ours", "category": "2", "abstain": false, "predicted": "", "correct": false}
+{"conv": 4, "qid": "conv-43_q074", "system": "ours", "category": "4", "abstain": false, "predicted": "Fitting into the new team's style of play.", "correct": true}
+{"conv": 4, "qid": "conv-43_q071", "system": "ours", "category": "3", "abstain": false, "predicted": "NO ANSWER", "correct": false}
+{"conv": 4, "qid": "conv-43_q072", "system": "ours", "category": "4", "abstain": false, "predicted": "The Minnesota Wolves", "correct": true}
+{"conv": 4, "qid": "conv-43_q068", "system": "ours", "category": "3", "abstain": false, "predicted": "", "correct": false}
+{"conv": 4, "qid": "conv-43_q076", "system": "ours", "category": "4", "abstain": false, "predicted": "a fantasy literature forum", "correct": true}
+{"conv": 4, "qid": "conv-43_q070", "system": "ours", "category": "2", "abstain": false, "predicted": "", "correct": false}
+{"conv": 4, "qid": "conv-43_q078", "system": "ours", "category": "4", "abstain": false, "predicted": "40 points", "correct": true}
+{"conv": 4, "qid": "conv-43_q075", "system": "ours", "category": "4", "abstain": false, "predicted": "characters, spells, and magical creatures", "correct": true}
+{"conv": 4, "qid": "conv-43_q081", "system": "ours", "category": "4", "abstain": false, "predicted": "Seattle", "correct": true}
+{"conv": 4, "qid": "conv-43_q082", "system": "ours", "category": "4", "abstain": false, "predicted": "Five years.", "correct": true}
+{"conv": 4, "qid": "conv-43_q077", "system": "ours", "category": "4", "abstain": false, "predicted": "", "correct": false}
+{"conv": 4, "qid": "conv-43_q079", "system": "ours", "category": "4", "abstain": false, "predicted": "", "correct": false}
+{"conv": 4, "qid": "conv-43_q083", "system": "ours", "category": "4", "abstain": false, "predicted": "Unreal \u2014 amazing, super exciting and free-feeling.", "correct": true}
+{"conv": 4, "qid": "conv-43_q084", "system": "ours", "category": "4", "abstain": false, "predicted": "Articles about fantasy novels.", "correct": false}
+{"conv": 4, "qid": "conv-43_q089", "system": "ours", "category": "4", "abstain": false, "predicted": "NO ANSWER", "correct": false}
+{"conv": 4, "qid": "conv-43_q090", "system": "ours", "category": "4", "abstain": false, "predicted": "Winning a championship.", "correct": true}
+{"conv": 4, "qid": "conv-43_q080", "system": "ours", "category": "4", "abstain": false, "predicted": "A basketball shoe and gear deal with Nike, and a potential sponsorship with Gatorade.", "correct": true}
+{"conv": 4, "qid": "conv-43_q086", "system": "ours", "category": "4", "abstain": false, "predicted": "Harry Potter trivia contest", "correct": true}
+{"conv": 4, "qid": "conv-43_q087", "system": "ours", "category": "4", "abstain": false, "predicted": "NO ANSWER", "correct": false}
+{"conv": 4, "qid": "conv-43_q085", "system": "ours", "category": "4", "abstain": false, "predicted": "", "correct": false}
+{"conv": 4, "qid": "conv-43_q088", "system": "ours", "category": "4", "abstain": false, "predicted": "", "correct": false}
+{"conv": 4, "qid": "conv-43_q092", "system": "ours", "category": "4", "abstain": false, "predicted": "August 15, 2023", "correct": true}
+{"conv": 4, "qid": "conv-43_q091", "system": "ours", "category": "4", "abstain": false, "predicted": "NO ANSWER", "correct": false}
+{"conv": 4, "qid": "conv-43_q094", "system": "ours", "category": "4", "abstain": false, "predicted": "To show their friendship and appreciation.", "correct": true}
+{"conv": 4, "qid": "conv-43_q095", "system": "ours", "category": "4", "abstain": false, "predicted": "To learn more about literature and create a stronger bond to it.", "correct": true}
+{"conv": 4, "qid": "conv-43_q097", "system": "ours", "category": "4", "abstain": false, "predicted": "NO ANSWER", "correct": false}
+{"conv": 4, "qid": "conv-43_q099", "system": "ours", "category": "4", "abstain": false, "predicted": "Home Alone", "correct": true}
+{"conv": 4, "qid": "conv-43_q101", "system": "ours", "category": "4", "abstain": false, "predicted": "Four years.", "correct": true}
+{"conv": 4, "qid": "conv-43_q093", "system": "ours", "category": "4", "abstain": false, "predicted": "A signed ball", "correct": false}
+{"conv": 4, "qid": "conv-43_q100", "system": "ours", "category": "4", "abstain": false, "predicted": "Watching movies.", "correct": false}
+{"conv": 4, "qid": "conv-43_q096", "system": "ours", "category": "4", "abstain": false, "predicted": "The piano.", "correct": true}
+{"conv": 4, "qid": "conv-43_q098", "system": "ours", "category": "4", "abstain": false, "predicted": "Watching it with his family \u2014 getting comfy with snacks and a blanket and being totally absorbed.", "correct": true}
+{"conv": 4, "qid": "conv-43_q105", "system": "ours", "category": "4", "abstain": false, "predicted": "Sage", "correct": true}
+{"conv": 4, "qid": "conv-43_q102", "system": "ours", "category": "4", "abstain": false, "predicted": "", "correct": false}
+{"conv": 4, "qid": "conv-43_q106", "system": "ours", "category": "4", "abstain": false, "predicted": "NO ANSWER", "correct": false}
+{"conv": 4, "qid": "conv-43_q108", "system": "ours", "category": "4", "abstain": false, "predicted": "Edinburgh, Scotland", "correct": true}
+{"conv": 4, "qid": "conv-43_q104", "system": "ours", "category": "4", "abstain": false, "predicted": "", "correct": false}
+{"conv": 4, "qid": "conv-43_q103", "system": "ours", "category": "4", "abstain": false, "predicted": "\"Trust me, NYC is amazing! It's got so much to check out - the culture, food - you won't regret it. It's an adventure you'll never forget!\"", "correct": true}
+{"conv": 4, "qid": "conv-43_q111", "system": "ours", "category": "4", "abstain": false, "predicted": "NO ANSWER", "correct": false}
+{"conv": 4, "qid": "conv-43_q110", "system": "ours", "category": "4", "abstain": false, "predicted": "When picking endorsements, make sure they align with your values and brand. Look for a company that shares your desire to make a change and help others. It's important that the endorsement feels authentic to your followers.", "correct": true}
+{"conv": 4, "qid": "conv-43_q112", "system": "ours", "category": "4", "abstain": false, "predicted": "A greenhouse venue.", "correct": true}
+{"conv": 4, "qid": "conv-43_q114", "system": "ours", "category": "4", "abstain": false, "predicted": "NO ANSWER", "correct": false}
+{"conv": 4, "qid": "conv-43_q113", "system": "ours", "category": "4", "abstain": false, "predicted": "A cozy restaurant.", "correct": true}
+{"conv": 4, "qid": "conv-43_q115", "system": "ours", "category": "4", "abstain": false, "predicted": "Fantasy", "correct": true}
+{"conv": 4, "qid": "conv-43_q109", "system": "ours", "category": "4", "abstain": false, "predicted": "Pursue endorsements and build his brand.", "correct": false}
+{"conv": 4, "qid": "conv-43_q116", "system": "ours", "category": "4", "abstain": false, "predicted": "It was an intense season with both tough losses and great wins. Overall, I'd say we did pretty well.", "correct": true}
+{"conv": 4, "qid": "conv-43_q117", "system": "ours", "category": "4", "abstain": false, "predicted": "We back each other up and won't quit.", "correct": true}
+{"conv": 4, "qid": "conv-43_q123", "system": "ours", "category": "4", "abstain": false, "predicted": "Growth, improvement, and confidence.", "correct": false}
+{"conv": 4, "qid": "conv-43_q118", "system": "ours", "category": "4", "abstain": false, "predicted": "Facing tough opponents.", "correct": true}
+{"conv": 4, "qid": "conv-43_q107", "system": "ours", "category": "4", "abstain": false, "predicted": "a new city", "correct": true}
+{"conv": 4, "qid": "conv-43_q119", "system": "ours", "category": "4", "abstain": false, "predicted": "NO ANSWER.", "correct": false}
+{"conv": 4, "qid": "conv-43_q124", "system": "ours", "category": "4", "abstain": false, "predicted": "Fantasy", "correct": true}
+{"conv": 4, "qid": "conv-43_q120", "system": "ours", "category": "4", "abstain": false, "predicted": "Smoky Mountains", "correct": true}
+{"conv": 4, "qid": "conv-43_q125", "system": "ours", "category": "4", "abstain": false, "predicted": "J.K. Rowling", "correct": true}
+{"conv": 4, "qid": "conv-43_q122", "system": "ours", "category": "4", "abstain": false, "predicted": "", "correct": false}
+{"conv": 4, "qid": "conv-43_q121", "system": "ours", "category": "4", "abstain": false, "predicted": "He finds it really rewarding and fulfilling \u2014 he enjoys being a positive role model and feels great to have their trust and admiration.", "correct": true}
+{"conv": 4, "qid": "conv-43_q127", "system": "ours", "category": "4", "abstain": false, "predicted": "Motivational quotes and strategies", "correct": true}
+{"conv": 4, "qid": "conv-43_q128", "system": "ours", "category": "4", "abstain": false, "predicted": "Cooking", "correct": true}
+{"conv": 4, "qid": "conv-43_q134", "system": "ours", "category": "4", "abstain": false, "predicted": "The views were spectacular.", "correct": true}
+{"conv": 4, "qid": "conv-43_q126", "system": "ours", "category": "4", "abstain": false, "predicted": "Turn on the light - happiness hides in the darkest of times.", "correct": true}
+{"conv": 4, "qid": "conv-43_q132", "system": "ours", "category": "4", "abstain": false, "predicted": "a basketball signed by his favorite player", "correct": true}
+{"conv": 4, "qid": "conv-43_q131", "system": "ours", "category": "4", "abstain": false, "predicted": "He got stuck on a plot twist and couldn't find his way out.", "correct": true}
+{"conv": 4, "qid": "conv-43_q130", "system": "ours", "category": "4", "abstain": false, "predicted": "NO ANSWER", "correct": false}
+{"conv": 4, "qid": "conv-43_q129", "system": "ours", "category": "4", "abstain": false, "predicted": "", "correct": false}
+{"conv": 4, "qid": "conv-43_q135", "system": "ours", "category": "4", "abstain": false, "predicted": "NO ANSWER", "correct": false}
+{"conv": 4, "qid": "conv-43_q133", "system": "ours", "category": "4", "abstain": false, "predicted": "", "correct": false}
+{"conv": 4, "qid": "conv-43_q136", "system": "ours", "category": "4", "abstain": false, "predicted": "", "correct": false}
+{"conv": 4, "qid": "conv-43_q141", "system": "ours", "category": "4", "abstain": false, "predicted": "He worked hard to get better, showing resilience and owning up to the mistake.", "correct": false}
+{"conv": 4, "qid": "conv-43_q142", "system": "ours", "category": "4", "abstain": false, "predicted": "The Alchemist", "correct": true}
+{"conv": 4, "qid": "conv-43_q140", "system": "ours", "category": "4", "abstain": false, "predicted": "His love of writing and reading.", "correct": true}
+{"conv": 4, "qid": "conv-43_q138", "system": "ours", "category": "4", "abstain": false, "predicted": "He tried writing a story based on his experiences in the UK, but it didn't go the way he wanted.", "correct": true}
+{"conv": 4, "qid": "conv-43_q137", "system": "ours", "category": "4", "abstain": false, "predicted": "", "correct": false}
+{"conv": 4, "qid": "conv-43_q145", "system": "ours", "category": "4", "abstain": false, "predicted": "30-60 seconds", "correct": true}
+{"conv": 4, "qid": "conv-43_q139", "system": "ours", "category": "4", "abstain": false, "predicted": "By taking time off and doing physical therapy, staying focused on recovery, working hard to strengthen his body, and exercising patience and perseverance.", "correct": true}
+{"conv": 4, "qid": "conv-43_q148", "system": "ours", "category": "4", "abstain": false, "predicted": "violin", "correct": true}
+{"conv": 4, "qid": "conv-43_q144", "system": "ours", "category": "4", "abstain": false, "predicted": "Yoga", "correct": true}
+{"conv": 4, "qid": "conv-43_q151", "system": "ours", "category": "4", "abstain": false, "predicted": "A Dance with Dragons", "correct": true}
+{"conv": 4, "qid": "conv-43_q153", "system": "ours", "category": "4", "abstain": false, "predicted": "a big game against our rival", "correct": false}
+{"conv": 4, "qid": "conv-43_q150", "system": "ours", "category": "4", "abstain": false, "predicted": "A Dance with Dragons", "correct": true}
+{"conv": 4, "qid": "conv-43_q147", "system": "ours", "category": "4", "abstain": false, "predicted": "Learning an instrument.", "correct": true}
+{"conv": 4, "qid": "conv-43_q143", "system": "ours", "category": "4", "abstain": false, "predicted": "", "correct": false}
+{"conv": 4, "qid": "conv-43_q149", "system": "ours", "category": "4", "abstain": false, "predicted": "", "correct": false}
+{"conv": 4, "qid": "conv-43_q146", "system": "ours", "category": "4", "abstain": false, "predicted": "A forest near his hometown", "correct": true}
+{"conv": 4, "qid": "conv-43_q159", "system": "ours", "category": "4", "abstain": false, "predicted": "communication and bonding", "correct": true}
+{"conv": 4, "qid": "conv-43_q158", "system": "ours", "category": "4", "abstain": false, "predicted": "In a forest near his hometown.", "correct": false}
+{"conv": 4, "qid": "conv-43_q152", "system": "ours", "category": "4", "abstain": false, "predicted": "Tim's English literature class \u2014 his analysis of a series.", "correct": false}
+{"conv": 4, "qid": "conv-43_q157", "system": "ours", "category": "4", "abstain": false, "predicted": "A deal with a renowned outdoor gear company.", "correct": true}
+{"conv": 4, "qid": "conv-43_q154", "system": "ours", "category": "4", "abstain": false, "predicted": "Practicing basketball outside for hours.", "correct": true}
+{"conv": 4, "qid": "conv-43_q163", "system": "ours", "category": "4", "abstain": false, "predicted": "The Wheel of Time", "correct": true}
+{"conv": 4, "qid": "conv-43_q160", "system": "ours", "category": "4", "abstain": false, "predicted": "Seminars helping people with their sports and marketing.", "correct": true}
+{"conv": 4, "qid": "conv-43_q155", "system": "ours", "category": "4", "abstain": false, "predicted": "It was really electric and added an extra level of intensity.", "correct": true}
+{"conv": 4, "qid": "conv-43_q164", "system": "ours", "category": "4", "abstain": false, "predicted": "German", "correct": true}
+{"conv": 4, "qid": "conv-43_q156", "system": "ours", "category": "4", "abstain": false, "predicted": "Relieved", "correct": false}
+{"conv": 4, "qid": "conv-43_q162", "system": "ours", "category": "4", "abstain": false, "predicted": "Supporting youth sports (fighting for fair chances for underserved communities)", "correct": true}
+{"conv": 4, "qid": "conv-43_q166", "system": "ours", "category": "4", "abstain": false, "predicted": "NO ANSWER", "correct": false}
+{"conv": 4, "qid": "conv-43_q168", "system": "ours", "category": "4", "abstain": false, "predicted": "Aragorn", "correct": true}
+{"conv": 4, "qid": "conv-43_q165", "system": "ours", "category": "4", "abstain": false, "predicted": "French", "correct": false}
+{"conv": 4, "qid": "conv-43_q161", "system": "ours", "category": "4", "abstain": false, "predicted": "He used it to plan his next adventure.", "correct": false}
+{"conv": 4, "qid": "conv-43_q171", "system": "ours", "category": "4", "abstain": false, "predicted": "To stay true and be a leader.", "correct": true}
+{"conv": 4, "qid": "conv-43_q174", "system": "ours", "category": "4", "abstain": false, "predicted": "Galway", "correct": true}
+{"conv": 4, "qid": "conv-43_q167", "system": "ours", "category": "4", "abstain": false, "predicted": "NO ANSWER", "correct": false}
+{"conv": 4, "qid": "conv-43_q173", "system": "ours", "category": "4", "abstain": false, "predicted": "Ireland", "correct": true}
+{"conv": 4, "qid": "conv-43_q172", "system": "ours", "category": "4", "abstain": false, "predicted": "A map of Middle-earth from LOTR.", "correct": true}
+{"conv": 4, "qid": "conv-43_q175", "system": "ours", "category": "4", "abstain": false, "predicted": "A benefit basketball game.", "correct": true}
+{"conv": 4, "qid": "conv-43_q170", "system": "ours", "category": "4", "abstain": false, "predicted": "A painting that reminds him to stay true and be a leader in everything he does.", "correct": false}
+{"conv": 4, "qid": "conv-43_q169", "system": "ours", "category": "4", "abstain": false, "predicted": "Because Aragorn is brave, selfless, down-to-earth, never gives up, stands up for justice, grows a lot, and is a great leader who puts others first.", "correct": false}
+{"conv": 4, "qid": "conv-43_q179", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 4, "qid": "conv-43_q176", "system": "ours", "category": "4", "abstain": false, "predicted": "", "correct": false}
+{"conv": 4, "qid": "conv-43_q181", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 4, "qid": "conv-43_q182", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 4, "qid": "conv-43_q177", "system": "ours", "category": "4", "abstain": false, "predicted": "He said it was \"wild\" and \"a total dream come true\" \u2014 \"just crazy!\"", "correct": true}
+{"conv": 4, "qid": "conv-43_q180", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 4, "qid": "conv-43_q183", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 4, "qid": "conv-43_q184", "system": "ours", "category": "5", "abstain": true, "predicted": "", "correct": true}
+{"conv": 4, "qid": "conv-43_q178", "system": "ours", "category": "4", "abstain": false, "predicted": "", "correct": false}
+{"conv": 4, "qid": "conv-43_q188", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 4, "qid": "conv-43_q185", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 4, "qid": "conv-43_q190", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 4, "qid": "conv-43_q186", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 4, "qid": "conv-43_q189", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 4, "qid": "conv-43_q192", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 4, "qid": "conv-43_q187", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 4, "qid": "conv-43_q194", "system": "ours", "category": "5", "abstain": true, "predicted": "To show their friendship and appreciation.", "correct": false}
+{"conv": 4, "qid": "conv-43_q191", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 4, "qid": "conv-43_q197", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 4, "qid": "conv-43_q195", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 4, "qid": "conv-43_q193", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 4, "qid": "conv-43_q200", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 4, "qid": "conv-43_q203", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 4, "qid": "conv-43_q196", "system": "ours", "category": "5", "abstain": true, "predicted": "", "correct": true}
+{"conv": 4, "qid": "conv-43_q199", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 4, "qid": "conv-43_q198", "system": "ours", "category": "5", "abstain": true, "predicted": "Home Alone", "correct": false}
+{"conv": 4, "qid": "conv-43_q204", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 4, "qid": "conv-43_q201", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 4, "qid": "conv-43_q202", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 4, "qid": "conv-43_q206", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 4, "qid": "conv-43_q205", "system": "ours", "category": "5", "abstain": true, "predicted": "", "correct": true}
+{"conv": 4, "qid": "conv-43_q207", "system": "ours", "category": "5", "abstain": true, "predicted": "", "correct": true}
+{"conv": 4, "qid": "conv-43_q210", "system": "ours", "category": "5", "abstain": true, "predicted": "Seeing them reach their goals and getting to show others what you know.", "correct": false}
+{"conv": 4, "qid": "conv-43_q215", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 4, "qid": "conv-43_q212", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 4, "qid": "conv-43_q208", "system": "ours", "category": "5", "abstain": true, "predicted": "", "correct": true}
+{"conv": 4, "qid": "conv-43_q209", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 4, "qid": "conv-43_q211", "system": "ours", "category": "5", "abstain": true, "predicted": "", "correct": true}
+{"conv": 4, "qid": "conv-43_q213", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 4, "qid": "conv-43_q214", "system": "ours", "category": "5", "abstain": true, "predicted": "", "correct": true}
+{"conv": 4, "qid": "conv-43_q216", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 4, "qid": "conv-43_q218", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 4, "qid": "conv-43_q217", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 4, "qid": "conv-43_q220", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 4, "qid": "conv-43_q219", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 4, "qid": "conv-43_q226", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 4, "qid": "conv-43_q225", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 4, "qid": "conv-43_q221", "system": "ours", "category": "5", "abstain": true, "predicted": "", "correct": true}
+{"conv": 4, "qid": "conv-43_q224", "system": "ours", "category": "5", "abstain": true, "predicted": "", "correct": true}
+{"conv": 4, "qid": "conv-43_q227", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 4, "qid": "conv-43_q222", "system": "ours", "category": "5", "abstain": true, "predicted": "", "correct": true}
+{"conv": 4, "qid": "conv-43_q223", "system": "ours", "category": "5", "abstain": true, "predicted": "", "correct": true}
+{"conv": 4, "qid": "conv-43_q228", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 4, "qid": "conv-43_q230", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 4, "qid": "conv-43_q231", "system": "ours", "category": "5", "abstain": true, "predicted": "Communication and bonding", "correct": false}
+{"conv": 4, "qid": "conv-43_q232", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 4, "qid": "conv-43_q235", "system": "ours", "category": "5", "abstain": true, "predicted": "Spanish", "correct": false}
+{"conv": 4, "qid": "conv-43_q234", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 4, "qid": "conv-43_q229", "system": "ours", "category": "5", "abstain": true, "predicted": "", "correct": true}
+{"conv": 4, "qid": "conv-43_q238", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 4, "qid": "conv-43_q236", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 4, "qid": "conv-43_q233", "system": "ours", "category": "5", "abstain": true, "predicted": "", "correct": true}
+{"conv": 4, "qid": "conv-43_q237", "system": "ours", "category": "5", "abstain": true, "predicted": "Because Aragorn's inspiring story of growth and redemption\u2014from a ranger to king of Gondor.", "correct": false}
+{"conv": 4, "qid": "conv-43_q241", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 4, "qid": "conv-43_q242", "system": "ours", "category": "5", "abstain": true, "predicted": "Congrats! How did it feel to seal the deal?", "correct": false}
+{"conv": 4, "qid": "conv-43_q240", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 4, "qid": "conv-43_q239", "system": "ours", "category": "5", "abstain": true, "predicted": "", "correct": true}
+{"conv": 6, "qid": "conv-47_q007", "system": "ours", "category": "3", "abstain": false, "predicted": "NO ANSWER", "correct": false}
+{"conv": 6, "qid": "conv-47_q010", "system": "ours", "category": "1", "abstain": false, "predicted": "Max and Daisy", "correct": false}
+{"conv": 6, "qid": "conv-47_q008", "system": "ours", "category": "3", "abstain": false, "predicted": "NO ANSWER", "correct": false}
+{"conv": 6, "qid": "conv-47_q002", "system": "ours", "category": "2", "abstain": false, "predicted": "NO ANSWER", "correct": false}
+{"conv": 6, "qid": "conv-47_q001", "system": "ours", "category": "3", "abstain": false, "predicted": "NO ANSWER", "correct": false}
+{"conv": 6, "qid": "conv-47_q006", "system": "ours", "category": "1", "abstain": false, "predicted": "NO ANSWER", "correct": false}
+{"conv": 6, "qid": "conv-47_q005", "system": "ours", "category": "2", "abstain": false, "predicted": "NO ANSWER", "correct": false}
+{"conv": 6, "qid": "conv-47_q012", "system": "ours", "category": "2", "abstain": false, "predicted": "NO ANSWER", "correct": false}
+{"conv": 6, "qid": "conv-47_q003", "system": "ours", "category": "1", "abstain": false, "predicted": "", "correct": false}
+{"conv": 6, "qid": "conv-47_q004", "system": "ours", "category": "1", "abstain": false, "predicted": "No.", "correct": true}
+{"conv": 6, "qid": "conv-47_q009", "system": "ours", "category": "1", "abstain": false, "predicted": "Three dogs.", "correct": true}
+{"conv": 6, "qid": "conv-47_q013", "system": "ours", "category": "3", "abstain": false, "predicted": "NO ANSWER", "correct": false}
+{"conv": 6, "qid": "conv-47_q017", "system": "ours", "category": "3", "abstain": false, "predicted": "NO ANSWER", "correct": false}
+{"conv": 6, "qid": "conv-47_q018", "system": "ours", "category": "3", "abstain": false, "predicted": "NO ANSWER", "correct": false}
+{"conv": 6, "qid": "conv-47_q016", "system": "ours", "category": "2", "abstain": false, "predicted": "NO ANSWER", "correct": false}
+{"conv": 6, "qid": "conv-47_q015", "system": "ours", "category": "2", "abstain": false, "predicted": "", "correct": false}
+{"conv": 6, "qid": "conv-47_q020", "system": "ours", "category": "3", "abstain": false, "predicted": "NO ANSWER", "correct": false}
+{"conv": 6, "qid": "conv-47_q011", "system": "ours", "category": "2", "abstain": false, "predicted": "", "correct": false}
+{"conv": 6, "qid": "conv-47_q019", "system": "ours", "category": "1", "abstain": false, "predicted": "NO ANSWER", "correct": false}
+{"conv": 6, "qid": "conv-47_q021", "system": "ours", "category": "1", "abstain": false, "predicted": "", "correct": false}
+{"conv": 6, "qid": "conv-47_q022", "system": "ours", "category": "2", "abstain": false, "predicted": "8 May 2022", "correct": false}
+{"conv": 6, "qid": "conv-47_q014", "system": "ours", "category": "2", "abstain": false, "predicted": "Last year.", "correct": false}
+{"conv": 6, "qid": "conv-47_q026", "system": "ours", "category": "3", "abstain": false, "predicted": "No.", "correct": true}
+{"conv": 6, "qid": "conv-47_q029", "system": "ours", "category": "2", "abstain": false, "predicted": "19 June 2022", "correct": false}
+{"conv": 6, "qid": "conv-47_q025", "system": "ours", "category": "1", "abstain": false, "predicted": "", "correct": false}
+{"conv": 6, "qid": "conv-47_q024", "system": "ours", "category": "2", "abstain": false, "predicted": "", "correct": false}
+{"conv": 6, "qid": "conv-47_q027", "system": "ours", "category": "1", "abstain": false, "predicted": "", "correct": false}
+{"conv": 6, "qid": "conv-47_q030", "system": "ours", "category": "2", "abstain": false, "predicted": "NO ANSWER", "correct": false}
+{"conv": 6, "qid": "conv-47_q031", "system": "ours", "category": "3", "abstain": false, "predicted": "NO ANSWER", "correct": false}
+{"conv": 6, "qid": "conv-47_q033", "system": "ours", "category": "2", "abstain": false, "predicted": "NO ANSWER", "correct": false}
+{"conv": 6, "qid": "conv-47_q023", "system": "ours", "category": "1", "abstain": false, "predicted": "a children's hospital", "correct": false}
+{"conv": 6, "qid": "conv-47_q032", "system": "ours", "category": "2", "abstain": false, "predicted": "NO ANSWER", "correct": false}
+{"conv": 6, "qid": "conv-47_q028", "system": "ours", "category": "1", "abstain": false, "predicted": "", "correct": false}
+{"conv": 6, "qid": "conv-47_q037", "system": "ours", "category": "3", "abstain": false, "predicted": "NO ANSWER", "correct": false}
+{"conv": 6, "qid": "conv-47_q034", "system": "ours", "category": "3", "abstain": false, "predicted": "NO ANSWER", "correct": false}
+{"conv": 6, "qid": "conv-47_q041", "system": "ours", "category": "1", "abstain": false, "predicted": "Sit, stay, paw, and rollover.", "correct": false}
+{"conv": 6, "qid": "conv-47_q035", "system": "ours", "category": "1", "abstain": false, "predicted": "", "correct": false}
+{"conv": 6, "qid": "conv-47_q036", "system": "ours", "category": "3", "abstain": false, "predicted": "", "correct": false}
+{"conv": 6, "qid": "conv-47_q040", "system": "ours", "category": "2", "abstain": false, "predicted": "NO ANSWER", "correct": false}
+{"conv": 6, "qid": "conv-47_q042", "system": "ours", "category": "2", "abstain": false, "predicted": "NO ANSWER", "correct": false}
+{"conv": 6, "qid": "conv-47_q038", "system": "ours", "category": "2", "abstain": false, "predicted": "", "correct": false}
+{"conv": 6, "qid": "conv-47_q039", "system": "ours", "category": "1", "abstain": false, "predicted": "He left his IT job after three years and got his dream/new job, which he's loving.", "correct": false}
+{"conv": 6, "qid": "conv-47_q043", "system": "ours", "category": "2", "abstain": false, "predicted": "", "correct": false}
+{"conv": 6, "qid": "conv-47_q044", "system": "ours", "category": "2", "abstain": false, "predicted": "21 August 2022", "correct": false}
+{"conv": 6, "qid": "conv-47_q049", "system": "ours", "category": "2", "abstain": false, "predicted": "NO ANSWER", "correct": false}
+{"conv": 6, "qid": "conv-47_q045", "system": "ours", "category": "3", "abstain": false, "predicted": "He preferred to have a beer somewhere instead.", "correct": true}
+{"conv": 6, "qid": "conv-47_q046", "system": "ours", "category": "1", "abstain": false, "predicted": "Stout", "correct": true}
+{"conv": 6, "qid": "conv-47_q047", "system": "ours", "category": "2", "abstain": false, "predicted": "NO ANSWER", "correct": false}
+{"conv": 6, "qid": "conv-47_q048", "system": "ours", "category": "2", "abstain": false, "predicted": "", "correct": false}
+{"conv": 6, "qid": "conv-47_q050", "system": "ours", "category": "1", "abstain": false, "predicted": "", "correct": false}
+{"conv": 6, "qid": "conv-47_q055", "system": "ours", "category": "1", "abstain": false, "predicted": "A programming seminar.", "correct": false}
+{"conv": 6, "qid": "conv-47_q052", "system": "ours", "category": "1", "abstain": false, "predicted": "", "correct": false}
+{"conv": 6, "qid": "conv-47_q051", "system": "ours", "category": "2", "abstain": false, "predicted": "", "correct": false}
+{"conv": 6, "qid": "conv-47_q053", "system": "ours", "category": "2", "abstain": false, "predicted": "", "correct": false}
+{"conv": 6, "qid": "conv-47_q054", "system": "ours", "category": "2", "abstain": false, "predicted": "", "correct": false}
+{"conv": 6, "qid": "conv-47_q056", "system": "ours", "category": "2", "abstain": false, "predicted": "The week before 13 October 2022.", "correct": true}
+{"conv": 6, "qid": "conv-47_q059", "system": "ours", "category": "2", "abstain": false, "predicted": "20 October 2022", "correct": true}
+{"conv": 6, "qid": "conv-47_q062", "system": "ours", "category": "2", "abstain": false, "predicted": "NO ANSWER", "correct": false}
+{"conv": 6, "qid": "conv-47_q058", "system": "ours", "category": "2", "abstain": false, "predicted": "", "correct": false}
+{"conv": 6, "qid": "conv-47_q065", "system": "ours", "category": "2", "abstain": false, "predicted": "NO ANSWER", "correct": false}
+{"conv": 6, "qid": "conv-47_q067", "system": "ours", "category": "2", "abstain": false, "predicted": "7 November 2022", "correct": false}
+{"conv": 6, "qid": "conv-47_q066", "system": "ours", "category": "2", "abstain": false, "predicted": "7 November 2022", "correct": true}
+{"conv": 6, "qid": "conv-47_q068", "system": "ours", "category": "4", "abstain": false, "predicted": "Python and C++.", "correct": true}
+{"conv": 6, "qid": "conv-47_q061", "system": "ours", "category": "1", "abstain": false, "predicted": "CS:GO, Fortnite, Overwatch, Apex Legends", "correct": true}
+{"conv": 6, "qid": "conv-47_q060", "system": "ours", "category": "2", "abstain": false, "predicted": "", "correct": false}
+{"conv": 6, "qid": "conv-47_q063", "system": "ours", "category": "2", "abstain": false, "predicted": "", "correct": false}
+{"conv": 6, "qid": "conv-47_q064", "system": "ours", "category": "2", "abstain": false, "predicted": "", "correct": false}
+{"conv": 6, "qid": "conv-47_q057", "system": "ours", "category": "1", "abstain": false, "predicted": "NO ANSWER", "correct": false}
+{"conv": 6, "qid": "conv-47_q072", "system": "ours", "category": "4", "abstain": false, "predicted": "He offered to help find the perfect pet for John.", "correct": true}
+{"conv": 6, "qid": "conv-47_q069", "system": "ours", "category": "4", "abstain": false, "predicted": "A dog-walking and pet-care app.", "correct": true}
+{"conv": 6, "qid": "conv-47_q070", "system": "ours", "category": "4", "abstain": false, "predicted": "By adding a personal touch: letting users add their pup's preferences/needs to customize it for each owner and pup.", "correct": true}
+{"conv": 6, "qid": "conv-47_q071", "system": "ours", "category": "4", "abstain": false, "predicted": "Mostly just bottle caps.", "correct": true}
+{"conv": 6, "qid": "conv-47_q077", "system": "ours", "category": "4", "abstain": false, "predicted": "Voice chat.", "correct": true}
+{"conv": 6, "qid": "conv-47_q080", "system": "ours", "category": "4", "abstain": false, "predicted": "Ned", "correct": true}
+{"conv": 6, "qid": "conv-47_q075", "system": "ours", "category": "4", "abstain": false, "predicted": "", "correct": false}
+{"conv": 6, "qid": "conv-47_q078", "system": "ours", "category": "4", "abstain": false, "predicted": "A couple of gaming tips.", "correct": false}
+{"conv": 6, "qid": "conv-47_q073", "system": "ours", "category": "4", "abstain": false, "predicted": "", "correct": false}
+{"conv": 6, "qid": "conv-47_q076", "system": "ours", "category": "4", "abstain": false, "predicted": "", "correct": false}
+{"conv": 6, "qid": "conv-47_q074", "system": "ours", "category": "4", "abstain": false, "predicted": "", "correct": false}
+{"conv": 6, "qid": "conv-47_q083", "system": "ours", "category": "4", "abstain": false, "predicted": "Italy", "correct": true}
+{"conv": 6, "qid": "conv-47_q079", "system": "ours", "category": "4", "abstain": false, "predicted": "A pup.", "correct": true}
+{"conv": 6, "qid": "conv-47_q086", "system": "ours", "category": "4", "abstain": false, "predicted": "Labrador", "correct": true}
+{"conv": 6, "qid": "conv-47_q085", "system": "ours", "category": "4", "abstain": false, "predicted": "A difficult coding assignment", "correct": true}
+{"conv": 6, "qid": "conv-47_q088", "system": "ours", "category": "4", "abstain": false, "predicted": "Hawaiian pizza", "correct": true}
+{"conv": 6, "qid": "conv-47_q081", "system": "ours", "category": "4", "abstain": false, "predicted": "", "correct": false}
+{"conv": 6, "qid": "conv-47_q087", "system": "ours", "category": "4", "abstain": false, "predicted": "Pepperoni", "correct": true}
+{"conv": 6, "qid": "conv-47_q090", "system": "ours", "category": "4", "abstain": false, "predicted": "They used it to buy groceries and cook food for the homeless.", "correct": true}
+{"conv": 6, "qid": "conv-47_q082", "system": "ours", "category": "4", "abstain": false, "predicted": "Witcher 3\u2019s amazing world and story.", "correct": false}
+{"conv": 6, "qid": "conv-47_q084", "system": "ours", "category": "4", "abstain": false, "predicted": "The megacities \u2014 how technologically advanced they are and the mesmerizing huge screens on the buildings.", "correct": false}
+{"conv": 6, "qid": "conv-47_q096", "system": "ours", "category": "4", "abstain": false, "predicted": "Liverpool", "correct": true}
+{"conv": 6, "qid": "conv-47_q091", "system": "ours", "category": "4", "abstain": false, "predicted": "To raise money for a dog shelter.", "correct": true}
+{"conv": 6, "qid": "conv-47_q097", "system": "ours", "category": "4", "abstain": false, "predicted": "Manchester City", "correct": true}
+{"conv": 6, "qid": "conv-47_q094", "system": "ours", "category": "4", "abstain": false, "predicted": "Some money", "correct": false}
+{"conv": 6, "qid": "conv-47_q089", "system": "ours", "category": "4", "abstain": false, "predicted": "A tournament for charity.", "correct": false}
+{"conv": 6, "qid": "conv-47_q099", "system": "ours", "category": "4", "abstain": false, "predicted": "Catching frisbees in mid-air", "correct": true}
+{"conv": 6, "qid": "conv-47_q095", "system": "ours", "category": "4", "abstain": false, "predicted": "NO ANSWER", "correct": false}
+{"conv": 6, "qid": "conv-47_q092", "system": "ours", "category": "4", "abstain": false, "predicted": "It streamlined their operations by making tracking inventory, resources, and donations run smoother, generating reports for analysis, and centralizing inventory in a smartphone app.", "correct": true}
+{"conv": 6, "qid": "conv-47_q093", "system": "ours", "category": "4", "abstain": false, "predicted": "", "correct": false}
+{"conv": 6, "qid": "conv-47_q100", "system": "ours", "category": "4", "abstain": false, "predicted": "Providing necessary items to those who are less fortunate.", "correct": true}
+{"conv": 6, "qid": "conv-47_q101", "system": "ours", "category": "4", "abstain": false, "predicted": "No.", "correct": true}
+{"conv": 6, "qid": "conv-47_q098", "system": "ours", "category": "4", "abstain": false, "predicted": "", "correct": false}
+{"conv": 6, "qid": "conv-47_q104", "system": "ours", "category": "4", "abstain": false, "predicted": "Extreme sports", "correct": true}
+{"conv": 6, "qid": "conv-47_q105", "system": "ours", "category": "4", "abstain": false, "predicted": "Vancouver", "correct": true}
+{"conv": 6, "qid": "conv-47_q102", "system": "ours", "category": "4", "abstain": false, "predicted": "By reading.", "correct": true}
+{"conv": 6, "qid": "conv-47_q103", "system": "ours", "category": "4", "abstain": false, "predicted": "Reading", "correct": true}
+{"conv": 6, "qid": "conv-47_q108", "system": "ours", "category": "4", "abstain": false, "predicted": "He wanted something that made a difference.", "correct": false}
+{"conv": 6, "qid": "conv-47_q106", "system": "ours", "category": "4", "abstain": false, "predicted": "July 20, 2022", "correct": false}
+{"conv": 6, "qid": "conv-47_q109", "system": "ours", "category": "4", "abstain": false, "predicted": "Fortnite", "correct": true}
+{"conv": 6, "qid": "conv-47_q107", "system": "ours", "category": "4", "abstain": false, "predicted": "Chess", "correct": true}
+{"conv": 6, "qid": "conv-47_q112", "system": "ours", "category": "4", "abstain": false, "predicted": "The Witcher 3", "correct": true}
+{"conv": 6, "qid": "conv-47_q111", "system": "ours", "category": "4", "abstain": false, "predicted": "Strategy and RPG games.", "correct": true}
+{"conv": 6, "qid": "conv-47_q110", "system": "ours", "category": "4", "abstain": false, "predicted": "It had a routine examination and was vaccinated to prevent the seasonal canine disease.", "correct": true}
+{"conv": 6, "qid": "conv-47_q114", "system": "ours", "category": "4", "abstain": false, "predicted": "Samantha", "correct": true}
+{"conv": 6, "qid": "conv-47_q117", "system": "ours", "category": "4", "abstain": false, "predicted": "dark beer", "correct": true}
+{"conv": 6, "qid": "conv-47_q119", "system": "ours", "category": "4", "abstain": false, "predicted": "Coding", "correct": true}
+{"conv": 6, "qid": "conv-47_q115", "system": "ours", "category": "4", "abstain": false, "predicted": "Call her tomorrow.", "correct": false}
+{"conv": 6, "qid": "conv-47_q121", "system": "ours", "category": "4", "abstain": false, "predicted": "Sennheiser", "correct": true}
+{"conv": 6, "qid": "conv-47_q113", "system": "ours", "category": "4", "abstain": false, "predicted": "", "correct": false}
+{"conv": 6, "qid": "conv-47_q120", "system": "ours", "category": "4", "abstain": false, "predicted": "Basic games and stories.", "correct": true}
+{"conv": 6, "qid": "conv-47_q123", "system": "ours", "category": "4", "abstain": false, "predicted": "$10 per class", "correct": true}
+{"conv": 6, "qid": "conv-47_q122", "system": "ours", "category": "4", "abstain": false, "predicted": "A good lager beer.", "correct": true}
+{"conv": 6, "qid": "conv-47_q116", "system": "ours", "category": "4", "abstain": false, "predicted": "A gaming night", "correct": true}
+{"conv": 6, "qid": "conv-47_q125", "system": "ours", "category": "4", "abstain": false, "predicted": "He wanted to learn something new.", "correct": true}
+{"conv": 6, "qid": "conv-47_q126", "system": "ours", "category": "4", "abstain": false, "predicted": "An omelette.", "correct": true}
+{"conv": 6, "qid": "conv-47_q128", "system": "ours", "category": "4", "abstain": false, "predicted": "From various sources like books, movies, and even dreams.", "correct": true}
+{"conv": 6, "qid": "conv-47_q124", "system": "ours", "category": "4", "abstain": false, "predicted": "dough", "correct": true}
+{"conv": 6, "qid": "conv-47_q118", "system": "ours", "category": "4", "abstain": false, "predicted": "A major bug in the code that messed up the game mechanics (couldn't fix it despite hours of debugging), and challenges balancing mechanics and ensuring fairness.", "correct": false}
+{"conv": 6, "qid": "conv-47_q127", "system": "ours", "category": "4", "abstain": false, "predicted": "Dungeons of the Dragon", "correct": true}
+{"conv": 6, "qid": "conv-47_q132", "system": "ours", "category": "4", "abstain": false, "predicted": "Drums", "correct": true}
+{"conv": 6, "qid": "conv-47_q133", "system": "ours", "category": "4", "abstain": false, "predicted": "He made his first mobile game.", "correct": true}
+{"conv": 6, "qid": "conv-47_q129", "system": "ours", "category": "4", "abstain": false, "predicted": "A crazy, vivid dream.", "correct": false}
+{"conv": 6, "qid": "conv-47_q136", "system": "ours", "category": "4", "abstain": false, "predicted": "Programming mentor for game developers.", "correct": true}
+{"conv": 6, "qid": "conv-47_q135", "system": "ours", "category": "4", "abstain": false, "predicted": "He watches tutorials and keeps up with developer forums for information and ideas.", "correct": true}
+{"conv": 6, "qid": "conv-47_q138", "system": "ours", "category": "4", "abstain": false, "predicted": "RPGs", "correct": true}
+{"conv": 6, "qid": "conv-47_q131", "system": "ours", "category": "4", "abstain": false, "predicted": "Guitar", "correct": true}
+{"conv": 6, "qid": "conv-47_q134", "system": "ours", "category": "4", "abstain": false, "predicted": "NO ANSWER", "correct": false}
+{"conv": 6, "qid": "conv-47_q130", "system": "ours", "category": "4", "abstain": false, "predicted": "Electronic and rock music", "correct": true}
+{"conv": 6, "qid": "conv-47_q141", "system": "ours", "category": "4", "abstain": false, "predicted": "Progress in his game.", "correct": false}
+{"conv": 6, "qid": "conv-47_q147", "system": "ours", "category": "4", "abstain": false, "predicted": "FIFA 23", "correct": true}
+{"conv": 6, "qid": "conv-47_q139", "system": "ours", "category": "4", "abstain": false, "predicted": "", "correct": false}
+{"conv": 6, "qid": "conv-47_q137", "system": "ours", "category": "4", "abstain": false, "predicted": "John is really excited.", "correct": false}
+{"conv": 6, "qid": "conv-47_q140", "system": "ours", "category": "4", "abstain": false, "predicted": "Playing his first gaming system \u2014 playing Super Mario and The Legend of Zelda for hours.", "correct": true}
+{"conv": 6, "qid": "conv-47_q146", "system": "ours", "category": "4", "abstain": false, "predicted": "Because they love McGee's bar \u2014 its proximity was one of their criteria for choosing the apartment.", "correct": true}
+{"conv": 6, "qid": "conv-47_q143", "system": "ours", "category": "4", "abstain": false, "predicted": "To raise money for a children's hospital.", "correct": true}
+{"conv": 6, "qid": "conv-47_q144", "system": "ours", "category": "4", "abstain": false, "predicted": "They decided to move in together.", "correct": true}
+{"conv": 6, "qid": "conv-47_q142", "system": "ours", "category": "4", "abstain": false, "predicted": "Fortnite, Overwatch, and Apex Legends.", "correct": true}
+{"conv": 6, "qid": "conv-47_q145", "system": "ours", "category": "4", "abstain": false, "predicted": "They rented an apartment not far from McGee's bar.", "correct": true}
+{"conv": 6, "qid": "conv-47_q151", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 6, "qid": "conv-47_q152", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 6, "qid": "conv-47_q154", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 6, "qid": "conv-47_q150", "system": "ours", "category": "4", "abstain": false, "predicted": "", "correct": false}
+{"conv": 6, "qid": "conv-47_q149", "system": "ours", "category": "4", "abstain": false, "predicted": "An online board game.", "correct": true}
+{"conv": 6, "qid": "conv-47_q156", "system": "ours", "category": "5", "abstain": true, "predicted": "They used it to buy groceries and cook food for the homeless.", "correct": false}
+{"conv": 6, "qid": "conv-47_q153", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 6, "qid": "conv-47_q148", "system": "ours", "category": "4", "abstain": false, "predicted": "You need to practice a little first.", "correct": false}
+{"conv": 6, "qid": "conv-47_q155", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 6, "qid": "conv-47_q157", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 6, "qid": "conv-47_q160", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 6, "qid": "conv-47_q163", "system": "ours", "category": "5", "abstain": true, "predicted": "Surfing", "correct": false}
+{"conv": 6, "qid": "conv-47_q158", "system": "ours", "category": "5", "abstain": true, "predicted": "Tracking inventory, resources and donations, streamlining operations, and generating reports for analysis.", "correct": false}
+{"conv": 6, "qid": "conv-47_q162", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 6, "qid": "conv-47_q159", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 6, "qid": "conv-47_q166", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 6, "qid": "conv-47_q164", "system": "ours", "category": "5", "abstain": true, "predicted": "Reading", "correct": false}
+{"conv": 6, "qid": "conv-47_q161", "system": "ours", "category": "5", "abstain": true, "predicted": "", "correct": true}
+{"conv": 6, "qid": "conv-47_q165", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 6, "qid": "conv-47_q168", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 6, "qid": "conv-47_q167", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 6, "qid": "conv-47_q171", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 6, "qid": "conv-47_q170", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 6, "qid": "conv-47_q172", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 6, "qid": "conv-47_q173", "system": "ours", "category": "5", "abstain": true, "predicted": "dough", "correct": false}
+{"conv": 6, "qid": "conv-47_q174", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 6, "qid": "conv-47_q175", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER.", "correct": true}
+{"conv": 6, "qid": "conv-47_q178", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 6, "qid": "conv-47_q176", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 6, "qid": "conv-47_q177", "system": "ours", "category": "5", "abstain": true, "predicted": "", "correct": true}
+{"conv": 6, "qid": "conv-47_q182", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 6, "qid": "conv-47_q169", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 6, "qid": "conv-47_q184", "system": "ours", "category": "5", "abstain": true, "predicted": "For a children's hospital.", "correct": false}
+{"conv": 6, "qid": "conv-47_q179", "system": "ours", "category": "5", "abstain": true, "predicted": "", "correct": true}
+{"conv": 6, "qid": "conv-47_q180", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 6, "qid": "conv-47_q183", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 6, "qid": "conv-47_q181", "system": "ours", "category": "5", "abstain": true, "predicted": "He thinks it sounds awesome and that John must love it.", "correct": false}
+{"conv": 6, "qid": "conv-47_q186", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 6, "qid": "conv-47_q185", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 6, "qid": "conv-47_q187", "system": "ours", "category": "5", "abstain": true, "predicted": "", "correct": true}
+{"conv": 6, "qid": "conv-47_q188", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 6, "qid": "conv-47_q189", "system": "ours", "category": "5", "abstain": true, "predicted": "", "correct": true}
+{"conv": 6, "qid": "conv-47_q190", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 8, "qid": "conv-49_q001", "system": "ours", "category": "1", "abstain": false, "predicted": "Prius", "correct": true}
+{"conv": 8, "qid": "conv-49_q004", "system": "ours", "category": "1", "abstain": false, "predicted": "2", "correct": true}
+{"conv": 8, "qid": "conv-49_q006", "system": "ours", "category": "3", "abstain": false, "predicted": "NO ANSWER", "correct": false}
+{"conv": 8, "qid": "conv-49_q010", "system": "ours", "category": "2", "abstain": false, "predicted": "The weekend before 24 May 2023.", "correct": true}
+{"conv": 8, "qid": "conv-49_q005", "system": "ours", "category": "2", "abstain": false, "predicted": "", "correct": false}
+{"conv": 8, "qid": "conv-49_q003", "system": "ours", "category": "1", "abstain": false, "predicted": "", "correct": false}
+{"conv": 8, "qid": "conv-49_q009", "system": "ours", "category": "1", "abstain": false, "predicted": "", "correct": false}
+{"conv": 8, "qid": "conv-49_q002", "system": "ours", "category": "1", "abstain": false, "predicted": "His new Prius (a car).", "correct": false}
+{"conv": 8, "qid": "conv-49_q008", "system": "ours", "category": "1", "abstain": false, "predicted": "Painting, kayaking, skiing", "correct": false}
+{"conv": 8, "qid": "conv-49_q007", "system": "ours", "category": "1", "abstain": false, "predicted": "", "correct": false}
+{"conv": 8, "qid": "conv-49_q012", "system": "ours", "category": "1", "abstain": false, "predicted": "Gastritis", "correct": false}
+{"conv": 8, "qid": "conv-49_q011", "system": "ours", "category": "3", "abstain": false, "predicted": "", "correct": false}
+{"conv": 8, "qid": "conv-49_q016", "system": "ours", "category": "1", "abstain": false, "predicted": "Soda and candy", "correct": true}
+{"conv": 8, "qid": "conv-49_q015", "system": "ours", "category": "1", "abstain": false, "predicted": "NO ANSWER", "correct": false}
+{"conv": 8, "qid": "conv-49_q013", "system": "ours", "category": "2", "abstain": false, "predicted": "24 May 2023", "correct": false}
+{"conv": 8, "qid": "conv-49_q017", "system": "ours", "category": "1", "abstain": false, "predicted": "Problems with the self-checkout machines.", "correct": true}
+{"conv": 8, "qid": "conv-49_q014", "system": "ours", "category": "2", "abstain": false, "predicted": "", "correct": false}
+{"conv": 8, "qid": "conv-49_q020", "system": "ours", "category": "3", "abstain": false, "predicted": "", "correct": false}
+{"conv": 8, "qid": "conv-49_q019", "system": "ours", "category": "1", "abstain": false, "predicted": "", "correct": false}
+{"conv": 8, "qid": "conv-49_q021", "system": "ours", "category": "3", "abstain": false, "predicted": "NO ANSWER", "correct": false}
+{"conv": 8, "qid": "conv-49_q018", "system": "ours", "category": "2", "abstain": false, "predicted": "27 July 2023", "correct": false}
+{"conv": 8, "qid": "conv-49_q027", "system": "ours", "category": "1", "abstain": false, "predicted": "His family.", "correct": false}
+{"conv": 8, "qid": "conv-49_q026", "system": "ours", "category": "2", "abstain": false, "predicted": "NO ANSWER", "correct": false}
+{"conv": 8, "qid": "conv-49_q022", "system": "ours", "category": "1", "abstain": false, "predicted": "", "correct": false}
+{"conv": 8, "qid": "conv-49_q024", "system": "ours", "category": "2", "abstain": false, "predicted": "", "correct": false}
+{"conv": 8, "qid": "conv-49_q023", "system": "ours", "category": "2", "abstain": false, "predicted": "", "correct": false}
+{"conv": 8, "qid": "conv-49_q029", "system": "ours", "category": "1", "abstain": false, "predicted": "Journal writing and creative writing.", "correct": true}
+{"conv": 8, "qid": "conv-49_q025", "system": "ours", "category": "2", "abstain": false, "predicted": "", "correct": false}
+{"conv": 8, "qid": "conv-49_q031", "system": "ours", "category": "2", "abstain": false, "predicted": "13 August 2023", "correct": true}
+{"conv": 8, "qid": "conv-49_q030", "system": "ours", "category": "1", "abstain": false, "predicted": "He met an awesome Canadian woman, and he came back with his new SO.", "correct": true}
+{"conv": 8, "qid": "conv-49_q034", "system": "ours", "category": "1", "abstain": false, "predicted": "Flying over skyscrapers", "correct": true}
+{"conv": 8, "qid": "conv-49_q032", "system": "ours", "category": "3", "abstain": false, "predicted": "", "correct": false}
+{"conv": 8, "qid": "conv-49_q038", "system": "ours", "category": "1", "abstain": false, "predicted": "NO ANSWER", "correct": false}
+{"conv": 8, "qid": "conv-49_q033", "system": "ours", "category": "1", "abstain": false, "predicted": "", "correct": false}
+{"conv": 8, "qid": "conv-49_q035", "system": "ours", "category": "1", "abstain": false, "predicted": "He fell off his bike and had a soccer accident that injured his ankle.", "correct": true}
+{"conv": 8, "qid": "conv-49_q036", "system": "ours", "category": "2", "abstain": false, "predicted": "", "correct": false}
+{"conv": 8, "qid": "conv-49_q037", "system": "ours", "category": "1", "abstain": false, "predicted": "Roasted vegetables; a homemade sauce; marinated, grilled veggies.", "correct": false}
+{"conv": 8, "qid": "conv-49_q039", "system": "ours", "category": "3", "abstain": false, "predicted": "It calms and rejuvenates them \u2014 providing peacefulness, clarity, relaxation, fresh air, and a \"reset\" for the mind and body.", "correct": true}
+{"conv": 8, "qid": "conv-49_q041", "system": "ours", "category": "2", "abstain": false, "predicted": "A few days before 19 August 2023.", "correct": true}
+{"conv": 8, "qid": "conv-49_q040", "system": "ours", "category": "2", "abstain": false, "predicted": "", "correct": false}
+{"conv": 8, "qid": "conv-49_q028", "system": "ours", "category": "3", "abstain": false, "predicted": "NO ANSWER", "correct": false}
+{"conv": 8, "qid": "conv-49_q042", "system": "ours", "category": "2", "abstain": false, "predicted": "Painting classes (watercolors)", "correct": true}
+{"conv": 8, "qid": "conv-49_q046", "system": "ours", "category": "2", "abstain": false, "predicted": "NO ANSWER", "correct": false}
+{"conv": 8, "qid": "conv-49_q045", "system": "ours", "category": "1", "abstain": false, "predicted": "", "correct": false}
+{"conv": 8, "qid": "conv-49_q043", "system": "ours", "category": "1", "abstain": false, "predicted": "A friend gave him a painting and inspired him to start painting.", "correct": false}
+{"conv": 8, "qid": "conv-49_q044", "system": "ours", "category": "3", "abstain": false, "predicted": "NO ANSWER", "correct": false}
+{"conv": 8, "qid": "conv-49_q050", "system": "ours", "category": "1", "abstain": false, "predicted": "His son", "correct": false}
+{"conv": 8, "qid": "conv-49_q047", "system": "ours", "category": "3", "abstain": false, "predicted": "", "correct": false}
+{"conv": 8, "qid": "conv-49_q048", "system": "ours", "category": "2", "abstain": false, "predicted": "", "correct": false}
+{"conv": 8, "qid": "conv-49_q054", "system": "ours", "category": "2", "abstain": false, "predicted": "11 September 2023", "correct": false}
+{"conv": 8, "qid": "conv-49_q051", "system": "ours", "category": "1", "abstain": false, "predicted": "", "correct": false}
+{"conv": 8, "qid": "conv-49_q052", "system": "ours", "category": "3", "abstain": false, "predicted": "", "correct": false}
+{"conv": 8, "qid": "conv-49_q049", "system": "ours", "category": "1", "abstain": false, "predicted": "A healthier diet and exercise routine \u2014 eating healthier (reducing soda and candy), yoga, hiking, and attending Weight Watchers.", "correct": false}
+{"conv": 8, "qid": "conv-49_q058", "system": "ours", "category": "3", "abstain": false, "predicted": "NO ANSWER", "correct": false}
+{"conv": 8, "qid": "conv-49_q057", "system": "ours", "category": "1", "abstain": false, "predicted": "The navigation app keeps malfunctioning.", "correct": true}
+{"conv": 8, "qid": "conv-49_q055", "system": "ours", "category": "1", "abstain": false, "predicted": "", "correct": false}
+{"conv": 8, "qid": "conv-49_q062", "system": "ours", "category": "2", "abstain": false, "predicted": "work stress", "correct": true}
+{"conv": 8, "qid": "conv-49_q056", "system": "ours", "category": "1", "abstain": false, "predicted": "Helping lost tourists find their way.", "correct": false}
+{"conv": 8, "qid": "conv-49_q060", "system": "ours", "category": "2", "abstain": false, "predicted": "14 October 2023", "correct": true}
+{"conv": 8, "qid": "conv-49_q065", "system": "ours", "category": "1", "abstain": false, "predicted": "NO ANSWER", "correct": false}
+{"conv": 8, "qid": "conv-49_q061", "system": "ours", "category": "2", "abstain": false, "predicted": "", "correct": false}
+{"conv": 8, "qid": "conv-49_q063", "system": "ours", "category": "1", "abstain": false, "predicted": "", "correct": false}
+{"conv": 8, "qid": "conv-49_q069", "system": "ours", "category": "2", "abstain": false, "predicted": "NO ANSWER", "correct": false}
+{"conv": 8, "qid": "conv-49_q059", "system": "ours", "category": "2", "abstain": false, "predicted": "", "correct": false}
+{"conv": 8, "qid": "conv-49_q053", "system": "ours", "category": "2", "abstain": false, "predicted": "Painting", "correct": true}
+{"conv": 8, "qid": "conv-49_q067", "system": "ours", "category": "2", "abstain": false, "predicted": "9 November 2023", "correct": false}
+{"conv": 8, "qid": "conv-49_q068", "system": "ours", "category": "2", "abstain": false, "predicted": "9 November 2023", "correct": false}
+{"conv": 8, "qid": "conv-49_q064", "system": "ours", "category": "2", "abstain": false, "predicted": "The weekend before 17 October 2023.", "correct": true}
+{"conv": 8, "qid": "conv-49_q066", "system": "ours", "category": "3", "abstain": false, "predicted": "", "correct": false}
+{"conv": 8, "qid": "conv-49_q071", "system": "ours", "category": "2", "abstain": false, "predicted": "NO ANSWER", "correct": false}
+{"conv": 8, "qid": "conv-49_q074", "system": "ours", "category": "2", "abstain": false, "predicted": "Next summer.", "correct": false}
+{"conv": 8, "qid": "conv-49_q070", "system": "ours", "category": "1", "abstain": false, "predicted": "They got married and their partner is pregnant.", "correct": true}
+{"conv": 8, "qid": "conv-49_q072", "system": "ours", "category": "3", "abstain": false, "predicted": "NO ANSWER", "correct": false}
+{"conv": 8, "qid": "conv-49_q077", "system": "ours", "category": "2", "abstain": false, "predicted": "A few days before 17 December 2023.", "correct": true}
+{"conv": 8, "qid": "conv-49_q076", "system": "ours", "category": "2", "abstain": false, "predicted": "5 January 2024", "correct": true}
+{"conv": 8, "qid": "conv-49_q073", "system": "ours", "category": "1", "abstain": false, "predicted": "", "correct": false}
+{"conv": 8, "qid": "conv-49_q075", "system": "ours", "category": "2", "abstain": false, "predicted": "", "correct": false}
+{"conv": 8, "qid": "conv-49_q079", "system": "ours", "category": "1", "abstain": false, "predicted": "His extended family.", "correct": false}
+{"conv": 8, "qid": "conv-49_q078", "system": "ours", "category": "1", "abstain": false, "predicted": "", "correct": false}
+{"conv": 8, "qid": "conv-49_q080", "system": "ours", "category": "2", "abstain": false, "predicted": "", "correct": false}
+{"conv": 8, "qid": "conv-49_q081", "system": "ours", "category": "2", "abstain": false, "predicted": "", "correct": false}
+{"conv": 8, "qid": "conv-49_q086", "system": "ours", "category": "4", "abstain": false, "predicted": "Painting", "correct": false}
+{"conv": 8, "qid": "conv-49_q087", "system": "ours", "category": "4", "abstain": false, "predicted": "You'll find it, just keep trying new things until something sparks your excitement.", "correct": true}
+{"conv": 8, "qid": "conv-49_q088", "system": "ours", "category": "4", "abstain": false, "predicted": "Jasper", "correct": true}
+{"conv": 8, "qid": "conv-49_q084", "system": "ours", "category": "4", "abstain": false, "predicted": "A new Prius", "correct": true}
+{"conv": 8, "qid": "conv-49_q083", "system": "ours", "category": "1", "abstain": false, "predicted": "Yoga", "correct": true}
+{"conv": 8, "qid": "conv-49_q090", "system": "ours", "category": "4", "abstain": false, "predicted": "Reducing her soda and candy intake.", "correct": true}
+{"conv": 8, "qid": "conv-49_q095", "system": "ours", "category": "4", "abstain": false, "predicted": "Flavored seltzer water", "correct": true}
+{"conv": 8, "qid": "conv-49_q089", "system": "ours", "category": "4", "abstain": false, "predicted": "NO ANSWER", "correct": false}
+{"conv": 8, "qid": "conv-49_q082", "system": "ours", "category": "1", "abstain": false, "predicted": "Painting", "correct": false}
+{"conv": 8, "qid": "conv-49_q093", "system": "ours", "category": "4", "abstain": false, "predicted": "The self-checkout machines were all broken.", "correct": true}
+{"conv": 8, "qid": "conv-49_q092", "system": "ours", "category": "4", "abstain": false, "predicted": "Flavored seltzer water and dark chocolate with high cocoa content.", "correct": true}
+{"conv": 8, "qid": "conv-49_q085", "system": "ours", "category": "4", "abstain": false, "predicted": "A friend gave him a painting that inspired him to start painting.", "correct": false}
+{"conv": 8, "qid": "conv-49_q099", "system": "ours", "category": "4", "abstain": false, "predicted": "Progress", "correct": true}
+{"conv": 8, "qid": "conv-49_q100", "system": "ours", "category": "4", "abstain": false, "predicted": "a dream interpretation book", "correct": true}
+{"conv": 8, "qid": "conv-49_q096", "system": "ours", "category": "4", "abstain": false, "predicted": "NO ANSWER", "correct": false}
+{"conv": 8, "qid": "conv-49_q091", "system": "ours", "category": "4", "abstain": false, "predicted": "Swap soda for flavored seltzer water and try dark chocolate with high cocoa content instead of candy.", "correct": true}
+{"conv": 8, "qid": "conv-49_q094", "system": "ours", "category": "4", "abstain": false, "predicted": "", "correct": false}
+{"conv": 8, "qid": "conv-49_q097", "system": "ours", "category": "4", "abstain": false, "predicted": "Strength and resilience.", "correct": true}
+{"conv": 8, "qid": "conv-49_q098", "system": "ours", "category": "4", "abstain": false, "predicted": "Because it symbolizes strength and resilience, and taking care of it motivates him to keep going through tough times.", "correct": true}
+{"conv": 8, "qid": "conv-49_q101", "system": "ours", "category": "4", "abstain": false, "predicted": "His keys.", "correct": true}
+{"conv": 8, "qid": "conv-49_q102", "system": "ours", "category": "4", "abstain": false, "predicted": "a cooking class", "correct": true}
+{"conv": 8, "qid": "conv-49_q110", "system": "ours", "category": "4", "abstain": false, "predicted": "NO ANSWER", "correct": false}
+{"conv": 8, "qid": "conv-49_q106", "system": "ours", "category": "4", "abstain": false, "predicted": "Watercolor painting classes.", "correct": true}
+{"conv": 8, "qid": "conv-49_q108", "system": "ours", "category": "4", "abstain": false, "predicted": "Observing nature and painting what we see.", "correct": true}
+{"conv": 8, "qid": "conv-49_q103", "system": "ours", "category": "4", "abstain": false, "predicted": "NO ANSWER", "correct": false}
+{"conv": 8, "qid": "conv-49_q104", "system": "ours", "category": "4", "abstain": false, "predicted": "", "correct": false}
+{"conv": 8, "qid": "conv-49_q107", "system": "ours", "category": "4", "abstain": false, "predicted": "painting", "correct": false}
+{"conv": 8, "qid": "conv-49_q114", "system": "ours", "category": "4", "abstain": false, "predicted": "Painting", "correct": true}
+{"conv": 8, "qid": "conv-49_q112", "system": "ours", "category": "4", "abstain": false, "predicted": "Swimming", "correct": true}
+{"conv": 8, "qid": "conv-49_q105", "system": "ours", "category": "4", "abstain": false, "predicted": "", "correct": false}
+{"conv": 8, "qid": "conv-49_q115", "system": "ours", "category": "4", "abstain": false, "predicted": "Acrylic paints, brushes, a canvas/paper, and a palette to mix colors.", "correct": true}
+{"conv": 8, "qid": "conv-49_q109", "system": "ours", "category": "4", "abstain": false, "predicted": "Natural landscapes", "correct": false}
+{"conv": 8, "qid": "conv-49_q116", "system": "ours", "category": "4", "abstain": false, "predicted": "Watercolor painting", "correct": true}
+{"conv": 8, "qid": "conv-49_q113", "system": "ours", "category": "4", "abstain": false, "predicted": "", "correct": false}
+{"conv": 8, "qid": "conv-49_q111", "system": "ours", "category": "4", "abstain": false, "predicted": "A knee injury.", "correct": false}
+{"conv": 8, "qid": "conv-49_q120", "system": "ours", "category": "4", "abstain": false, "predicted": "Lifting weights.", "correct": true}
+{"conv": 8, "qid": "conv-49_q122", "system": "ours", "category": "4", "abstain": false, "predicted": "on the lake", "correct": false}
+{"conv": 8, "qid": "conv-49_q117", "system": "ours", "category": "4", "abstain": false, "predicted": "a sunset painting", "correct": false}
+{"conv": 8, "qid": "conv-49_q118", "system": "ours", "category": "4", "abstain": false, "predicted": "Writing in my journal and creative writing", "correct": false}
+{"conv": 8, "qid": "conv-49_q123", "system": "ours", "category": "4", "abstain": false, "predicted": "Gastritis", "correct": true}
+{"conv": 8, "qid": "conv-49_q127", "system": "ours", "category": "4", "abstain": false, "predicted": "A 1968 Kustom K-200A vintage guitar.", "correct": true}
+{"conv": 8, "qid": "conv-49_q119", "system": "ours", "category": "4", "abstain": false, "predicted": "Sam's new phone \u2014 its navigation app keeps malfunctioning.", "correct": true}
+{"conv": 8, "qid": "conv-49_q121", "system": "ours", "category": "4", "abstain": false, "predicted": "Start with good form and technique, find a trainer to help you avoid injuries, start small and increase intensity as you get stronger.", "correct": false}
+{"conv": 8, "qid": "conv-49_q124", "system": "ours", "category": "4", "abstain": false, "predicted": "", "correct": false}
+{"conv": 8, "qid": "conv-49_q125", "system": "ours", "category": "4", "abstain": false, "predicted": "", "correct": false}
+{"conv": 8, "qid": "conv-49_q126", "system": "ours", "category": "4", "abstain": false, "predicted": "He changed his diet and started walking regularly.", "correct": true}
+{"conv": 8, "qid": "conv-49_q131", "system": "ours", "category": "4", "abstain": false, "predicted": "As something that can lead to new opportunities.", "correct": false}
+{"conv": 8, "qid": "conv-49_q129", "system": "ours", "category": "4", "abstain": false, "predicted": "His happy place.", "correct": true}
+{"conv": 8, "qid": "conv-49_q132", "system": "ours", "category": "4", "abstain": false, "predicted": "Yoga", "correct": true}
+{"conv": 8, "qid": "conv-49_q134", "system": "ours", "category": "4", "abstain": false, "predicted": "His partner is pregnant.", "correct": true}
+{"conv": 8, "qid": "conv-49_q128", "system": "ours", "category": "4", "abstain": false, "predicted": "His company downsized and he lost his job.", "correct": true}
+{"conv": 8, "qid": "conv-49_q130", "system": "ours", "category": "4", "abstain": false, "predicted": "Because he relies on it for his active lifestyle and road trips.", "correct": true}
+{"conv": 8, "qid": "conv-49_q135", "system": "ours", "category": "4", "abstain": false, "predicted": "A big family reunion.", "correct": true}
+{"conv": 8, "qid": "conv-49_q136", "system": "ours", "category": "4", "abstain": false, "predicted": "Bring it on Home", "correct": true}
+{"conv": 8, "qid": "conv-49_q133", "system": "ours", "category": "4", "abstain": false, "predicted": "Sam offered to give him yoga tips.", "correct": false}
+{"conv": 8, "qid": "conv-49_q139", "system": "ours", "category": "4", "abstain": false, "predicted": "running in the mornings", "correct": true}
+{"conv": 8, "qid": "conv-49_q143", "system": "ours", "category": "4", "abstain": false, "predicted": "NO ANSWER", "correct": false}
+{"conv": 8, "qid": "conv-49_q137", "system": "ours", "category": "4", "abstain": false, "predicted": "", "correct": false}
+{"conv": 8, "qid": "conv-49_q140", "system": "ours", "category": "4", "abstain": false, "predicted": "Put a GPS sensor on your keys.", "correct": true}
+{"conv": 8, "qid": "conv-49_q142", "system": "ours", "category": "4", "abstain": false, "predicted": "Keep trying new things.", "correct": true}
+{"conv": 8, "qid": "conv-49_q141", "system": "ours", "category": "4", "abstain": false, "predicted": "NO ANSWER.", "correct": false}
+{"conv": 8, "qid": "conv-49_q138", "system": "ours", "category": "4", "abstain": false, "predicted": "", "correct": false}
+{"conv": 8, "qid": "conv-49_q144", "system": "ours", "category": "4", "abstain": false, "predicted": "That he was getting married.", "correct": true}
+{"conv": 8, "qid": "conv-49_q152", "system": "ours", "category": "4", "abstain": false, "predicted": "The Godfather", "correct": true}
+{"conv": 8, "qid": "conv-49_q149", "system": "ours", "category": "4", "abstain": false, "predicted": "Snowshoeing", "correct": true}
+{"conv": 8, "qid": "conv-49_q153", "system": "ours", "category": "4", "abstain": false, "predicted": "Yoga", "correct": true}
+{"conv": 8, "qid": "conv-49_q147", "system": "ours", "category": "4", "abstain": false, "predicted": "They told their extended family about their marriage.", "correct": true}
+{"conv": 8, "qid": "conv-49_q148", "system": "ours", "category": "4", "abstain": false, "predicted": "Just two ginger snaps a day.", "correct": true}
+{"conv": 8, "qid": "conv-49_q145", "system": "ours", "category": "4", "abstain": false, "predicted": "", "correct": false}
+{"conv": 8, "qid": "conv-49_q154", "system": "ours", "category": "4", "abstain": false, "predicted": "An amazing sunset", "correct": false}
+{"conv": 8, "qid": "conv-49_q146", "system": "ours", "category": "4", "abstain": false, "predicted": "Some of these new healthy snacks he'd been trying.", "correct": false}
+{"conv": 8, "qid": "conv-49_q150", "system": "ours", "category": "4", "abstain": false, "predicted": "Diet and exercise tips.", "correct": false}
+{"conv": 8, "qid": "conv-49_q158", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 8, "qid": "conv-49_q151", "system": "ours", "category": "4", "abstain": false, "predicted": "Swimming, yoga, walking, and going on beach sunsets.", "correct": false}
+{"conv": 8, "qid": "conv-49_q161", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 8, "qid": "conv-49_q156", "system": "ours", "category": "4", "abstain": false, "predicted": "So peaceful.", "correct": true}
+{"conv": 8, "qid": "conv-49_q163", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 8, "qid": "conv-49_q162", "system": "ours", "category": "5", "abstain": true, "predicted": "", "correct": true}
+{"conv": 8, "qid": "conv-49_q166", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 8, "qid": "conv-49_q165", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 8, "qid": "conv-49_q157", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 8, "qid": "conv-49_q167", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 8, "qid": "conv-49_q160", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 8, "qid": "conv-49_q169", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 8, "qid": "conv-49_q171", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 8, "qid": "conv-49_q159", "system": "ours", "category": "5", "abstain": true, "predicted": "", "correct": true}
+{"conv": 8, "qid": "conv-49_q164", "system": "ours", "category": "5", "abstain": true, "predicted": "", "correct": true}
+{"conv": 8, "qid": "conv-49_q168", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 8, "qid": "conv-49_q155", "system": "ours", "category": "4", "abstain": false, "predicted": "For a drunken night when he damaged someone's roses.", "correct": true}
+{"conv": 8, "qid": "conv-49_q170", "system": "ours", "category": "5", "abstain": true, "predicted": "", "correct": true}
+{"conv": 8, "qid": "conv-49_q172", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 8, "qid": "conv-49_q179", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 8, "qid": "conv-49_q178", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 8, "qid": "conv-49_q174", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 8, "qid": "conv-49_q173", "system": "ours", "category": "5", "abstain": true, "predicted": "", "correct": true}
+{"conv": 8, "qid": "conv-49_q176", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 8, "qid": "conv-49_q180", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 8, "qid": "conv-49_q175", "system": "ours", "category": "5", "abstain": true, "predicted": "", "correct": true}
+{"conv": 8, "qid": "conv-49_q182", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 8, "qid": "conv-49_q177", "system": "ours", "category": "5", "abstain": true, "predicted": "", "correct": true}
+{"conv": 8, "qid": "conv-49_q181", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 8, "qid": "conv-49_q184", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 8, "qid": "conv-49_q183", "system": "ours", "category": "5", "abstain": true, "predicted": "Peaceful and stunning.", "correct": false}
+{"conv": 8, "qid": "conv-49_q191", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 8, "qid": "conv-49_q185", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 8, "qid": "conv-49_q189", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 8, "qid": "conv-49_q192", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 8, "qid": "conv-49_q186", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 8, "qid": "conv-49_q187", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 8, "qid": "conv-49_q190", "system": "ours", "category": "5", "abstain": true, "predicted": "", "correct": true}
+{"conv": 8, "qid": "conv-49_q188", "system": "ours", "category": "5", "abstain": true, "predicted": "", "correct": true}
+{"conv": 8, "qid": "conv-49_q195", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 8, "qid": "conv-49_q193", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 8, "qid": "conv-49_q194", "system": "ours", "category": "5", "abstain": true, "predicted": "NO ANSWER", "correct": true}
+{"conv": 8, "qid": "conv-49_q196", "system": "ours", "category": "5", "abstain": true, "predicted": "", "correct": true}
