@@ -484,8 +484,16 @@ def our_context(sysm, sample, q, k):
 
 
 # ---------------------------------------------------------------- mem0 memory
-def mem0_ingest(client, uid, sample, use_dates, wait, settle_stable=20, poll=10):
-    """Ingest per-session, then poll get_all until the store count stops growing."""
+def mem0_ingest(client, uid, sample, use_dates, wait, settle_stable=120, poll=15, min_settle=180):
+    """Ingest per-session, then poll get_all until the store count stops growing.
+
+    Mem0's async extraction plateaus in bursts: the count sits at a low value
+    for tens of seconds before jumping. A short stability window therefore
+    returns while the store is still nearly empty, and evaluating that starves
+    retrieval (measured: a 20s window returned ~15 memories for a conv that
+    settled at ~250, collapsing the arm's answerable accuracy). We require a
+    long stable window AND a minimum elapsed floor before accepting the count.
+    """
     sessions = {}
     for ep in sample.episodes:
         sid = str(getattr(ep, "id", "") or "").split(":")[0]
@@ -504,7 +512,9 @@ def mem0_ingest(client, uid, sample, use_dates, wait, settle_stable=20, poll=10)
         # a partially ingested store would silently deflate the Mem0 arm
         raise RuntimeError("mem0_ingest: %d/%d session batches failed for %s (%s) - aborting instead of evaluating a partial store"
                            % (len(failed), len(sessions), uid, ",".join(failed)))
-    # settle: poll until count is stable for `settle_stable`s, capped at `wait`s
+    # settle: poll until the count has been stable for `settle_stable`s AND at
+    # least `min_settle`s have elapsed (so an early plateau cannot end it),
+    # capped at `wait`s.
     t0 = time.time(); last = -1; stable_since = None
     while time.time() - t0 < wait:
         time.sleep(poll)
@@ -512,15 +522,19 @@ def mem0_ingest(client, uid, sample, use_dates, wait, settle_stable=20, poll=10)
         if cnt == last and cnt > 0:
             if stable_since is None:
                 stable_since = time.time()
-            elif time.time() - stable_since >= settle_stable:
+            elif (time.time() - stable_since >= settle_stable) and (time.time() - t0 >= min_settle):
                 break
         else:
             stable_since = None; last = cnt
     return n_add, mem0_count(client, uid)
 
 
-def _mem0_retry(fn, tries=6):
-    """Call a Mem0 client method, retrying on 429/5xx with fixed backoff."""
+def _mem0_retry(fn, tries=12):
+    """Call a Mem0 client method, retrying on 429/5xx with fixed backoff.
+
+    Mem0's platform rate-limits the memories endpoint; under concurrency the
+    search calls 429 in bursts. A too-short retry budget turns a transient 429
+    into an __ERR__ row that deflates the arm, so we retry patiently."""
     last = None
     for attempt in range(tries):
         try:
@@ -528,7 +542,7 @@ def _mem0_retry(fn, tries=6):
         except Exception as e:
             last = str(e)
             if "429" in last or "Too Many" in last or "500" in last or "502" in last or "503" in last:
-                time.sleep(min(2 ** attempt, 20)); continue
+                time.sleep(min(3 * 2 ** attempt, 60)); continue
             raise
     raise RuntimeError("mem0 retry exhausted: %s" % last)
 

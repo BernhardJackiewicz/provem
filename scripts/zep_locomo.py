@@ -64,10 +64,17 @@ def ingest(client, sample, ci, uid_prefix):
     from zep_cloud import Message
 
     user_id = "%s_conv%d" % (uid_prefix, ci)
-    try:
-        client.user.add(user_id=user_id)
-    except Exception:
-        pass  # already exists
+    # Create the user with retries: if this silently fails, every thread.create
+    # under it fails with "user not found" and the whole conv aborts.
+    for attempt in range(8):
+        try:
+            client.user.add(user_id=user_id)
+            break
+        except Exception as err:
+            msg = str(err)
+            if "already exists" in msg.lower() or "status_code: 409" in msg:
+                break
+            time.sleep(min(3 * 2 ** attempt, 60))
     # graph owner = first speaker of the conversation (Zep checklist point 1)
     owner, _ = _speaker_and_text(sample.episodes[0].content)
     # idempotent resume via a LOCAL state file (thread.get does not expose
@@ -146,7 +153,7 @@ def ingest(client, sample, ci, uid_prefix):
                     raise
             if not ok:
                 raise RuntimeError("chunk failed after 10 rate-limit retries (%s %s)" % (thread_id, start))
-            time.sleep(2.0)  # pace below the trial ingestion quota instead of slamming it
+            time.sleep(0.3)  # light pace; the 429-retry above absorbs bursts
         # verify persistence before recording the session as done
         check = client.thread.get(thread_id, lastn=1)
         if not (getattr(check, "messages", None) or []):
@@ -171,8 +178,19 @@ def graph_complete(client, user_id, expected, timeout=7200, poll=60, stall=1800)
     last_processed = -1
     last_change = time.time()
     while True:
-        resp = client.graph.episode.get_by_user_id(user_id, lastn=max(expected + 50, 100))
-        eps = getattr(resp, "episodes", None) or []
+        # a transient network blip during a poll must not kill a multi-hour
+        # wait; retry the read a few times before giving up on this poll
+        eps = None
+        for attempt in range(6):
+            try:
+                resp = client.graph.episode.get_by_user_id(user_id, lastn=max(expected + 50, 100))
+                eps = getattr(resp, "episodes", None) or []
+                break
+            except Exception as err:
+                print("  poll retry %s (%s)" % (user_id, str(err)[:80]), flush=True)
+                time.sleep(min(5 * 2 ** attempt, 60))
+        if eps is None:
+            time.sleep(poll); continue  # keep waiting; graphs build regardless
         processed = sum(1 for e in eps if getattr(e, "processed", False))
         print("  %s: %d/%d episodes present, %d processed" % (user_id, len(eps), expected, processed), flush=True)
         if len(eps) >= expected and processed >= expected:
