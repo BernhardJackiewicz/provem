@@ -278,8 +278,8 @@ def dated_content(ep):
 # `features` is the campaign's A/B switchboard: every optimization is opt-in and
 # attributable. Empty set == the frozen 0.388 baseline pipeline.
 VEC_CACHE = os.environ.get(
-    "ENGRAM_VEC_CACHE",
-    "/private/tmp/claude-501/-Users-bernhard-Desktop-brain/e9f97b9f-09f0-4aff-ac11-a991e6b1aafa/scratchpad/vector_cache.jsonl")
+    "PROVEM_VEC_CACHE",
+    os.environ.get("ENGRAM_VEC_CACHE", "docs/runs/caches/vector_cache.jsonl"))
 
 
 def build_ours(sample, use_dates, features=frozenset()):
@@ -575,13 +575,13 @@ def main():
     ap.add_argument("--workers", type=int, default=12)
     ap.add_argument("--wait", type=int, default=300, help="max seconds to wait for Mem0 settle per conv")
     ap.add_argument("--uid-prefix", default="engram_e2e")
-    ap.add_argument("--out", default="/private/tmp/claude-501/-Users-bernhard-Desktop-brain/e9f97b9f-09f0-4aff-ac11-a991e6b1aafa/scratchpad/e2e_results.jsonl")
+    ap.add_argument("--out", default="docs/runs/local/e2e_results.jsonl")
     ap.add_argument("--skip-mem0", action="store_true")
     ap.add_argument("--systems", default=None, help="comma list: ours,mem0 (default both; ours == --skip-mem0)")
     ap.add_argument("--ours-features", default="", help="comma list of opt-in pipeline features for OUR side")
     ap.add_argument("--tag", default="", help="run tag for the ledger")
-    ap.add_argument("--cache-dir", default="/private/tmp/claude-501/-Users-bernhard-Desktop-brain/e9f97b9f-09f0-4aff-ac11-a991e6b1aafa/scratchpad")
-    ap.add_argument("--ledger", default="/private/tmp/claude-501/-Users-bernhard-Desktop-brain/e9f97b9f-09f0-4aff-ac11-a991e6b1aafa/scratchpad/campaign_ledger.jsonl")
+    ap.add_argument("--cache-dir", default="docs/runs/caches")
+    ap.add_argument("--ledger", default="docs/runs/caches/campaign_ledger.jsonl")
     ap.add_argument("--campaign-cap-eur", type=float, default=30.0)
     args = ap.parse_args()
 
@@ -624,6 +624,8 @@ def main():
         from mem0 import MemoryClient
         client = MemoryClient(api_key=os.environ["MEM0_API_KEY"])
 
+    if os.path.dirname(args.out):
+        os.makedirs(os.path.dirname(args.out), exist_ok=True)
     done = load_done(args.out)
     out = open(args.out, "a")
     out_lock = threading.Lock()

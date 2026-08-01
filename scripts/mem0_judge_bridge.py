@@ -39,9 +39,21 @@ from cognitive_memory.stats import mcnemar_from_pairs, wilson_point_and_interval
 # github.com/mem0ai/memory-benchmarks benchmarks/locomo/prompts.py; the
 # {question}/{answer}/{response} placeholders are theirs.
 MEM0_JUDGE_SYSTEM = "You are evaluating conversational AI memory recall. Return JSON only with the format requested."
-MEM0_JUDGE_TEMPLATE = open(
-    "/private/tmp/claude-501/-Users-bernhard-Desktop-brain/e9f97b9f-09f0-4aff-ac11-a991e6b1aafa/scratchpad/mem0_judge_template.txt"
-).read()
+_TEMPLATE_PATH = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)), "prompts", "mem0_judge_template.txt")
+_template_text = None
+
+
+def _get_template():
+    global _template_text
+    if _template_text is None:
+        if not os.path.exists(_TEMPLATE_PATH):
+            raise FileNotFoundError(
+                "Mem0 judge template not found at %s (tracked in the repo under "
+                "scripts/prompts/; restore it before judging)" % _TEMPLATE_PATH)
+        with open(_TEMPLATE_PATH) as fh:
+            _template_text = fh.read()
+    return _template_text
 
 
 def mem0_judge(model, question, golds, predicted, qid, cache):
@@ -50,7 +62,7 @@ def mem0_judge(model, question, golds, predicted, qid, cache):
     if cached is not None:
         return bool(cached)
     gold = "; ".join(str(g) for g in golds)
-    user = MEM0_JUDGE_TEMPLATE.replace("{question}", question).replace("{answer}", gold).replace("{response}", predicted)
+    user = _get_template().replace("{question}", question).replace("{answer}", gold).replace("{response}", predicted)
     msgs = [{"role": "system", "content": MEM0_JUDGE_SYSTEM}, {"role": "user", "content": user}]
     text, _ = e2e.openai_chat(model, msgs, max_tokens=256, reasoning_effort="low")
     m = re.search(r'"label"\s*:\s*"(CORRECT|WRONG)"', text, re.I)
@@ -74,7 +86,7 @@ def main():
     ap.add_argument("--ours", default="docs/runs/iter/c2_full_final2.jsonl")
     ap.add_argument("--mem0", default="docs/runs/locomo_e2e_mem0_patched.jsonl")
     ap.add_argument("--workers", type=int, default=12)
-    ap.add_argument("--cache", default="/private/tmp/claude-501/-Users-bernhard-Desktop-brain/e9f97b9f-09f0-4aff-ac11-a991e6b1aafa/scratchpad/mem0_judge_cache.jsonl")
+    ap.add_argument("--cache", default="docs/runs/caches/mem0_judge_cache.jsonl")
     args = ap.parse_args()
 
     cache = e2e.DiskCache(args.cache)

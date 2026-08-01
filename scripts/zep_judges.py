@@ -50,7 +50,7 @@ def main():
     ap.add_argument("--workers", type=int, default=8)
     ap.add_argument("--skip-opus", action="store_true")
     ap.add_argument("--skip-mem0-judge", action="store_true")
-    ap.add_argument("--cache-dir", default="/private/tmp/claude-501/-Users-bernhard-Desktop-brain/e9f97b9f-09f0-4aff-ac11-a991e6b1aafa/scratchpad")
+    ap.add_argument("--cache-dir", default="docs/runs/caches")
     args = ap.parse_args()
 
     opus_cache = e2e.DiskCache(os.path.join(args.cache_dir, "judge2_cache.jsonl"))

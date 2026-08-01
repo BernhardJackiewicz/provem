@@ -72,7 +72,9 @@ def ingest(client, sample, ci, uid_prefix):
     owner, _ = _speaker_and_text(sample.episodes[0].content)
     # idempotent resume via a LOCAL state file (thread.get does not expose
     # messages, so remote checks are unreliable)
-    state_path = os.path.join(os.environ.get("ZEP_STATE_DIR", "/tmp"), "zep_ingested.json")
+    state_dir = os.environ.get("ZEP_STATE_DIR", "docs/runs/local")
+    os.makedirs(state_dir, exist_ok=True)
+    state_path = os.path.join(state_dir, "zep_ingested.json")
     try:
         state = set(json.load(open(state_path)))
     except Exception:
@@ -181,7 +183,7 @@ def main():
     ap.add_argument("--workers", type=int, default=4)
     ap.add_argument("--limit-qa", type=int, default=None)
     ap.add_argument("--out", default="docs/runs/zep_locomo.jsonl")
-    ap.add_argument("--cache-dir", default="/private/tmp/claude-501/-Users-bernhard-Desktop-brain/e9f97b9f-09f0-4aff-ac11-a991e6b1aafa/scratchpad")
+    ap.add_argument("--cache-dir", default="docs/runs/caches")
     args = ap.parse_args()
 
     e2e._ANSWER_CACHE = e2e.DiskCache(os.path.join(args.cache_dir, "llm_cache_answer.jsonl"))

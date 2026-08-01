@@ -101,8 +101,8 @@ def main():
     ap.add_argument("--optimized", default="docs/runs/locomo_e2e_ours_optimized.jsonl")
     ap.add_argument("--pilot", type=int, default=0)
     ap.add_argument("--workers", type=int, default=8)
-    ap.add_argument("--cache", default="/private/tmp/claude-501/-Users-bernhard-Desktop-brain/e9f97b9f-09f0-4aff-ac11-a991e6b1aafa/scratchpad/judge2_cache.jsonl")
-    ap.add_argument("--out", default="/private/tmp/claude-501/-Users-bernhard-Desktop-brain/e9f97b9f-09f0-4aff-ac11-a991e6b1aafa/scratchpad/judge2_results.json")
+    ap.add_argument("--cache", default="docs/runs/caches/judge2_cache.jsonl")
+    ap.add_argument("--out", default="docs/runs/local/judge2_results.json")
     args = ap.parse_args()
 
     cache = e2e.DiskCache(args.cache)
@@ -256,6 +256,8 @@ def main():
             print("  %-10s Cohen's kappa = %.3f (n=%d)" % (set_name, k, n))
             report.setdefault("kappa", {})[set_name] = [k, n]
 
+    if os.path.dirname(args.out):
+        os.makedirs(os.path.dirname(args.out), exist_ok=True)
     json.dump(report, open(args.out, "w"), indent=1)
     print("\nwrote", args.out)
 

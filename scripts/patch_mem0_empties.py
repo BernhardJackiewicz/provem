@@ -42,7 +42,7 @@ def main():
     ap.add_argument("--uid-prefix", default="engram_e2e")
     ap.add_argument("--top-k", type=int, default=20)
     ap.add_argument("--workers", type=int, default=4)
-    ap.add_argument("--cache-dir", default="/private/tmp/claude-501/-Users-bernhard-Desktop-brain/e9f97b9f-09f0-4aff-ac11-a991e6b1aafa/scratchpad")
+    ap.add_argument("--cache-dir", default="docs/runs/caches")
     args = ap.parse_args()
 
     e2e._ANSWER_CACHE = e2e.DiskCache(os.path.join(args.cache_dir, "llm_cache_answer.jsonl"))
