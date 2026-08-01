@@ -80,13 +80,16 @@ memories decline unanswerable questions about equally well (governance parity).
 | Category | Ours | Mem0 | Mem0 lead |
 |---|---|---|---|
 | multi-hop (cat 1) | 0.206 | 0.316 | +0.110 |
-| single-hop (cat 2) | 0.411 | 0.436 | +0.025 |
-| temporal (cat 3) | 0.198 | 0.260 | +0.062 |
-| open-domain (cat 4) | 0.461 | 0.567 | +0.106 |
+| temporal (cat 2) | 0.411 | 0.436 | +0.025 |
+| open-domain (cat 3) | 0.198 | 0.260 | +0.062 |
+| single-hop (cat 4) | 0.461 | 0.567 | +0.106 |
 
-Mem0 leads everywhere; the gap is widest on **multi-hop** and **open-domain**
-reasoning, where distilled memories that connect facts across sessions help the
-answerer most. (Category codes are the harness's; names follow canonical LoCoMo.)
+Mem0 leads everywhere; the gap is widest on **multi-hop** and **single-hop**,
+where distilled memories that connect facts across sessions help the answerer
+most. (Historical note: this table originally carried the harness's
+pre-correction category names, which mislabeled codes 2/3/4. Labels were
+corrected post-hoc to the official LoCoMo mapping — 1=multi-hop, 2=temporal,
+3=open-domain, 4=single-hop; the per-code values are unchanged.)
 
 ### By conversation
 

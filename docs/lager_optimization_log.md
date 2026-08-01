@@ -1,5 +1,9 @@
 # Lager optimization campaign log — beating Mem0 on LoCoMo E2E
 
+> Category names throughout this log were corrected post-hoc (see the
+> 2026-07-31 correction note below): cat2=temporal, cat3=open-domain,
+> cat4=single-hop. All per-code numbers are unchanged.
+
 **Goal:** answerable accuracy > Mem0's frozen 0.475 on all 1540 LoCoMo QA, significantly
 (target ≥ ~0.505, paired McNemar p < 0.05), with zero regressions in the Wächter
 (reliability headline, quality gate, abstention ≥ 0.85, full test suite).
@@ -42,7 +46,7 @@ against Mem0's frozen rows (identical questions, answerer model, judge):
 - **Holdout-only confirmation** (convs 1,3,5,7,9 — never used for tuning): answerable
   **0.539 vs 0.471 (+0.068, p = 4.2×10⁻⁴)**, abstention 0.907 ✓ → the win generalizes;
   not a DEV-overfitting artifact.
-- Categories: single-hop 0.520 vs 0.436, open-domain 0.667 vs 0.567, temporal 0.302 vs
+- Categories: temporal 0.520 vs 0.436, single-hop 0.667 vs 0.567, open-domain 0.302 vs
   0.260; multi-hop remains Mem0's (0.245 vs 0.316) — honest residual gap (cross-session
   assembly needs extraction/consolidation, wave 3, not required for the target).
 - **Wächter gates all green** at promotion: 488 unit tests OK, reliability headline exactly
@@ -120,7 +124,7 @@ by their run files; the post-fix comparison supersedes them.
 - **OURS(fixed) 0.611 vs MEM0(patched) 0.509 answerable (+10.2 pts, p=1.3e-13)** — the
   bug had hidden ~7.5 pts of our true accuracy (and ~3.4 of Mem0's: 731→784, 53 of 195
   re-asked empties now correct). Multi-hop gap shrinks to −2.5 (0.372 vs 0.397);
-  temporal now clearly ours (0.406 vs 0.333); single-hop 0.629 vs 0.442.
+  open-domain now clearly ours (0.406 vs 0.333); temporal 0.629 vs 0.442.
 - **BUT abstention collapsed to 0.780** (Mem0 0.848): empty answers on adversarial
   questions had counted as declines — the strict4 calibration partly rode on the bug.
   Honest and expected: fixing an artifact exposes the real calibration state.
@@ -148,8 +152,8 @@ Iteration attribution on DEV (each €0.3-1.8, caches make unchanged questions f
   - answerable **0.614 vs 0.509 (+10.5 pts, McNemar p=7.2e-14)**; holdout-only
     **0.617 vs 0.503 (+11.4, p=1.7e-8)**
   - abstention **0.863 vs 0.848** (gate ≥0.85 ✓, parity p=0.49)
-  - by category: multi-hop **0.411 vs 0.397** (flipped!), single-hop 0.614 vs 0.442,
-    open-domain 0.717 vs 0.592, cat_3 0.312 vs 0.333 (2 questions of 96 — statistical
+  - by category: multi-hop **0.411 vs 0.397** (flipped!), temporal 0.614 vs 0.442,
+    single-hop 0.717 vs 0.592, open-domain 0.312 vs 0.333 (2 questions of 96 — statistical
     noise, CIs overlap massively; further iteration on it would be noise-chasing).
 - Wächter gates at close: 490 tests OK, reliability headline exact (governed 0.900,
   0 violations, benign 1.0), quality-gate 10× PASS, feature-less default byte-identical.
@@ -201,17 +205,17 @@ Mem0 reference (frozen): DEV answerable 0.478, full-set 0.475, abstain 0.883.
 ### Iterations 2–5 — single-feature attribution (2026-07-31)
 - **The window family** (any direction) consistently trades abstention for answerable
   accuracy: both=+2.7/−7.9, prev=+0.4/−0.4, next=+1.5/−6.9 (all deltas in pts). Flip
-  analysis: prev-window gains come from open-domain (+16/−8) but dilute single-/multi-hop;
+  analysis: prev-window gains come from single-hop (+16/−8) but dilute temporal/multi-hop;
   the taxonomy's real adjacency case is the REPLY after a hit (next), which indeed lifts
   more than prev — but every added neighbor tempts the answerer into answering adversarial
   questions. Conclusion: windows need the `strict` abstention-hardened prompt to be viable.
-- **`temporal` is aggregate-neutral** (±0.0 answerable, −1.7 abstain): temporal-category
-  +2/−1, single-hop +10/−12 — the date annotations shift BM25 token weights slightly and
+- **`temporal` is aggregate-neutral** (±0.0 answerable, −1.7 abstain): open-domain category
+  +2/−1, temporal +10/−12 — the date annotations shift BM25 token weights slightly and
   giveth/taketh away. Not promoted alone; may still help stacked on dense (different
   retrieval channel). Honest negative result.
 - **`dense` (text-embedding-3-small + RRF over lexical top-50) is the breakthrough:
-  answerable 0.391→0.519 (+12.8 pts), beating Mem0's DEV 0.478** — open-domain
-  0.473→0.671, temporal 0.164→0.262, multi-hop 0.212→0.258. Exactly the 30%
+  answerable 0.391→0.519 (+12.8 pts), beating Mem0's DEV 0.478** — single-hop
+  0.473→0.671, open-domain 0.164→0.262, multi-hop 0.212→0.258. Exactly the 30%
   paraphrase/attribute-colocation loss pattern the taxonomy predicted. Abstention broke the
   gate (0.797) like the windows did → `dense,strict` combo is the promotion candidate.
 

@@ -1,12 +1,12 @@
 # Provem
 
-**Governed, GDPR-native memory for AI agents with stronger recall than Mem0 and Zep, zero compliance violations, both proven.**
+**Governed, GDPR-native memory for AI agents — stronger measured recall than Mem0 and Zep on LoCoMo, and zero compliance violations across the 960-trajectory governance benchmark.**
 
 Two results, one system, every number reproducible from frozen artifacts at zero cost:
 
 | Axis | Result |
 |---|---|
-| **Governance** | Compliance violations **240 → 0**, memory-poisoning success **100% → 0%**, silent compounding errors **72.6% → 0.0%** (paired McNemar p ≈ 5×10⁻¹⁵⁰, deterministic, no API key) |
+| **Governance** | Compliance violations **240 → 0**, memory-poisoning success **100% → 0%**, silent compounding errors **72.6% → 0.0%** (paired: governance flips 497 of 960 trajectories, loses 0; deterministic, no API key) |
 | **Memory** | **Beats Mem0 and Zep on full LoCoMo**: 0.614 vs 0.509 vs 0.449 answerable accuracy (paired; Provem>Mem0 p = 7×10⁻¹⁴, Provem>Zep p = 1×10⁻³⁵) — the ordering holds under an independent Claude judge **and under Mem0's own published judge prompt** (0.772 / 0.722 / 0.632) |
 
 ## The problem
@@ -32,8 +32,8 @@ real companies:
 - Customer A's data surfaces in customer B's session.
 - Someone asks *"why did the agent say that?"* — and there is no answer.
 - The agent states a stale fact confidently instead of saying "I don't know",
-  and in a multi-step workflow that error compounds (measured below: one bad
-  memory corrupts 2.12 downstream steps on average).
+  and in a multi-step workflow that error repeats (measured below: one bad
+  memory re-fires in 2.12 later steps of the scripted workflow on average).
 
 Better retrieval fixes none of this. These are governance problems, and today
 they are mostly "solved" in prompts (unenforceable) or in per-app code
@@ -122,13 +122,15 @@ sh scripts/replay_report.sh     # every LoCoMo-vs-Mem0 number, €0, from frozen
 
 | Tier | LoCoMo answerable | Governance | Requirements |
 |---|---|---|---|
-| **stdlib default** | ~0.39–0.45 (below Mem0) | full | none — no key, no pip dependency, air-gap-safe |
+| stdlib retrieval + LLM answerer | 0.388 (below Mem0) | full | LLM API key for answering; no pip dependency |
+| fully keyless (extractive answers) | 0.21 — below the 0.24 no-memory baseline | full | none — no key, no pip dependency, air-gap-safe |
 | **dense (recommended)** | **0.614** (> Mem0 0.509 > Zep 0.449) | full | embeddings API key (cents per conversation, disk-cached) |
-| local embeddings | ~0.47–0.50 (projected) | full | planned: pip extra, no API key |
+| local embeddings | ~0.47–0.50 (projected, unbuilt) | full | planned: pip extra, no API key |
 
-The stdlib tier is the zero-dependency governance layer and demo path — it does
-not compete on recall, and we say so. The dense tier is the benchmarked
-configuration.
+The keyless tier is the zero-dependency governance layer and demo path — it
+does not compete on recall (its extractive answering scores below a no-memory
+abstain baseline on LoCoMo, measured 0.207–0.212), and we say so. The dense
+tier is the benchmarked configuration.
 
 ## Evidence 1: the governance benchmark (deterministic, no API key)
 
@@ -140,15 +142,22 @@ whether governance is on:
 | ungoverned memory | 0.375 | 72.6% of steps | 100% | 240 | 1.000 |
 | **+ Provem governance** | **0.893** | **0.0%** | **0%** | **0** | **1.000** |
 
-Paired exact McNemar p ≈ 5×10⁻¹⁵⁰; governance never loses a task the ungoverned
-arm wins; benign accuracy stays 1.000 (calibrated, not blanket abstention). With
-a stochastic agent, governance buys +43 to +52 points of end-to-end task success
-at every skill level. Attack models are faithful analogs of MINJA
+Paired per trajectory: governance flips 497 of 960 trajectories from fail to
+pass and never loses one the ungoverned arm wins (497/0 discordant). We report
+counts, not p-values, here on purpose: the benchmark is a deterministic,
+author-designed simulation, so a McNemar p-value would only restate the chosen
+scenario count. Benign accuracy stays 1.000 — by construction: benign probes
+are designed so no governance mechanism can fire, which verifies governance
+does not interfere, not that it is calibrated on hard cases. With a stochastic
+agent, governance buys +43 to +52 points of end-to-end task success at every
+skill level. Attack models are simplified analogs of the MINJA
 ([arXiv:2503.03704](https://arxiv.org/abs/2503.03704)) and AgentPoison
-([arXiv:2407.12784](https://arxiv.org/abs/2407.12784)). The agent is a
-deterministic/noise-parametrized policy by design — it isolates the memory
-layer's causal contribution; it is not an end-to-end LLM claim. Full method and
-limits: [`docs/agentic_reliability_benchmark.md`](docs/agentic_reliability_benchmark.md),
+([arXiv:2407.12784](https://arxiv.org/abs/2407.12784)) mechanisms — see the
+attack-family results and their limits, including the same-channel poisoning
+boundary governance cannot catch. The agent is a deterministic/
+noise-parametrized policy by design — it isolates the memory layer's causal
+contribution; it is not an end-to-end LLM claim. Full method and limits:
+[`docs/agentic_reliability_benchmark.md`](docs/agentic_reliability_benchmark.md),
 [`docs/reliability_results.md`](docs/reliability_results.md).
 
 ## Evidence 2: memory quality vs Mem0 and Zep (full LoCoMo, paired, three judges)
@@ -171,12 +180,18 @@ fixed **symmetrically** before these numbers (full disclosure in
 | Abstention on 446 adversarial questions | **0.863** | 0.848 | 0.704 |
 
 **The ordering is invariant under all three judges.** All pairwise differences
-are significant (paired McNemar: Provem>Mem0 p = 7.2×10⁻¹⁴, Provem>Zep
-p = 1.0×10⁻³⁵, Mem0>Zep p = 7.4×10⁻⁵). Per category (strict judge): single-hop
-**0.717 / 0.592 / 0.561**, temporal **0.614 / 0.442 / 0.305**, multi-hop
-**0.411 / 0.397 / 0.340**, open-domain 0.312 / 0.333 / 0.260 (tie with Mem0,
-n=96). Holdout conversations never used for tuning confirm the ordering
-(0.617 / 0.503 / 0.451). Full methodology, configs, and limitations:
+in **answerable accuracy** are significant (paired McNemar: Provem>Mem0
+p = 7.2×10⁻¹⁴, Provem>Zep p = 1.0×10⁻³⁵, Mem0>Zep p = 7.4×10⁻⁵). The
+abstention edge over Mem0 (0.863 vs 0.848) is a statistical tie (p = 0.49),
+and Provem's 0.863 comes from its dev-tuned prompt chain — under the shared
+neutral prompt Provem's abstention is 0.693, behind Zep 0.704 and Mem0 0.848
+(answerable accuracy still wins under that neutral prompt: 0.596 vs 0.509).
+Per category (strict judge): single-hop **0.717 / 0.592 / 0.561**, temporal
+**0.614 / 0.442 / 0.305**; multi-hop 0.411 / 0.397 / 0.340 and open-domain
+0.312 / 0.333 / 0.260 are statistical ties with Mem0 (p = 0.74 and p = 0.80,
+n=282 / n=96). Holdout conversations (final config chosen on the dev split
+only) confirm the ordering (0.617 / 0.503 / 0.451). Full methodology, configs,
+and limitations:
 [`docs/three_system_benchmark.md`](docs/three_system_benchmark.md).
 
 ### The LoCoMo landscape (read before quoting any of it)
@@ -195,24 +210,38 @@ so we present three separately-valid rankings instead.
 | 3 | Zep platform | 0.449 | 0.329 | 0.632 | 0.704 |
 
 Identical questions, answerer, and judges for every row. All pairwise
-differences are significant (paired McNemar: Provem>Mem0 p = 7×10⁻¹⁴,
-Provem>Zep p = 1×10⁻³⁵, Mem0>Zep p = 7×10⁻⁵) and the ordering is identical
-under all three judges. Zep was configured following its own published
-evaluation checklist (proper user model, native created_at timestamps,
-parallel edge+node graph searches) to pre-empt the misconfiguration critique
-it raised against Mem0's paper; config details in the ship report. We rank
-only what we measured.
+differences in answerable accuracy are significant (paired McNemar:
+Provem>Mem0 p = 7×10⁻¹⁴, Provem>Zep p = 1×10⁻³⁵, Mem0>Zep p = 7×10⁻⁵) and the
+ordering is identical under all three judges; the abstention column's
+Provem-vs-Mem0 gap is a statistical tie and prompt-confounded (see above). Zep
+was configured following its own published evaluation checklist (proper user
+model, native created_at timestamps, parallel edge+node graph searches) to
+pre-empt the misconfiguration critique it raised against Mem0's paper; config
+details in the ship report. We rank only what we measured.
 
-**Ranking 2 — independent third-party evaluations (quoted verbatim, their setups):**
+**Ranking 2 — independent third-party evaluations (quoted verbatim, their
+setups; two separate leaderboards, not comparable to each other):**
 
-| ENGRAM paper (arXiv 2511.12960)¹, k=20, gpt-4o-mini | J | | LoCoMo-Refined (strict judge, 86% human agreement) | score |
-|---|---|---|---|---|
-| ENGRAM (academic system¹) | 77.6 | | MemoraX AI | 82.7 |
-| MemOS | 73.0 | | MemOS | 63.6 |
-| **Mem0** | **64.7** | | MemPalace | 58.7 |
-| LangMem | 55.3 | | EverMemOS | 58.3 |
-| OpenAI Memory | 52.8 | | **Mem0** | **48.9** |
-| Zep | 42.3 | | | |
+ENGRAM paper (arXiv 2511.12960)¹, k=20, gpt-4o-mini judge:
+
+| System | Score |
+|---|---|
+| ENGRAM (academic system¹) | 77.6 |
+| MemOS | 73.0 |
+| **Mem0** | **64.7** |
+| LangMem | 55.3 |
+| OpenAI Memory | 52.8 |
+| Zep | 42.3 |
+
+LoCoMo-Refined (strict judge, 86% human agreement):
+
+| System | Score |
+|---|---|
+| MemoraX AI | 82.7 |
+| MemOS | 63.6 |
+| MemPalace | 58.7 |
+| EverMemOS | 58.3 |
+| **Mem0** | **48.9** |
 
 ¹ Unrelated academic system (arXiv 2511.12960), no relation to this project.
 
@@ -249,13 +278,17 @@ Sources and the full dispute history (including who retracted what):
 ## Honest limitations
 
 - **One recall benchmark** (LoCoMo). LongMemEval port is designed, not run.
-- **LLM judges only** (two vendors, κ = 0.70–0.83 agreement); no human eval yet.
-- Answer prompts were tuned on a dev split — but the win survives with a fully
-  neutral prompt (+8.7 pts) and on held-out conversations (+11.4 pts).
+- **LLM judges only** (two vendors, κ ≈ 0.70–0.72 agreement on the final
+  artifacts); no human eval yet.
+- Answer prompts were tuned on a dev split — the answerable-accuracy win
+  survives with a fully neutral prompt (+8.7 pts) and on held-out conversations
+  (+11.4 pts), but the abstention headline does not: under the neutral prompt
+  Provem's abstention is 0.693, last of the three systems.
 - Mem0 ran with platform defaults; a Mem0 expert might configure it better. Its
   stores kept consolidating between runs (drift favors Mem0).
-- The stdlib tier trails Mem0 on recall (~0.39–0.45); keyless parity is not
-  realistic and we don't claim it.
+- Keyless parity is not realistic and we don't claim it: with stdlib retrieval
+  and an LLM answerer we measure 0.388; fully keyless (extractive answering)
+  measures 0.207–0.212, below the 0.237 no-memory abstain baseline.
 - The governance benchmark uses a scripted agent by design (causal isolation).
 - No external security audit; not "production-certified"; self-hosted only.
 

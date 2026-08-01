@@ -75,13 +75,16 @@ and identical for all arms:
 - **Outcome-based scoring against ground truth**, never the agent's self-report
   (the tau-bench / Terminal-Bench discipline).
 - **All seeds reported; nothing hand-picked.** The suite is deterministic:
-  `Math.random` is seeded, so a given `(seed, scenarios)` reproduces exactly.
+  the RNG is seeded (`random.Random(seed)`), so a given `(seed, scenarios)` reproduces exactly.
 
 ## Failure families (faithful, simplified analogs)
 
 Each scenario is a short trajectory mixing benign recall with one injected
-failure mode. Mixture is benign-dominated (a realistic workload is mostly
-ordinary recall) with a meaningful adversarial minority.
+failure mode. The mixture is adversarial-heavy by design (to exercise the
+governance paths): 62.5% of scenarios and 72.6% of steps are adversarial;
+37.5% of scenarios are purely benign. This inflates the aggregate silent-error
+and end-to-end deltas relative to a production workload, which would be mostly
+ordinary recall — read the per-family results, not just the headline mix.
 
 | Family | Models | What ungoverned does wrong |
 | --- | --- | --- |
@@ -211,8 +214,10 @@ canonical run.
   They capture the retrieval-and-refire mechanism, not the live planting
   procedure (MINJA's elicitation / progressive shortening, AgentPoison's
   gradient-guided trigger optimization).
-- **Scenarios are synthetic and deterministic.** They are constructed to be fair
-  (benign-dominated, competent control arm) but they are not real agent traffic.
+- **Scenarios are synthetic and deterministic.** The mixture is adversarial-heavy
+  (62.5% of scenarios) to exercise the governance paths, so the aggregate deltas
+  overstate what a mostly-benign production workload would show; they are not
+  real agent traffic. Read the per-family table for the per-attack picture.
 - **The ungoverned baseline is a generic similarity memory**, not a specific
   tuned product. It is meant to represent the recall-first design class, not to
   benchmark any named vendor.

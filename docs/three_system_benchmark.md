@@ -10,7 +10,7 @@ paired statistics, all artifacts frozen and replayable at zero cost.
 |---|---|
 | **Provem** (this repo) | dense tier: verbatim store + BM25 + key-gated `text-embedding-3-small` + RRF fusion, top-k 20; abstention-calibrated answer prompts with question-type routing (`dense,strict5,agg,aggfan,temporalroute`) |
 | **Mem0** | Mem0 Platform (paid tier), its own extraction pipeline over the same conversations, top-k 20 searches; empty-prediction fix applied to its stored answers against its live stores |
-| **Zep** | Zep Cloud (trial), configured per **Zep's own published evaluation checklist** — one graph owner per conversation with proper user/assistant roles and speaker names, timestamps via the native `created_at` field (not appended to text), retrieval via parallel edge+node graph searches composed into dated facts + entity summaries, k-capped like the others. Ingestion read-back verified per session (272/272); graph processing confirmed complete (5,788/5,882 episodes) before evaluation |
+| **Zep** | Zep Cloud (trial), configured per **Zep's own published evaluation checklist** — one graph owner per conversation with proper user/assistant roles and speaker names, timestamps via the native `created_at` field (not appended to text), retrieval via parallel edge+node graph searches composed into dated facts + entity summaries, k-capped like the others. Ingestion read-back verified per session (272/272); graph processing reached 5,788 of 5,882 episodes (98.4%) before evaluation — 94 episodes (1.6%) never completed processing on the trial account |
 
 Shared pipeline for all three: LoCoMo, 10 conversations, 5,882 turns, 1,986
 questions (1,540 answerable + 446 adversarial). Answerer: `gpt-5-mini`
@@ -25,9 +25,17 @@ correct on adversarial questions). Judges see (question, gold, prediction) only.
 | Strict binary (gpt-5) | **0.614** | 0.509 | 0.449 |
 | Cross-vendor (claude-opus-5) | **0.502** | 0.419 | 0.329 |
 | Mem0's own published judge prompt (gpt-5; partial credit, 14-day date tolerance) | **0.772** | 0.722 | 0.632 |
-| Abstention on 446 adversarial questions | **0.863** | 0.848 | 0.704 |
+| Abstention on 446 adversarial questions | 0.863¹ | 0.848 | 0.704 |
 
-**The ordering Provem > Mem0 > Zep is invariant under all three judges.**
+**The ordering Provem > Mem0 > Zep is invariant under all three judges** for
+answerable accuracy.
+
+¹ The abstention row is not a same-footing comparison: Provem's 0.863 comes
+from its dev-tuned strict5 prompt chain, while Mem0 and Zep answered under the
+neutral prompt. Under the shared neutral prompt Provem's abstention is 0.693
+(309/446) — behind Zep 0.704 and Mem0 0.848 — and the 0.863-vs-0.848 gap to
+Mem0 is a statistical tie either way (McNemar 42/35 discordants, p = 0.49).
+Neutral-prompt answerable accuracy is 0.596, still ahead of Mem0's 0.509.
 
 Pairwise significance (paired exact McNemar, strict judge):
 
@@ -46,14 +54,21 @@ Pairwise significance (paired exact McNemar, strict judge):
 | multi-hop (n=282) | **0.411** | 0.397 | 0.340 |
 | open-domain (n=96) | 0.312 | 0.333 | 0.260 |
 
-Provem leads three of four categories; open-domain (n=96) is a statistical tie
-with Mem0 (2 questions apart). Category names verified against Mem0's official
-run files by question counts.
+Provem leads two of four categories (single-hop, temporal). Multi-hop
+(+4 questions, McNemar p = 0.74, n=282) and open-domain (−2 questions,
+p = 0.80, n=96) are statistical ties with Mem0 — labeled symmetrically as
+such. Category names verified against Mem0's official run files by question
+counts.
 
-## Holdout confirmation (convs 1,3,5,7,9 — never used for any tuning)
+## Holdout confirmation (convs 1,3,5,7,9)
 
 Provem **0.617** (464/752) · Mem0 0.503 (378/752) · Zep 0.451 (339/752).
-The ordering and margins hold on never-tuned conversations.
+The final configuration was chosen on the dev split (convs 0,2,4,6,8) only,
+and the ordering and margins hold on the holdout conversations. Caveat: this
+is not a single-shot confirmatory test — full-set runs (including the holdout)
+were evaluated ~7 times across ~20 tried configurations during the campaign
+for ordering checks, and the reported p-values carry no multiplicity
+adjustment (the three headline p-values survive any correction).
 
 ## Congruence with published numbers
 

@@ -18,12 +18,12 @@ question-type routing. Mem0: its platform pipeline over the same conversations
 | Answerable accuracy, **Mem0's own published judge prompt** (gpt-5, partial credit + 14-day date tolerance) | **0.772** | 0.722 | **+5.0 pts, p=4.4×10⁻⁵** — we win under their scoring too; Mem0's 0.722 sits inside its published band (paper 66.9, independent k=20 64.7, own k=50 82.7), validating our harness |
 | Holdout-only (never tuned, n=752) | **0.617** | 0.503 | +11.4 pts, p=1.7×10⁻⁸ |
 | Neutral prompt (no tuning at all) | **0.596** | 0.509 | win survives without prompt tuning |
-| Abstention on adversarial (n=446) | **0.863** | 0.848 | parity (p=0.49), gate ≥0.85 ✓ |
+| Abstention on adversarial (n=446) | 0.863 | 0.848 | statistical tie (p=0.49); Provem number is from the dev-tuned strict5 prompt — neutral-prompt abstention is 0.693, last of three |
 | multi-hop (n=282) | **0.411** | 0.397 | flipped in campaign 2 |
 | temporal (n=321) | **0.614** | 0.442 | clear win |
 | single-hop (n=841) | **0.717** | 0.592 | clear win |
 | open-domain (n=96) | 0.312 | 0.333 | statistical tie (2 questions; CIs overlap) |
-| Judge agreement (Cohen's κ, gpt-5 vs opus-5) | 0.70–0.83 | — | substantial |
+| Judge agreement (Cohen's κ, gpt-5 vs opus-5) | 0.70–0.72 (final artifacts) | — | substantial |
 
 Wächter (no regressions): 490 unit tests OK; reliability headline exactly stable
 (governed 0.900, 0 catastrophic violations, benign accuracy 1.0, poisoning 0);

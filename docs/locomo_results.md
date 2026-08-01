@@ -1,6 +1,6 @@
 # LoCoMo Text-Only Results
 
-Date: 2026-05-02
+Date: 2026-05-02 (initial keyless runs; LLM-answerer and scoring sections updated 2026-07-29/30)
 
 Dataset path:
 

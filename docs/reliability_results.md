@@ -21,14 +21,21 @@ PYTHONPATH=src python3 -m cognitive_memory reliability --seeds 1,2,3,4,5,6,7,8,9
 
 ## Governed vs ungoverned (paired, same 960 trajectories)
 
-- **Task-success McNemar:** governed-only wins `497`, ungoverned-only wins `0`,
-  discordant `497`, **p = 4.9e-150**. Governed never loses a trajectory the
-  ungoverned arm wins.
-- **Per-step correctness gain:** `+0.549`, 95% CI `[+0.526, +0.572]` (excludes 0).
-- **Silent-error-rate change:** `-0.726`, 95% CI `[-0.747, -0.705]` (excludes 0).
-- **Blast radius (compounding):** ungoverned `2.12` silent errors per adversarial
-  trajectory vs governed `0.00`. One bad memory corrupts every downstream step
-  without governance; governance contains it to zero.
+- **Task-success pairing:** governed-only wins `497`, ungoverned-only wins `0`,
+  discordant `497` of 960 trajectories. Governed never loses a trajectory the
+  ungoverned arm wins. We deliberately report counts instead of a McNemar
+  p-value: the benchmark is a deterministic, author-designed simulation whose
+  null hypothesis is false by construction, so a p-value's magnitude would
+  only restate the chosen scenario count (2,000 scenarios would mechanically
+  yield p ≈ 1e-300).
+- **Per-step correctness gain:** `+0.549` (descriptive; steps within a
+  trajectory are not independent, so no step-level CI is reported).
+- **Silent-error-rate change:** `-0.726` (descriptive, same reason).
+- **Blast radius (re-retrieval):** ungoverned `2.12` silent errors per
+  adversarial trajectory vs governed `0.00`. "Blast radius" here means the
+  same bad record is re-retrieved and re-served across on average 2.12 later
+  scripted steps — repetition of one error, not error propagation through
+  agent state; governance contains it to zero.
 
 ## End-to-end task success (stochastic agent)
 
@@ -41,12 +48,12 @@ memory error compounding over the trajectory. Agent noise is paired across arms.
 PYTHONPATH=src python3 -m cognitive_memory reliability --end-to-end --seeds 1,2,3,4,5,6,7,8,9,10 --scenarios 96 --skills 1.0,0.99,0.95,0.90
 ```
 
-| Agent skill `p` | no_memory | ungoverned | governed | agent-only baseline `p^n` | governance delta | McNemar p |
+| Agent skill `p` | no_memory | ungoverned | governed | agent-only baseline `p^n` | governance delta | discordant (gov-only / ung-only) |
 | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| 1.00 | 0.000 | 0.375 | **0.893** | 1.000 | **+0.518** | 4.9e-150 |
-| 0.99 | 0.000 | 0.371 | **0.875** | 0.980 | **+0.504** | 4e-146 |
-| 0.95 | 0.000 | 0.366 | **0.839** | 0.902 | **+0.473** | 4.3e-137 |
-| 0.90 | 0.000 | 0.339 | **0.770** | 0.810 | **+0.431** | 4.7e-125 |
+| 1.00 | 0.000 | 0.375 | **0.893** | 1.000 | **+0.518** | 497 / 0 |
+| 0.99 | 0.000 | 0.371 | **0.875** | 0.980 | **+0.504** | 484 / 0 |
+| 0.95 | 0.000 | 0.366 | **0.839** | 0.902 | **+0.473** | 454 / 0 |
+| 0.90 | 0.000 | 0.339 | **0.770** | 0.810 | **+0.431** | 414 / 0 |
 
 **Reading:** with governance, end-to-end success stays close to the agent-only
 compounding baseline `p^n` (a well-governed memory adds almost no error of its
@@ -183,8 +190,9 @@ cross-subject serves). Real-data scope numbers are deferred to a later pass.
   agent policy is fixed by design to isolate the memory layer.
 - This is **not** a reproduction of the full MINJA / AgentPoison exploits; it
   models their retrieval-and-refire mechanism, not the live planting procedure.
-- This is **not** real agent traffic; scenarios are synthetic (though fair:
-  benign-dominated, with a competent control arm).
+- This is **not** real agent traffic; scenarios are synthetic and the mixture
+  is adversarial-heavy by design (62.5% of scenarios), so aggregate deltas
+  overstate a mostly-benign production workload.
 - This does **not** benchmark any named vendor. `ungoverned` represents the
   recall-first design class, not a specific product.
 - This is **not** a production-readiness claim.
