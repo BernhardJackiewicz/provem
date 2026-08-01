@@ -39,21 +39,21 @@
         "question_id": "fake_q1",
         "question": "What does Maya drink before work?",
         "answer": "green tea",
-        "category": 2,
+        "category": 4,
         "evidence": ["D1:1"]
       },
       {
         "question_id": "fake_q2",
         "question": "Where does Liam live?",
         "answer": "Berlin",
-        "category": 2,
+        "category": 4,
         "evidence": ["D1:2"]
       },
       {
         "question_id": "fake_q3",
         "question": "What day is Maya's piano lesson now?",
         "answer": "Friday",
-        "category": 3,
+        "category": 2,
         "evidence": ["D2:1"]
       }
     ]

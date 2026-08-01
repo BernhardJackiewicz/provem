@@ -26,11 +26,15 @@ from .models import Episode, RetrievalRequest, lexical_score, tokenize
 from .retrieval import OpenConversationRetrievalPlanner, RetrievalPlanner
 
 
+# Official LoCoMo category codes (matches Mem0's published evaluation):
+# 1=multi-hop, 2=temporal, 3=open-domain, 4=single-hop, 5=adversarial.
+# Codes 2/3/4 were mislabeled here until 2026-08; stored run artifacts carry
+# raw codes, so frozen results are unaffected by the correction.
 CATEGORY_NAMES = {
     "1": "multi_hop",
-    "2": "single_hop",
-    "3": "temporal",
-    "4": "open_domain",
+    "2": "temporal",
+    "3": "open_domain",
+    "4": "single_hop",
     "5": "adversarial",
 }
 

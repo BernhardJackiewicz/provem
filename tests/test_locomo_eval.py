@@ -18,6 +18,7 @@ from cognitive_memory.benchmark import BenchmarkRunner
 from cognitive_memory.controller import MemoryController
 from cognitive_memory.extractor import ExtractorSchemaError, GenericConversationExtractor, OpenConversationLLMExtractor
 from cognitive_memory.locomo_eval import (
+    CATEGORY_NAMES,
     LoCoMoEvaluationError,
     LoCoMoLoader,
     dumps_locomo_report,
@@ -85,7 +86,7 @@ class LoCoMoEvaluationTests(unittest.TestCase):
                         "question_id": "hybrid_q1",
                         "question": "Where does Maya live?",
                         "answer": "Oslo",
-                        "category": 2,
+                        "category": 4,
                         "evidence": ["D1:1"],
                     }
                 ],
@@ -114,6 +115,18 @@ class LoCoMoEvaluationTests(unittest.TestCase):
         self.assertEqual(temporal.question_id, "fake_q3")
         self.assertEqual(temporal.answers, ["Friday"])
         self.assertEqual(temporal.evidence_ids, ["D2:1"])
+
+    def test_category_names_match_official_locomo_mapping(self):
+        self.assertEqual(
+            CATEGORY_NAMES,
+            {
+                "1": "multi_hop",
+                "2": "temporal",
+                "3": "open_domain",
+                "4": "single_hop",
+                "5": "adversarial",
+            },
+        )
 
     def test_images_are_ignored_and_not_added_to_episode_text(self):
         sample = LoCoMoLoader().load(FIXTURE)[0]
@@ -456,7 +469,7 @@ class LoCoMoEvaluationTests(unittest.TestCase):
                     "question_id": "missing_memory_q",
                     "question": "What helps Maya focus?",
                     "answer": "green tea",
-                    "category": 2,
+                    "category": 4,
                     "evidence": ["D2:2"],
                 }
             ]
@@ -487,7 +500,7 @@ class LoCoMoEvaluationTests(unittest.TestCase):
                         "question_id": "cue_q",
                         "question": "Where is the nice place?",
                         "answer": "near Paris",
-                        "category": 2,
+                        "category": 4,
                         "evidence": ["D1:1"],
                     }
                 ],
@@ -519,7 +532,7 @@ class LoCoMoEvaluationTests(unittest.TestCase):
                         "question_id": "precision_q",
                         "question": "Where does Noah live?",
                         "answer": "Lisbon",
-                        "category": 2,
+                        "category": 4,
                         "evidence": ["D1:1"],
                     }
                 ],
@@ -545,7 +558,7 @@ class LoCoMoEvaluationTests(unittest.TestCase):
                     "question_id": "wrong_retrieval_q",
                     "question": "Where does Liam live?",
                     "answer": "green tea",
-                    "category": 2,
+                    "category": 4,
                     "evidence": ["D1:1"],
                 }
             ]
@@ -664,14 +677,14 @@ class LoCoMoEvaluationTests(unittest.TestCase):
                         "question_id": "template_time_q",
                         "question": "When is Maya's support group?",
                         "answer": "Friday",
-                        "category": 3,
+                        "category": 2,
                         "evidence": ["D1:1"],
                     },
                     {
                         "question_id": "template_relationship_q",
                         "question": "What is Maya's relationship status?",
                         "answer": "dating Alex",
-                        "category": 2,
+                        "category": 4,
                         "evidence": ["D1:2"],
                     },
                 ],
@@ -707,21 +720,21 @@ class LoCoMoEvaluationTests(unittest.TestCase):
                         "question_id": "where_visit_q",
                         "question": "Where did Noah take the class?",
                         "answer": "observatory",
-                        "category": 2,
+                        "category": 4,
                         "evidence": ["D1:1"],
                     },
                     {
                         "question_id": "where_camping_q",
                         "question": "Where did Noah camp?",
                         "answer": "Cedar Lake",
-                        "category": 2,
+                        "category": 4,
                         "evidence": ["D1:2"],
                     },
                     {
                         "question_id": "who_dating_q",
                         "question": "Who is Noah dating?",
                         "answer": "Riley",
-                        "category": 2,
+                        "category": 4,
                         "evidence": ["D1:3"],
                     },
                 ],
@@ -766,7 +779,7 @@ class LoCoMoEvaluationTests(unittest.TestCase):
                     "question_id": "abstain_with_evidence_q",
                     "question": "ZXQ galaxy nebula code?",
                     "answer": "green tea",
-                    "category": 2,
+                    "category": 4,
                     "evidence": ["D1:1"],
                 }
             ]
@@ -1029,7 +1042,7 @@ class LoCoMoEvaluationTests(unittest.TestCase):
                         "question_id": "map_q",
                         "question": "Where is the old map stored?",
                         "answer": "Paris",
-                        "category": 2,
+                        "category": 4,
                         "evidence": ["D1:1"],
                     }
                 ],

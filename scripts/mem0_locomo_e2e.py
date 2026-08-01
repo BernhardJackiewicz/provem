@@ -395,8 +395,12 @@ def our_context(sysm, sample, q, k):
     features = getattr(sysm, "ours_features", frozenset())
     dense = "dense" in features and getattr(sysm, "embedder", None) is not None
     fetch_k = 50 if dense else k
+    # Pinned to raw category code "3": the frozen c2 campaign ran while
+    # CATEGORY_NAMES mislabeled code 3 as "temporal", so its retrieval routed
+    # code-3 questions through the temporal path. Keep that behavior verbatim
+    # so a replay of the frozen ours arm stays bit-identical.
     req = RetrievalRequest(query=q.question, user_id=sample.sample_id, project_id="locomo",
-                           task_type="temporal" if q.category_name == "temporal" else "general", top_k=fetch_k)
+                           task_type="temporal" if q.category == "3" else "general", top_k=fetch_k)
     res = sysm.retrieval.retrieve(req)
     entries = []
     for m in res.selected_memories[:fetch_k]:
