@@ -1,4 +1,4 @@
-# Engram MVP 1 Quality Gate
+# Provem MVP 1 Quality Gate (developed under the working name Engram)
 
 This checklist defines the bar for freezing MVP 1 as a local synthetic research
 prototype. It is not a production release checklist.

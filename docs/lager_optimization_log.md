@@ -50,7 +50,7 @@ against Mem0's frozen rows (identical questions, answerer model, judge):
   0.260; multi-hop remains Mem0's (0.245 vs 0.316) — honest residual gap (cross-session
   assembly needs extraction/consolidation, wave 3, not required for the target).
 - **Wächter gates all green** at promotion: 488 unit tests OK, reliability headline exactly
-  stable (governed 0.900, 0 violations, benign accuracy 1.0), quality-gate PASS (incl.
+  stable (governed 0.900 [gate config] (gate config: seeds 1-5, 64 scen; headline 0.893 is seeds 1-10, 96), 0 violations, benign accuracy 1.0), quality-gate PASS (incl.
   external_reliability), MCP-sqlite restart smoke PASS, feature-less baseline byte-identical.
 - **Cost: €10.92 of €30** (ledger-verified).
 
@@ -155,7 +155,7 @@ Iteration attribution on DEV (each €0.3-1.8, caches make unchanged questions f
   - by category: multi-hop **0.411 vs 0.397** (flipped!), temporal 0.614 vs 0.442,
     single-hop 0.717 vs 0.592, open-domain 0.312 vs 0.333 (2 questions of 96 — statistical
     noise, CIs overlap massively; further iteration on it would be noise-chasing).
-- Wächter gates at close: 490 tests OK, reliability headline exact (governed 0.900,
+- Wächter gates at close: 490 tests OK, reliability headline exact (governed 0.900 [gate config],
   0 violations, benign 1.0), quality-gate 10× PASS, feature-less default byte-identical.
 - Ledger: OpenAI €19.04/€30; Anthropic ~€3-9/€20 (pricing band), second-judge top-up on
   final predictions in flight.
@@ -200,7 +200,7 @@ Mem0 reference (frozen): DEV answerable 0.478, full-set 0.475, abstain 0.883.
   not re-pay. Library addition: `cognitive_memory/temporal.py` (deterministic relative-date
   annotation, 8 tests) — pending its own measurement as `temporal`.
 - Gates re-verified locally during the outage: full suite OK, quality-gate PASS, reliability
-  headline stable (governed 0.900, 0 violations, benign 1.0).
+  headline stable (governed 0.900 [gate config], 0 violations, benign 1.0).
 
 ### Iterations 2–5 — single-feature attribution (2026-07-31)
 - **The window family** (any direction) consistently trades abstention for answerable

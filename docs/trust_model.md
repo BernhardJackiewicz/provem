@@ -1,4 +1,4 @@
-# Engram — Trust Model & Deployment Boundaries
+# Provem (formerly Engram) — Trust Model & Deployment Boundaries
 
 The enterprise audit flagged "no auth", "no TLS", "no RBAC", "tenant trusted from
 the caller", "no horizontal scaling". These are **not bugs in the shipped

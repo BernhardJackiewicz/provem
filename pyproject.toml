@@ -3,9 +3,9 @@ requires = ["setuptools>=61"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "engram-memory-layer"
+name = "provem"
 version = "0.1.0"
-description = "Engram: a falsifiable hippocampal memory layer prototype for AI agents."
+description = "Provem: a governed, GDPR-native memory layer for AI agents (formerly Engram)."
 requires-python = ">=3.9"
 dependencies = []
 

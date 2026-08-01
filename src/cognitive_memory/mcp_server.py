@@ -24,7 +24,7 @@ from .compliance import CompliancePolicy, available_profiles, resolve_policy
 from .reliability import Bm25Backend, GovernedMemory, NaiveBackend, Scope
 
 PROTOCOL_VERSION = "2025-06-18"
-SERVER_NAME = "engram-governed-memory"
+SERVER_NAME = "provem-governed-memory"
 SERVER_VERSION = "0.1.0"
 
 # JSON-RPC error codes

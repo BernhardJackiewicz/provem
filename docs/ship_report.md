@@ -1,4 +1,4 @@
-# Ship report: Provem (formerly Provem) memory vs Mem0 — final numbers, honest limitations, recommendation
+# Ship report: Provem (formerly Engram) memory vs Mem0 — final numbers, honest limitations, recommendation
 
 Date: 2026-07-31. Full evidence chain: `lager_optimization_log.md` (both campaigns),
 `mem0_locomo_e2e_results.md` (original baseline), `docs/runs/manifest.json` +
@@ -26,7 +26,7 @@ question-type routing. Mem0: its platform pipeline over the same conversations
 | Judge agreement (Cohen's κ, gpt-5 vs opus-5) | 0.70–0.72 (final artifacts) | — | substantial |
 
 Wächter (no regressions): 490 unit tests OK; reliability headline exactly stable
-(governed 0.900, 0 catastrophic violations, benign accuracy 1.0, poisoning 0);
+(governed 0.900 in the quality-gate config — seeds 1-5, 64 scenarios/seed, 320 trajectories; the published headline 0.893 uses seeds 1-10, 96 scenarios, 960 trajectories — 0 catastrophic violations, benign accuracy 1.0, poisoning 0);
 quality-gate 10× PASS; feature-less stdlib default byte-identical; MCP restart smoke PASS.
 Costs: OpenAI €19.04 of the €30 cap; Anthropic ~€3.8–11.2 of €20 (pricing band).
 

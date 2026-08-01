@@ -1,4 +1,4 @@
-# Engram MVP 1 Architecture Review
+# Provem MVP 1 Architecture Review (developed under the working name Engram)
 
 This review documents the current local architecture before an MVP 1 freeze. It
 is an engineering audit, not a production-readiness claim.

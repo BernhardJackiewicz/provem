@@ -1,5 +1,8 @@
 # Claim Register
 
+> Historical rows keep the project's former working name "Engram" verbatim —
+> this register is a document of record. Engram and Provem are the same system.
+
 Track every external or product-significant claim before using it in a paper,
 deck or product narrative.
 
@@ -169,6 +172,6 @@ script, dataset description, metric definition and failure analysis.
 Synthetic support is not enough for product claims. Any claim marked
 `Internally supported` must be retested against noisier natural-language data and
 at least one real external baseline before use in a strategy deck or paper.
-| Optimized memory (dense+RRF hybrid, strict4 prompt) beats live Mem0 on full LoCoMo E2E: answerable 0.536 vs 0.475, McNemar p=4.2e-6; abstention parity 0.886 vs 0.883. | `docs/lager_optimization_log.md`, `docs/runs/locomo_e2e_ours_optimized.jsonl` paired against frozen Mem0 rows | Full real-data LoCoMo run, shared gpt-5-mini answerer + gpt-5 judge, paired stats | Yes, incl. never-tuned holdout convs (+6.8 pts, p=4.2e-4) | Medium | Supported; caveats: strict4 prompt tuned on DEV for our side only (neutral-prompt dense already beats Mem0 on answerable), single judge family, multi-hop still behind Mem0 (0.245 vs 0.316) |
+| Optimized memory (dense+RRF hybrid, strict4 prompt) beats live Mem0 on full LoCoMo E2E: answerable 0.536 vs 0.475, McNemar p=4.2e-6; abstention parity 0.886 vs 0.883. | `docs/lager_optimization_log.md`, `docs/runs/locomo_e2e_ours_optimized.jsonl` paired against frozen Mem0 rows | Full real-data LoCoMo run, shared gpt-5-mini answerer + gpt-5 judge, paired stats | Yes, incl. holdout convs (+6.8 pts, p=4.2e-4) | Medium | **Superseded** by the campaign-2 final-config row below: these are pre-empty-fix numbers, and the optimization log notes the campaign-1 abstention calibration partly rode on that bug |
 | Final Engram config (dense+RRF, strict5 routing) beats Mem0 on full LoCoMo E2E after symmetric empty-fix: 0.614 vs 0.509 (p=7.2e-14, gpt-5 judge) and 0.502 vs 0.419 (p=5.1e-10, claude-opus-5 judge); abstention parity; multi-hop flipped 0.411 vs 0.397; holdout +11.4. | `docs/ship_report.md`, `docs/lager_optimization_log.md`, replayable via `scripts/replay_report.sh` | Full real-data paired runs, two judge vendors, holdout confirmation | Yes, bit-exact from frozen caches at EUR 0 | Medium | Supported; disclosed limits: LoCoMo-only, LLM judges only, DEV-tuned prompts (neutral-prompt control still wins), Mem0 store drift, cat_3 tie |
 | Three-system LoCoMo E2E (identical harness): Provem 0.614 > Mem0 0.509 > Zep 0.449 (strict judge); ordering invariant under claude-opus-5 and Mem0's own judge; all pairwise McNemar significant (7e-14 / 1e-35 / 7e-5); abstention 0.863/0.848/0.704. | `docs/three_system_benchmark.md`, frozen runs + judge caches, `scripts/replay_report.sh` | Full real-data paired runs, three judges, holdout confirmation, Zep configured per its own checklist with read-back-verified ingestion | Yes, EUR-0 replay from frozen caches | Medium | Supported; caveats: Zep on trial/default config, LoCoMo-only, LLM judges, Provem prompts dev-tuned (neutral-prompt control still wins) |

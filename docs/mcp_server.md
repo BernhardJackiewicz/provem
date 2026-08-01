@@ -1,4 +1,4 @@
-# Engram Governed Memory — MCP Server
+# Provem Governed Memory — MCP Server
 
 A configurable, dependency-free MCP server that puts the governance layer in
 front of agent memory. One deployment serves many domains: each tenant is

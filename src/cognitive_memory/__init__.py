@@ -1,4 +1,4 @@
-"""Engram: a hippocampal memory layer research prototype for AI."""
+"""Provem (formerly Engram): a governed memory layer research prototype for AI agents."""
 
 from .controller import MemoryController
 from .external_eval import (

@@ -1,4 +1,4 @@
-# Engram Research Plan
+# Provem Research Plan (developed under the working name Engram)
 
 Engram is framed as **a hippocampal memory layer for AI**: a functional
 analogy for episodic encoding, temporal context, controlled consolidation,

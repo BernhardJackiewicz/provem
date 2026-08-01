@@ -1,4 +1,4 @@
-# Engram — Enterprise Readiness Audit
+# Provem (formerly Engram) — Enterprise Readiness Audit
 
 **Status: audit only — no fixes applied.** This is an inventory of gaps and
 suspected bugs to make Engram a serious enterprise product, produced by a

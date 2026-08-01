@@ -28,7 +28,7 @@ class HandshakeTests(unittest.TestCase):
     def test_initialize(self):
         server = MCPServer()
         resp = server.handle(_req("initialize", {"protocolVersion": PROTOCOL_VERSION, "capabilities": {}}))
-        self.assertEqual(resp["result"]["serverInfo"]["name"], "engram-governed-memory")
+        self.assertEqual(resp["result"]["serverInfo"]["name"], "provem-governed-memory")
         self.assertIn("tools", resp["result"]["capabilities"])
 
     def test_initialized_notification_returns_none(self):

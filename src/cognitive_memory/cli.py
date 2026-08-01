@@ -217,7 +217,7 @@ def run_mcp_serve(args: argparse.Namespace) -> int:
         return 2
     server = MCPServer(GovernedMemoryService(config))
     print(
-        "engram MCP server ready on stdio (default_profile=%s, tenants=%s)"
+        "provem MCP server ready on stdio (default_profile=%s, tenants=%s)"
         % (config.default_profile, ",".join(config.tenant_profiles) or "none"),
         file=sys.stderr,
     )
@@ -713,7 +713,7 @@ def _quality_gate_review_queue_smoke() -> bool:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(prog="cml", description="Engram hippocampal memory layer prototype")
+    parser = argparse.ArgumentParser(prog="cml", description="Provem governed memory layer (formerly Engram)")
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     benchmark = subparsers.add_parser("benchmark", help="Run synthetic benchmark baselines")
