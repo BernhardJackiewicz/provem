@@ -51,6 +51,10 @@ def main():
     ap.add_argument("--skip-opus", action="store_true")
     ap.add_argument("--skip-mem0-judge", action="store_true")
     ap.add_argument("--cache-dir", default="docs/runs/caches")
+    ap.add_argument("--top-up", action="store_true",
+                    help="allow paid judge calls for missing verdicts; without it a replay never spends money")
+    ap.add_argument("--allow-missing", action="store_true",
+                    help="score missing verdicts as incorrect instead of aborting (intentional partial scoring only)")
     args = ap.parse_args()
 
     opus_cache = e2e.DiskCache(os.path.join(args.cache_dir, "judge2_cache.jsonl"))
@@ -82,6 +86,10 @@ def main():
             if m0j_cache.get(mk) is None:
                 tasks.append(("m0j", ci, qid, q, pred, mk))
     print("zep judge top-up: %d calls needed" % len(tasks), flush=True)
+    if tasks and not args.top_up:
+        raise SystemExit(
+            "ABORT: %d judge verdicts are missing from the caches. This is a replay "
+            "(no paid calls); rerun with --top-up to spend, or --skip-opus/--skip-mem0-judge." % len(tasks))
 
     lock = threading.Lock()
     done = [0]
@@ -102,7 +110,7 @@ def main():
         list(pool.map(work, tasks))
 
     # ---- three-system scoreboard under each judge ----
-    def score(system, rows, regime):
+    def score(system, rows, regime, missing):
         c = n = 0
         for (ci, qid), r in rows.items():
             q = qinfo.get((ci, qid))
@@ -118,18 +126,44 @@ def main():
                 else:
                     set_name = {"provem": "ours_opt", "mem0": "mem0", "zep": "zep"}[system]
                     v = opus_cache.get(e2e._h("j2", set_name, qid, "claude-opus-5", (pred or "").strip().lower()))
+                    if v is None:
+                        missing.append((regime, system, ci, qid))
                     ok = bool(v)
             else:  # mem0 judge
                 v = m0j_cache.get(e2e._h("m0j", qid, "gpt-5", (pred or "").strip().lower()))
+                if v is None:
+                    missing.append((regime, system, ci, qid))
                 ok = bool(v)
             c += 1 if ok else 0
         return c, n
 
+    # compute everything first: a missing cached verdict must abort loudly
+    # instead of being silently scored as incorrect (bool(None) deflated scores)
+    missing = []
+    results = {}
+    regimes = [("strict", "strict gpt-5 judge")]
+    if not args.skip_opus:
+        regimes.append(("opus", "claude-opus-5 judge"))
+    if not args.skip_mem0_judge:
+        regimes.append(("m0j", "Mem0's own judge prompt"))
+    for regime, _label in regimes:
+        for system in ("provem", "mem0", "zep"):
+            results[(regime, system)] = score(system, systems[system], regime, missing)
+    if missing and not args.allow_missing:
+        by = {}
+        for regime, system, _ci, _qid in missing:
+            by[(regime, system)] = by.get((regime, system), 0) + 1
+        detail = ", ".join("%s/%s: %d" % (r, s, k) for (r, s), k in sorted(by.items()))
+        raise SystemExit(
+            "ABORT: %d judge verdicts missing from the caches (%s). Scores would be "
+            "silently deflated. Run with --top-up to judge them, or --allow-missing "
+            "to score them as incorrect on purpose." % (len(missing), detail))
+
     print("\n============ THREE-SYSTEM SCOREBOARD (answerable, n=1540) ============")
-    for regime, label in (("strict", "strict gpt-5 judge"), ("opus", "claude-opus-5 judge"), ("m0j", "Mem0's own judge prompt")):
+    for regime, label in regimes:
         parts = []
         for system in ("provem", "mem0", "zep"):
-            c, n = score(system, systems[system], regime)
+            c, n = results[(regime, system)]
             p, lo, hi = wilson_point_and_interval(c, max(n, 1))
             parts.append("%s %.3f (%d/%d)" % (system, p, c, n))
         print("%-26s: %s" % (label, " | ".join(parts)))

@@ -103,6 +103,8 @@ def main():
     ap.add_argument("--workers", type=int, default=8)
     ap.add_argument("--cache", default="docs/runs/caches/judge2_cache.jsonl")
     ap.add_argument("--out", default="docs/runs/local/judge2_results.json")
+    ap.add_argument("--allow-missing", action="store_true",
+                    help="silently drop rows whose verdict is not cached instead of aborting")
     args = ap.parse_args()
 
     cache = e2e.DiskCache(args.cache)
@@ -183,6 +185,7 @@ def main():
 
     # ---------- score all three sets under judge2 (cache-complete now) ----------
     verdicts = {}
+    missing = []
     for set_name, rows in sets.items():
         per = {}
         for (ci, qid), r in rows.items():
@@ -198,9 +201,20 @@ def main():
                 ck = e2e._h("j2", set_name, qid, args.model, (r["predicted"] or "").strip().lower())
                 v = cache.get(ck)
                 if v is None:
+                    # dropping the row would silently shrink the denominator
+                    missing.append((set_name, ci, qid))
                     continue
                 per[(ci, qid)] = ("answerable", bool(v))
         verdicts[set_name] = per
+    if missing and not args.allow_missing:
+        by = {}
+        for set_name, _ci, _qid in missing:
+            by[set_name] = by.get(set_name, 0) + 1
+        raise SystemExit(
+            "ABORT: %d verdicts missing from %s (%s). Denominators would silently "
+            "shrink. Re-run the judging phase for these rows, or pass "
+            "--allow-missing for an intentional partial report."
+            % (len(missing), args.cache, ", ".join("%s: %d" % kv for kv in sorted(by.items()))))
 
     def acc(set_name, kind):
         per = verdicts[set_name]
