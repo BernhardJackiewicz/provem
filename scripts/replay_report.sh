@@ -20,3 +20,7 @@ done
 echo ""
 echo "== campaign ledger =="
 [ -f docs/runs/caches/campaign_ledger.jsonl ] && cat docs/runs/caches/campaign_ledger.jsonl | tail -20
+
+echo ""
+echo "== THREE-SYSTEM SCOREBOARD: Provem vs Mem0 vs Zep (from frozen judge caches) =="
+$PY scripts/zep_judges.py --workers 1 2>/dev/null | tail -6

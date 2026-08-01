@@ -1,13 +1,13 @@
 # Provem
 
-**Governed, GDPR-native memory for AI agents with stronger recall than Mem0, zero compliance violations, both proven.**
+**Governed, GDPR-native memory for AI agents with stronger recall than Mem0 and Zep, zero compliance violations, both proven.**
 
 Two results, one system, every number reproducible from frozen artifacts at zero cost:
 
 | Axis | Result |
 |---|---|
 | **Governance** | Compliance violations **240 → 0**, memory-poisoning success **100% → 0%**, silent compounding errors **72.6% → 0.0%** (paired McNemar p ≈ 5×10⁻¹⁵⁰, deterministic, no API key) |
-| **Memory** | **Beats Mem0 on full LoCoMo**: 0.614 vs 0.509 answerable accuracy (paired, +10.5 pts, p = 7×10⁻¹⁴) — confirmed under an independent Claude judge (+8.2, p = 5×10⁻¹⁰) **and under Mem0's own published judge prompt** (0.772 vs 0.722, p = 4×10⁻⁵) |
+| **Memory** | **Beats Mem0 and Zep on full LoCoMo**: 0.614 vs 0.509 vs 0.449 answerable accuracy (paired; Provem>Mem0 p = 7×10⁻¹⁴, Provem>Zep p = 1×10⁻³⁵) — the ordering holds under an independent Claude judge **and under Mem0's own published judge prompt** (0.772 / 0.722 / 0.632) |
 
 ## The problem
 
@@ -123,7 +123,7 @@ sh scripts/replay_report.sh     # every LoCoMo-vs-Mem0 number, €0, from frozen
 | Tier | LoCoMo answerable | Governance | Requirements |
 |---|---|---|---|
 | **stdlib default** | ~0.39–0.45 (below Mem0) | full | none — no key, no pip dependency, air-gap-safe |
-| **dense (recommended)** | **0.614** (> Mem0 0.509) | full | embeddings API key (cents per conversation, disk-cached) |
+| **dense (recommended)** | **0.614** (> Mem0 0.509 > Zep 0.449) | full | embeddings API key (cents per conversation, disk-cached) |
 | local embeddings | ~0.47–0.50 (projected) | full | planned: pip extra, no API key |
 
 The stdlib tier is the zero-dependency governance layer and demo path — it does
@@ -151,26 +151,33 @@ layer's causal contribution; it is not an end-to-end LLM claim. Full method and
 limits: [`docs/agentic_reliability_benchmark.md`](docs/agentic_reliability_benchmark.md),
 [`docs/reliability_results.md`](docs/reliability_results.md).
 
-## Evidence 2: memory quality vs Mem0 (full LoCoMo, paired, three judges)
+## Evidence 2: memory quality vs Mem0 and Zep (full LoCoMo, paired, three judges)
 
-Both systems ingested the same 10 LoCoMo conversations (5,882 turns) and answered
-the same 1,986 questions with the **identical answerer model**; only the memory
-differs. Mem0 ran on its own platform pipeline. A harness bug that silently
-swallowed 12–23% of answers at the token cap was found and fixed **symmetrically
-for both sides** before these numbers (full disclosure in
+All three systems ingested the same 10 LoCoMo conversations (5,882 turns) and
+answered the same 1,986 questions with the **identical answerer model**; only
+the memory differs. Mem0 ran on its own platform pipeline; Zep ran on Zep Cloud,
+configured per **Zep's own published evaluation checklist** (proper user model,
+native `created_at` timestamps, parallel edge+node graph searches), with
+ingestion read-back verified and graph completion confirmed before evaluation.
+A harness bug that silently swallowed answers at the token cap was found and
+fixed **symmetrically** before these numbers (full disclosure in
 [`docs/lager_optimization_log.md`](docs/lager_optimization_log.md)).
 
-| Scoring regime | **Provem (dense)** | Mem0 | Paired significance |
+| Scoring regime | **Provem (dense)** | Mem0 | Zep |
 |---|---|---|---|
-| Strict binary judge (gpt-5) | **0.614** | 0.509 | p = 7.2×10⁻¹⁴ |
-| Independent cross-vendor judge (claude-opus-5) | **0.502** | 0.419 | p = 5.1×10⁻¹⁰ |
-| **Mem0's own published judge prompt** (partial credit, 14-day date tolerance) | **0.772** | 0.722 | p = 4.4×10⁻⁵ |
-| Abstention on 446 adversarial questions | **0.863** | 0.848 | parity (p = 0.49) |
+| Strict binary judge (gpt-5) | **0.614** | 0.509 | 0.449 |
+| Independent cross-vendor judge (claude-opus-5) | **0.502** | 0.419 | 0.329 |
+| **Mem0's own published judge prompt** (partial credit, 14-day date tolerance) | **0.772** | 0.722 | 0.632 |
+| Abstention on 446 adversarial questions | **0.863** | 0.848 | 0.704 |
 
-Per category (strict judge): temporal **0.614 vs 0.442**, single-hop
-**0.717 vs 0.592**, multi-hop **0.411 vs 0.397**, open-domain 0.312 vs 0.333
-(statistical tie, n=96). Holdout conversations never used for tuning show the
-*larger* win (+11.4 pts, p = 1.7×10⁻⁸).
+**The ordering is invariant under all three judges.** All pairwise differences
+are significant (paired McNemar: Provem>Mem0 p = 7.2×10⁻¹⁴, Provem>Zep
+p = 1.0×10⁻³⁵, Mem0>Zep p = 7.4×10⁻⁵). Per category (strict judge): single-hop
+**0.717 / 0.592 / 0.561**, temporal **0.614 / 0.442 / 0.305**, multi-hop
+**0.411 / 0.397 / 0.340**, open-domain 0.312 / 0.333 / 0.260 (tie with Mem0,
+n=96). Holdout conversations never used for tuning confirm the ordering
+(0.617 / 0.503 / 0.451). Full methodology, configs, and limitations:
+[`docs/three_system_benchmark.md`](docs/three_system_benchmark.md).
 
 ### The LoCoMo landscape (read before quoting any of it)
 
@@ -277,6 +284,7 @@ MCP server (JSON-RPC/stdio, per-tenant profiles)   or   direct library embedding
 
 | Doc | What it contains |
 |---|---|
+| [`docs/three_system_benchmark.md`](docs/three_system_benchmark.md) | The headline benchmark: Provem vs Mem0 vs Zep, three judges, paired stats |
 | [`docs/ship_report.md`](docs/ship_report.md) | Final scoreboard, full limitations, ship recommendation |
 | [`docs/lager_optimization_log.md`](docs/lager_optimization_log.md) | Every optimization iteration incl. failures and the bug post-mortem |
 | [`docs/reliability_results.md`](docs/reliability_results.md) | Governance benchmark, full statistics |

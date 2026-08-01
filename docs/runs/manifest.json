@@ -1,6 +1,6 @@
 {
  "purpose": "Reproducibility freeze for the Engram-vs-Mem0 LoCoMo E2E comparison campaigns",
- "git_sha": "263bf887948c46500b6d10e78bebda4dad057012",
+ "git_sha": "d5fd5f9222129e73bab633a7ad93671270ba79bb",
  "dataset": {
   "file": "data/external/locomo/locomo10.json",
   "convs": 10,
@@ -45,11 +45,36 @@
   "docs/runs/locomo_e2e_ours_vs_mem0.jsonl": "02893eb0296882f8",
   "docs/runs/locomo_e2e_ours_optimized.jsonl": "3dd8622addbb5421",
   "data/external/locomo/locomo10.json": "79fa87e90f040813",
-  "docs/runs/caches/campaign_ledger.jsonl": "1362135c83baa3b2",
-  "docs/runs/caches/judge2_cache.jsonl": "e59def36a67680f8",
-  "docs/runs/caches/llm_cache_answer.jsonl": "826b2d1cee666578",
-  "docs/runs/caches/llm_cache_judge.jsonl": "63e625419b9abb92",
-  "docs/runs/caches/vector_cache.jsonl": "26dcbef10ebe08b4"
+  "docs/runs/caches/campaign_ledger.jsonl": "f4b6273e8c94d735",
+  "docs/runs/caches/judge2_cache.jsonl": "ffe55d3203f1c3f6",
+  "docs/runs/caches/llm_cache_answer.jsonl": "d172b92698d9eaa7",
+  "docs/runs/caches/llm_cache_judge.jsonl": "664f1866bc815ef2",
+  "docs/runs/caches/vector_cache.jsonl": "26dcbef10ebe08b4",
+  "docs/runs/zep_locomo.jsonl": "17681a0b275720bf",
+  "docs/runs/caches/mem0_judge_cache.jsonl": "b548b621b2bb79ff"
  },
- "replay": "scripts/replay_report.sh reproduces all headline numbers at EUR 0 from the caches"
+ "replay": "scripts/replay_report.sh reproduces all headline numbers at EUR 0 from the caches",
+ "three_system_scoreboard": {
+  "strict_gpt5": {
+   "provem": 0.614,
+   "mem0": 0.509,
+   "zep": 0.449
+  },
+  "claude_opus_5": {
+   "provem": 0.502,
+   "mem0": 0.419,
+   "zep": 0.329
+  },
+  "mem0_own_judge": {
+   "provem": 0.772,
+   "mem0": 0.722,
+   "zep": 0.632
+  },
+  "abstention": {
+   "provem": 0.863,
+   "mem0": 0.848,
+   "zep": 0.704
+  },
+  "zep_config": "per Zep's published checklist; ingestion read-back verified; graph completion confirmed before eval"
+ }
 }
