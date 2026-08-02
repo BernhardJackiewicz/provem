@@ -1,10 +1,11 @@
 {
  "artifacts_sha256": {
   "docs/runs/caches/campaign_ledger.jsonl": "f4b6273e8c94d7359e070c565f3ff2fa47d9113b5b5cd9853acece95e60b5042",
-  "docs/runs/caches/judge2_cache.jsonl": "ffe55d3203f1c3f630d4fb4925915e73af5a4fd4deb01248ef2d79415b3b918c",
-  "docs/runs/caches/llm_cache_answer.jsonl": "d172b92698d9eaa797b062a421833c53889ec6cbb756fbc39954fc92b057f0ae",
-  "docs/runs/caches/llm_cache_judge.jsonl": "cca727f070f241c1f4143e1ee634ee8fe6a8b3568c48aefeb35226e12aac7688",
-  "docs/runs/caches/mem0_judge_cache.jsonl": "b548b621b2bb79ffdf9eded38413de696027124f670253e70c586541da3eafa7",
+  "docs/runs/caches/judge2_cache.jsonl": "695e453385cb53b9200d5ad30f56f559864e5e1e4ad1f9c08e21320e159a1831",
+  "docs/runs/caches/llm_cache_answer.jsonl": "4a09ed7cb1db30a4414d957efc5cc45dc17ef13ce8db6d2b7d296aed8d18e752",
+  "docs/runs/caches/llm_cache_judge.jsonl": "6d0777c2ee19d60a545907aa48328df6857d8e5f51bdd522ead9bde812c0ae48",
+  "docs/runs/caches/mem0_judge_cache.jsonl": "84f8f4a241167772f4487947639f4a7c176b562f241e64573108b8894baaaf15",
+  "docs/runs/caches/remeasure_ledger.jsonl": "bd4b672e79a1d9d1b03e42884c05488723e71f1733f3902b6489091e3caf5098",
   "docs/runs/iter/c2_full_final.jsonl": "7f23db0599490c44b7e3bd464aa7d4550c65db907bfd784d72f749afecc3f921",
   "docs/runs/iter/c2_full_final2.jsonl": "4b952471ba48790c3409505f99e3acebc226d31ded1ea60f8741ff1c6e9f7e21",
   "docs/runs/iter/c2_full_strict5.jsonl": "509659adab034eb201e96301087ef2ca26f674f1aa227c64a27f5dda694bca71",
@@ -28,10 +29,13 @@
   "docs/runs/iter/iter8_dense_strict3.jsonl": "c55d104ddb405c5bcf8b3d53328920d5efe01ed5245adfcb489337d68846eab3",
   "docs/runs/iter/iter9_dense_strict4.jsonl": "c6f5b5de39f3b339fe91084963c937fa354517833b154b8ee09ca8f29531b386",
   "docs/runs/locomo_e2e_mem0_patched.jsonl": "0ce8b75ca67af2e12df6c587f8f8dbe2f96a8cb24737d32cf94f678e9b7ab28b",
+  "docs/runs/locomo_e2e_mem0_v2.jsonl": "f0d579167f288112a04674b654dd8a2d0d9e1cf15e61b289e822c2027bba5eec",
   "docs/runs/locomo_e2e_ours_emptyfix.jsonl": "07bf2d464d16791b637dfcf91d99d864025c75202323e6299150247a7ad5f6da",
   "docs/runs/locomo_e2e_ours_optimized.jsonl": "3dd8622addbb5421c54feb920d575835088d01bb3d961a3f791017566c749345",
   "docs/runs/locomo_e2e_ours_vs_mem0.jsonl": "02893eb0296882f807ec517eb130538094910438a9d0a9e348fe916067447bb9",
+  "docs/runs/three_system_report_v2.json": "75595c3e1981beeb8e3ad68885c08bc97e87c14c1c72627121ac3f4df90fbfc7",
   "docs/runs/zep_locomo.jsonl": "17681a0b275720bf08f9775ab2e7d678b7bda5f8d88c3f810242b4d5fb90d137",
+  "docs/runs/zep_locomo_v2.jsonl": "8bedda61d0bfe98892d4dce90afc16214851c8c2b172ccd9c2fe316b2a99db47",
   "scripts/prompts/mem0_judge_template.txt": "d248e056d993725e28fba8d16ca7081f0b59deae272ef294f3c6b00d48eac02b"
  },
  "dataset": {
@@ -48,7 +52,8 @@
   6,
   8
  ],
- "git_sha_at_build": "9a50aea1293e23f5899976feb513920a3ee946a7",
+ "git_sha_at_build": "d2a3d069a5e4d358812b61ec093bed71f6362d36",
+ "headline_version": "v2 (corrected Mem0+Zep re-measurement, 2026-08-02); v1 numbers archived in docs/measurement_changelog.md",
  "holdout_convs": [
   1,
   3,
@@ -62,7 +67,14 @@
   "data/external/locomo/locomo10.json": "79fa87e90f04081343b8c8debecb80a9a6842b76a7aa537dc9fdf651ea698ff4",
   "docs/runs/caches/vector_cache.jsonl": "2ee1007cb7a6babe915db54a588d5e7dfa91e086c9ce7088c161149b1bf897b7"
  },
- "model_snapshots": {},
+ "model_snapshots": {
+  "v2_remeasurement_2026-08-01": {
+   "answerer": "gpt-5-mini-2025-08-07",
+   "primary_judge": "gpt-5-2025-08-07",
+   "probe": "1-token probe calls before phase M1; see docs/measurement_changelog.md",
+   "second_judge": "claude-opus-5 (Anthropic returns the id as requested)"
+  }
+ },
  "models": {
   "answerer": "gpt-5-mini (reasoning_effort=medium)",
   "embeddings": "text-embedding-3-small",
@@ -88,26 +100,35 @@
  "replay": "sh scripts/verify_repro.sh replays and ASSERTS every headline number at EUR 0 from the frozen artifacts",
  "three_system_scoreboard": {
   "abstention": {
-   "mem0": 0.848,
+   "mem0": 0.83,
    "provem": 0.863,
-   "zep": 0.704
+   "zep": 0.722
   },
   "claude_opus_5": {
-   "mem0": 0.419,
+   "mem0": 0.368,
    "provem": 0.502,
-   "zep": 0.329
+   "zep": 0.304
   },
   "mem0_own_judge": {
-   "mem0": 0.722,
+   "mem0": 0.716,
    "provem": 0.772,
-   "zep": 0.632
+   "zep": 0.649
   },
+  "note": "v2 corrected re-measurement; source docs/runs/three_system_report_v2.json",
+  "strict_gpt5": {
+   "mem0": 0.565,
+   "provem": 0.614,
+   "zep": 0.449
+  },
+  "zep_config": "per Zep's published checklist; chronological ingestion; full graph completion hard-gated before eval"
+ },
+ "three_system_scoreboard_v1_superseded": {
+  "note": "v1 had a Mem0 double-date input bug and Zep lexical ingestion order; see docs/measurement_changelog.md",
   "strict_gpt5": {
    "mem0": 0.509,
    "provem": 0.614,
    "zep": 0.449
-  },
-  "zep_config": "per Zep's published checklist; ingestion read-back verified; graph processing reached 5788/5882 episodes (98.4%) before eval"
+  }
  },
  "top_k": 20
 }

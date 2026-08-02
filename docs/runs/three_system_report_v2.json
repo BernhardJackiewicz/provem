@@ -1,0 +1,261 @@
+{
+ "abstention": {
+  "mem0": {
+   "acc": 0.8296,
+   "n": 446,
+   "n_correct": 370
+  },
+  "provem": {
+   "acc": 0.8632,
+   "n": 446,
+   "n_correct": 385
+  },
+  "zep": {
+   "acc": 0.722,
+   "n": 446,
+   "n_correct": 322
+  }
+ },
+ "holdout_strict": {
+  "mem0": {
+   "acc": 0.5824,
+   "n": 752,
+   "n_correct": 438
+  },
+  "provem": {
+   "acc": 0.617,
+   "n": 752,
+   "n_correct": 464
+  },
+  "zep": {
+   "acc": 0.4694,
+   "n": 752,
+   "n_correct": 353
+  }
+ },
+ "inputs": {
+  "mem0": "docs/runs/locomo_e2e_mem0_v2.jsonl",
+  "opus_sets": {
+   "mem0": "mem0_v2",
+   "provem": "ours_opt",
+   "zep": "zep_v2"
+  },
+  "ours": "docs/runs/iter/c2_full_final2.jsonl",
+  "zep": "docs/runs/zep_locomo_v2.jsonl"
+ },
+ "kappa_strict_vs_opus": {
+  "mem0": 0.5383,
+  "provem": 0.6973,
+  "zep": 0.6488
+ },
+ "markdown": "| Judge | Provem | Mem0 | Zep |\n|---|---|---|---|\n| Strict binary (gpt-5) | 0.614 | 0.565 | 0.449 |\n| Cross-vendor (claude-opus-5) | 0.502 | 0.368 | 0.304 |\n| Mem0's own judge prompt | 0.772 | 0.716 | 0.649 |\n| Abstention (n=446) | 0.863 | 0.830 | 0.722 |",
+ "mcnemar": {
+  "abstention:mem0>zep": {
+   "a_only": 80,
+   "b_only": 32,
+   "p": 6.57e-06
+  },
+  "abstention:provem>mem0": {
+   "a_only": 47,
+   "b_only": 32,
+   "p": 0.115
+  },
+  "abstention:provem>zep": {
+   "a_only": 80,
+   "b_only": 17,
+   "p": 6.01e-11
+  },
+  "m0j:mem0>zep": {
+   "a_only": 268,
+   "b_only": 165,
+   "p": 8.48e-07
+  },
+  "m0j:provem>mem0": {
+   "a_only": 202,
+   "b_only": 115,
+   "p": 1.18e-06
+  },
+  "m0j:provem>zep": {
+   "a_only": 268,
+   "b_only": 78,
+   "p": 1.58e-25
+  },
+  "opus:mem0>zep": {
+   "a_only": 256,
+   "b_only": 157,
+   "p": 1.27e-06
+  },
+  "opus:provem>mem0": {
+   "a_only": 321,
+   "b_only": 115,
+   "p": 1.34e-23
+  },
+  "opus:provem>zep": {
+   "a_only": 371,
+   "b_only": 66,
+   "p": 1.33e-52
+  },
+  "strict:mem0>zep": {
+   "a_only": 346,
+   "b_only": 168,
+   "p": 3.11e-15
+  },
+  "strict:provem>mem0": {
+   "a_only": 249,
+   "b_only": 173,
+   "p": 0.000252
+  },
+  "strict:provem>zep": {
+   "a_only": 352,
+   "b_only": 98,
+   "p": 1.14e-34
+  }
+ },
+ "per_category_strict": {
+  "multi_hop": {
+   "mem0": {
+    "acc": 0.3936,
+    "n": 282
+   },
+   "provem": {
+    "acc": 0.4113,
+    "n": 282
+   },
+   "zep": {
+    "acc": 0.3298,
+    "n": 282
+   }
+  },
+  "open_domain": {
+   "mem0": {
+    "acc": 0.2708,
+    "n": 96
+   },
+   "provem": {
+    "acc": 0.3125,
+    "n": 96
+   },
+   "zep": {
+    "acc": 0.3125,
+    "n": 96
+   }
+  },
+  "single_hop": {
+   "mem0": {
+    "acc": 0.6718,
+    "n": 841
+   },
+   "provem": {
+    "acc": 0.717,
+    "n": 841
+   },
+   "zep": {
+    "acc": 0.566,
+    "n": 841
+   }
+  },
+  "temporal": {
+   "mem0": {
+    "acc": 0.5234,
+    "n": 321
+   },
+   "provem": {
+    "acc": 0.6137,
+    "n": 321
+   },
+   "zep": {
+    "acc": 0.2897,
+    "n": 321
+   }
+  }
+ },
+ "scoreboard": {
+  "m0j": {
+   "mem0": {
+    "acc": 0.7156,
+    "ci": [
+     0.6925,
+     0.7376
+    ],
+    "n": 1540,
+    "n_correct": 1102
+   },
+   "provem": {
+    "acc": 0.7721,
+    "ci": [
+     0.7505,
+     0.7923
+    ],
+    "n": 1540,
+    "n_correct": 1189
+   },
+   "zep": {
+    "acc": 0.6487,
+    "ci": [
+     0.6245,
+     0.6721
+    ],
+    "n": 1540,
+    "n_correct": 999
+   }
+  },
+  "opus": {
+   "mem0": {
+    "acc": 0.3682,
+    "ci": [
+     0.3444,
+     0.3926
+    ],
+    "n": 1540,
+    "n_correct": 567
+   },
+   "provem": {
+    "acc": 0.5019,
+    "ci": [
+     0.477,
+     0.5269
+    ],
+    "n": 1540,
+    "n_correct": 773
+   },
+   "zep": {
+    "acc": 0.3039,
+    "ci": [
+     0.2814,
+     0.3273
+    ],
+    "n": 1540,
+    "n_correct": 468
+   }
+  },
+  "strict": {
+   "mem0": {
+    "acc": 0.5649,
+    "ci": [
+     0.54,
+     0.5895
+    ],
+    "n": 1540,
+    "n_correct": 870
+   },
+   "provem": {
+    "acc": 0.6143,
+    "ci": [
+     0.5897,
+     0.6383
+    ],
+    "n": 1540,
+    "n_correct": 946
+   },
+   "zep": {
+    "acc": 0.4494,
+    "ci": [
+     0.4247,
+     0.4743
+    ],
+    "n": 1540,
+    "n_correct": 692
+   }
+  }
+ }
+}

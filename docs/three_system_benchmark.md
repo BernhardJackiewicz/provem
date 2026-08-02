@@ -1,16 +1,18 @@
 # Three-system LoCoMo benchmark: Provem vs Mem0 vs Zep
 
-Date: 2026-08-01. This is the repo's headline memory-quality result: three
-systems, identical questions, identical answerer, three independent judges,
-paired statistics, all artifacts frozen and replayable at zero cost.
+Date: 2026-08-02 (v2 — corrected re-measurement of the Mem0 and Zep arms; see
+[`measurement_changelog.md`](measurement_changelog.md) for v1→v2 and the bug
+root-causes). Three systems, identical questions, identical answerer, three
+independent judges, paired statistics, all artifacts frozen and replayable at
+zero cost.
 
 ## Systems under test
 
 | System | Configuration |
 |---|---|
 | **Provem** (this repo) | dense tier: verbatim store + BM25 + key-gated `text-embedding-3-small` + RRF fusion, top-k 20; abstention-calibrated answer prompts with question-type routing (`dense,strict5,agg,aggfan,temporalroute`) |
-| **Mem0** | Mem0 Platform (paid tier), its own extraction pipeline over the same conversations, top-k 20 searches; empty-prediction fix applied to its stored answers against its live stores |
-| **Zep** | Zep Cloud (trial), configured per **Zep's own published evaluation checklist** — one graph owner per conversation with proper user/assistant roles and speaker names, timestamps via the native `created_at` field (not appended to text), retrieval via parallel edge+node graph searches composed into dated facts + entity summaries, k-capped like the others. Ingestion read-back verified per session (272/272); graph processing reached 5,788 of 5,882 episodes (98.4%) before evaluation — 94 episodes (1.6%) never completed processing on the trial account |
+| **Mem0** | Mem0 Platform, its own extraction pipeline over the same conversations, top-k 20 searches; date-augmented input (single prefix — v1's double-date bug fixed) and retrieval run against fully-settled stores (2,157 memories) |
+| **Zep** | Zep Cloud, configured per **Zep's own published evaluation checklist** — one graph owner per conversation with proper user/assistant roles and speaker names, timestamps via the native `created_at` field (not appended to text), retrieval via parallel edge+node graph searches composed into dated facts + entity summaries, k-capped like the others. Sessions ingested in **chronological order** (v1's lexical-order bug fixed); ingestion read-back verified per session; graph processing **completed for all episodes** (hard-gated before eval, no unprocessed remainder this time) |
 
 Shared pipeline for all three: LoCoMo, 10 conversations, 5,882 turns, 1,986
 questions (1,540 answerable + 446 adversarial). Answerer: `gpt-5-mini`
@@ -22,47 +24,51 @@ correct on adversarial questions). Judges see (question, gold, prediction) only.
 
 | Judge | **Provem** | Mem0 | Zep |
 |---|---|---|---|
-| Strict binary (gpt-5) | **0.614** | 0.509 | 0.449 |
-| Cross-vendor (claude-opus-5) | **0.502** | 0.419 | 0.329 |
-| Mem0's own published judge prompt (gpt-5; partial credit, 14-day date tolerance) | **0.772** | 0.722 | 0.632 |
-| Abstention on 446 adversarial questions | 0.863¹ | 0.848 | 0.704 |
+| Strict binary (gpt-5) | **0.614** | 0.565 | 0.449 |
+| Cross-vendor (claude-opus-5) | **0.502** | 0.368 | 0.304 |
+| Mem0's own published judge prompt (gpt-5; partial credit, 14-day date tolerance) | **0.772** | 0.716 | 0.649 |
+| Abstention on 446 adversarial questions | 0.863¹ | 0.830 | 0.722 |
 
 **The ordering Provem > Mem0 > Zep is invariant under all three judges** for
-answerable accuracy.
+answerable accuracy. Note the judges disagree on the *size* of the Provem→Mem0
+gap: the strict gpt-5 judge scores the corrected Mem0 at 0.565 (a +4.9-pt
+Provem lead), while claude-opus-5 scores it at 0.368 (a wider lead) — opus
+rejects more of the extra borderline answers the corrected Mem0 now attempts
+(strict-vs-opus κ for Mem0 = 0.54, vs 0.70 for Provem). We report both.
 
 ¹ The abstention row is not a same-footing comparison: Provem's 0.863 comes
 from its dev-tuned strict5 prompt chain, while Mem0 and Zep answered under the
 neutral prompt. Under the shared neutral prompt Provem's abstention is 0.693
 (309/446) — behind Zep 0.704 and Mem0 0.848 — and the 0.863-vs-0.848 gap to
 Mem0 is a statistical tie either way (McNemar 42/35 discordants, p = 0.49).
-Neutral-prompt answerable accuracy is 0.596, still ahead of Mem0's 0.509.
+Neutral-prompt answerable accuracy is 0.596, still ahead of Mem0's 0.565.
 
 Pairwise significance (paired exact McNemar, strict judge):
 
 | Pair | Accuracies | Diff | Discordants | p |
 |---|---|---|---|---|
-| Provem vs Mem0 | 0.614 vs 0.509 | +0.105 | 317 / 155 | 7.2×10⁻¹⁴ |
-| Provem vs Zep | 0.614 vs 0.449 | +0.166 | 348 / 93 | 1.0×10⁻³⁵ |
-| Mem0 vs Zep | 0.509 vs 0.449 | +0.060 | 317 / 224 | 7.4×10⁻⁵ |
+| Provem vs Mem0 | 0.614 vs 0.565 | +0.049 | 249 / 173 | 2.5×10⁻⁴ |
+| Provem vs Zep | 0.614 vs 0.449 | +0.166 | 352 / 98 | 1.1×10⁻³⁴ |
+| Mem0 vs Zep | 0.565 vs 0.449 | +0.116 | 346 / 168 | 3.1×10⁻¹⁵ |
 
 ## By category (strict judge)
 
 | Category | Provem | Mem0 | Zep |
 |---|---|---|---|
-| single-hop (n=841) | **0.717** | 0.592 | 0.561 |
-| temporal (n=321) | **0.614** | 0.442 | 0.305 |
-| multi-hop (n=282) | **0.411** | 0.397 | 0.340 |
-| open-domain (n=96) | 0.312 | 0.333 | 0.260 |
+| single-hop (n=841) | **0.717** | 0.672 | 0.566 |
+| temporal (n=321) | **0.614** | 0.523 | 0.290 |
+| multi-hop (n=282) | **0.411** | 0.394 | 0.330 |
+| open-domain (n=96) | **0.312** | 0.271 | 0.312 |
 
-Provem leads two of four categories (single-hop, temporal). Multi-hop
-(+4 questions, McNemar p = 0.74, n=282) and open-domain (−2 questions,
-p = 0.80, n=96) are statistical ties with Mem0 — labeled symmetrically as
-such. Category names verified against Mem0's official run files by question
-counts.
+With a fairly-measured Mem0, Provem leads or ties all four categories, but by
+smaller margins than v1: single-hop and temporal are clear Provem leads,
+multi-hop is now a narrow Provem lead (0.411 vs 0.394, n=282), and open-domain
+is a Provem/Zep tie above Mem0 (n=96, small). Category names verified against
+Mem0's official run files by question counts.
 
 ## Holdout confirmation (convs 1,3,5,7,9)
 
-Provem **0.617** (464/752) · Mem0 0.503 (378/752) · Zep 0.451 (339/752).
+Provem **0.617** (464/752) · Mem0 0.582 (438/752) · Zep 0.469 (353/752).
 The final configuration was chosen on the dev split (convs 0,2,4,6,8) only,
 and the ordering and margins hold on the holdout conversations. Caveat: this
 is not a single-shot confirmatory test — full-set runs (including the holdout)

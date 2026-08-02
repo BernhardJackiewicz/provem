@@ -28,7 +28,12 @@ ARTIFACTS = sorted(
         "docs/runs/locomo_e2e_ours_emptyfix.jsonl",
         "docs/runs/locomo_e2e_mem0_patched.jsonl",
         "docs/runs/zep_locomo.jsonl",
+        # v2 corrected re-measurement (headline)
+        "docs/runs/locomo_e2e_mem0_v2.jsonl",
+        "docs/runs/zep_locomo_v2.jsonl",
+        "docs/runs/three_system_report_v2.json",
         "docs/runs/caches/campaign_ledger.jsonl",
+        "docs/runs/caches/remeasure_ledger.jsonl",
         "docs/runs/caches/judge2_cache.jsonl",
         "docs/runs/caches/llm_cache_answer.jsonl",
         "docs/runs/caches/llm_cache_judge.jsonl",
@@ -66,7 +71,15 @@ STATIC = {
         "embeddings": "text-embedding-3-small",
     },
     "models_note": "Model ids are provider aliases; exact snapshot ids were not recorded for the original (v1) runs. New measurement campaigns record snapshots below.",
-    "model_snapshots": {},
+    "model_snapshots": {
+        "v2_remeasurement_2026-08-01": {
+            "answerer": "gpt-5-mini-2025-08-07",
+            "primary_judge": "gpt-5-2025-08-07",
+            "second_judge": "claude-opus-5 (Anthropic returns the id as requested)",
+            "probe": "1-token probe calls before phase M1; see docs/measurement_changelog.md",
+        }
+    },
+    "headline_version": "v2 (corrected Mem0+Zep re-measurement, 2026-08-02); v1 numbers archived in docs/measurement_changelog.md",
     "prompt_versions": {
         "answerer_default": "v1",
         "strict_chain": ["strict1", "strict2", "strict3", "strict4", "strict4agg", "strict5", "strict5agg"],
@@ -76,11 +89,16 @@ STATIC = {
     "judge_cache_note": "llm_cache_judge.jsonl was backfilled from the stored per-row verdicts (scripts/backfill_judge_cache.py); stored rows are the published record",
     "replay": "sh scripts/verify_repro.sh replays and ASSERTS every headline number at EUR 0 from the frozen artifacts",
     "three_system_scoreboard": {
+        "note": "v2 corrected re-measurement; source docs/runs/three_system_report_v2.json",
+        "strict_gpt5": {"provem": 0.614, "mem0": 0.565, "zep": 0.449},
+        "claude_opus_5": {"provem": 0.502, "mem0": 0.368, "zep": 0.304},
+        "mem0_own_judge": {"provem": 0.772, "mem0": 0.716, "zep": 0.649},
+        "abstention": {"provem": 0.863, "mem0": 0.830, "zep": 0.722},
+        "zep_config": "per Zep's published checklist; chronological ingestion; full graph completion hard-gated before eval",
+    },
+    "three_system_scoreboard_v1_superseded": {
         "strict_gpt5": {"provem": 0.614, "mem0": 0.509, "zep": 0.449},
-        "claude_opus_5": {"provem": 0.502, "mem0": 0.419, "zep": 0.329},
-        "mem0_own_judge": {"provem": 0.772, "mem0": 0.722, "zep": 0.632},
-        "abstention": {"provem": 0.863, "mem0": 0.848, "zep": 0.704},
-        "zep_config": "per Zep's published checklist; ingestion read-back verified; graph processing reached 5788/5882 episodes (98.4%) before eval",
+        "note": "v1 had a Mem0 double-date input bug and Zep lexical ingestion order; see docs/measurement_changelog.md",
     },
 }
 

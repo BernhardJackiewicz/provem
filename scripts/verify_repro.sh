@@ -75,12 +75,19 @@ expect "McNemar: ours-only-right=317 mem0-only-right=155 discordant=472  p=7.19e
 expect "OURS 0.863 [0.828,0.892] (385/446)"
 expect "MEM0 0.848 [0.811,0.878] (378/446)"
 
-run "three-system scoreboard (three judges)" $PY scripts/zep_judges.py --workers 1
-expect "zep judge top-up: 0 calls needed"
+# v1 three-system scoreboard (frozen artifacts, campaign history)
+run "three-system scoreboard v1 (historical)" $PY scripts/zep_judges.py --workers 1
 expect "strict gpt-5 judge        : provem 0.614 (946/1540) | mem0 0.509 (784/1540) | zep 0.449 (691/1540)"
-expect "claude-opus-5 judge       : provem 0.502 (773/1540) | mem0 0.419 (646/1540) | zep 0.329 (506/1540)"
-expect "Mem0's own judge prompt   : provem 0.772 (1189/1540) | mem0 0.722 (1112/1540) | zep 0.632 (974/1540)"
-expect "abstention (446 adversarial): provem 0.863 (385/446) | mem0 0.848 (378/446) | zep 0.704 (314/446)"
+
+# v2 headline scoreboard (corrected Mem0+Zep re-measurement) — the published numbers
+run "three-system scoreboard v2 (headline)" $PY scripts/three_system_report.py \
+  --mem0 docs/runs/locomo_e2e_mem0_v2.jsonl --zep docs/runs/zep_locomo_v2.jsonl \
+  --opus-sets provem=ours_opt,mem0=mem0_v2,zep=zep_v2
+expect "| Strict binary (gpt-5) | 0.614 | 0.565 | 0.449 |"
+expect "| Cross-vendor (claude-opus-5) | 0.502 | 0.368 | 0.304 |"
+expect "| Mem0's own judge prompt | 0.772 | 0.716 | 0.649 |"
+expect "| Abstention (n=446) | 0.863 | 0.830 | 0.722 |"
+expect "strict:provem>mem0       a_only=249  b_only=173  p=0.000252"
 
 run "neutral-prompt control (prompt-confound disclosure)" $PY - <<'EOF'
 import json

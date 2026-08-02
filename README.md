@@ -7,7 +7,7 @@ Two results, one system, every number reproducible from frozen artifacts at zero
 | Axis | Result |
 |---|---|
 | **Governance** | Compliance violations **240 → 0**, memory-poisoning success **100% → 0%**, silent compounding errors **72.6% → 0.0%** (paired: governance flips 497 of 960 trajectories, loses 0; deterministic, no API key) |
-| **Memory** | **Beats Mem0 and Zep on full LoCoMo**: 0.614 vs 0.509 vs 0.449 answerable accuracy (paired; Provem>Mem0 p = 7×10⁻¹⁴, Provem>Zep p = 1×10⁻³⁵) — the ordering holds under an independent Claude judge **and under Mem0's own published judge prompt** (0.772 / 0.722 / 0.632) |
+| **Memory** | **Beats Mem0 and Zep on full LoCoMo**: 0.614 vs 0.565 vs 0.449 answerable accuracy (paired; Provem>Mem0 p = 2.5×10⁻⁴, Provem>Zep p = 1×10⁻³⁴) — the ordering holds under an independent Claude judge **and under Mem0's own published judge prompt** (0.772 / 0.716 / 0.649). Both baselines re-measured after fixing input bugs that had understated them |
 
 ## The problem
 
@@ -124,7 +124,7 @@ sh scripts/replay_report.sh     # every LoCoMo-vs-Mem0 number, €0, from frozen
 |---|---|---|---|
 | stdlib retrieval + LLM answerer | 0.388 (below Mem0) | full | LLM API key for answering; no pip dependency |
 | fully keyless (extractive answers) | 0.21 — below the 0.24 no-memory baseline | full | none — no key, no pip dependency, air-gap-safe |
-| **dense (recommended)** | **0.614** (> Mem0 0.509 > Zep 0.449) | full | embeddings API key (cents per conversation, disk-cached) |
+| **dense (recommended)** | **0.614** (> Mem0 0.565 > Zep 0.449) | full | embeddings API key (cents per conversation, disk-cached) |
 | local embeddings | ~0.47–0.50 (projected, unbuilt) | full | planned: pip extra, no API key |
 
 The keyless tier is the zero-dependency governance layer and demo path — it
@@ -166,31 +166,36 @@ All three systems ingested the same 10 LoCoMo conversations (5,882 turns) and
 answered the same 1,986 questions with the **identical answerer model**; only
 the memory differs. Mem0 ran on its own platform pipeline; Zep ran on Zep Cloud,
 configured per **Zep's own published evaluation checklist** (proper user model,
-native `created_at` timestamps, parallel edge+node graph searches), with
-ingestion read-back verified and graph completion confirmed before evaluation.
-A harness bug that silently swallowed answers at the token cap was found and
-fixed **symmetrically** before these numbers (full disclosure in
-[`docs/lager_optimization_log.md`](docs/lager_optimization_log.md)).
+native `created_at` timestamps, parallel edge+node graph searches, chronological
+ingestion), with ingestion read-back verified and full graph completion
+hard-gated before evaluation. Both baseline arms were **re-measured** after an
+audit found two input bugs that understated them (Mem0 got a doubled date
+prefix; Zep ingested sessions in lexical order) — full v1→v2 disclosure in
+[`docs/measurement_changelog.md`](docs/measurement_changelog.md).
 
 | Scoring regime | **Provem (dense)** | Mem0 | Zep |
 |---|---|---|---|
-| Strict binary judge (gpt-5) | **0.614** | 0.509 | 0.449 |
-| Independent cross-vendor judge (claude-opus-5) | **0.502** | 0.419 | 0.329 |
-| **Mem0's own published judge prompt** (partial credit, 14-day date tolerance) | **0.772** | 0.722 | 0.632 |
-| Abstention on 446 adversarial questions | **0.863** | 0.848 | 0.704 |
+| Strict binary judge (gpt-5) | **0.614** | 0.565 | 0.449 |
+| Independent cross-vendor judge (claude-opus-5) | **0.502** | 0.368 | 0.304 |
+| **Mem0's own published judge prompt** (partial credit, 14-day date tolerance) | **0.772** | 0.716 | 0.649 |
+| Abstention on 446 adversarial questions | **0.863** | 0.830 | 0.722 |
 
 **The ordering is invariant under all three judges.** All pairwise differences
 in **answerable accuracy** are significant (paired McNemar: Provem>Mem0
-p = 7.2×10⁻¹⁴, Provem>Zep p = 1.0×10⁻³⁵, Mem0>Zep p = 7.4×10⁻⁵). The
-abstention edge over Mem0 (0.863 vs 0.848) is a statistical tie (p = 0.49),
-and Provem's 0.863 comes from its dev-tuned prompt chain — under the shared
-neutral prompt Provem's abstention is 0.693, behind Zep 0.704 and Mem0 0.848
-(answerable accuracy still wins under that neutral prompt: 0.596 vs 0.509).
-Per category (strict judge): single-hop **0.717 / 0.592 / 0.561**, temporal
-**0.614 / 0.442 / 0.305**; multi-hop 0.411 / 0.397 / 0.340 and open-domain
-0.312 / 0.333 / 0.260 are statistical ties with Mem0 (p = 0.74 and p = 0.80,
-n=282 / n=96). Holdout conversations (final config chosen on the dev split
-only) confirm the ordering (0.617 / 0.503 / 0.451). Full methodology, configs,
+p = 2.5×10⁻⁴, Provem>Zep p = 1.1×10⁻³⁴, Mem0>Zep p = 3.1×10⁻¹⁵). Fixing Mem0's
+input bug raised it from 0.509 to 0.565, so the Provem→Mem0 strict lead is
+**+4.9 pts, not the +10.5 pts v1 reported** — still significant, but roughly
+half. (The judges disagree on the gap's size: opus scores the corrected Mem0 at
+0.368, a wider lead, rejecting more of the extra borderline answers Mem0 now
+attempts; strict-vs-opus κ for Mem0 is 0.54.) The abstention edge over Mem0
+(0.863 vs 0.830) is a statistical tie (p = 0.12), and Provem's 0.863 comes from
+its dev-tuned prompt chain — under the shared neutral prompt Provem's abstention
+is 0.693, behind Zep 0.722 and Mem0 0.830 (answerable accuracy still wins under
+that neutral prompt: 0.596 vs 0.565). Per category (strict judge): single-hop
+**0.717 / 0.672 / 0.566**, temporal **0.614 / 0.523 / 0.290**, multi-hop
+**0.411 / 0.394 / 0.330** (narrow), open-domain 0.312 / 0.271 / 0.312 (Provem/Zep
+tie, n=96). Holdout conversations (final config chosen on the dev split
+only) confirm the ordering (0.617 / 0.582 / 0.469). Full methodology, configs,
 and limitations:
 [`docs/three_system_benchmark.md`](docs/three_system_benchmark.md).
 
@@ -206,12 +211,12 @@ so we present three separately-valid rankings instead.
 | Rank | System | Strict judge | Claude judge | Mem0's own judge | Abstention |
 |---|---|---|---|---|---|
 | 1 | **Provem (dense tier)** | **0.614** | **0.502** | **0.772** | **0.863** |
-| 2 | Mem0 platform | 0.509 | 0.419 | 0.722 | 0.848 |
-| 3 | Zep platform | 0.449 | 0.329 | 0.632 | 0.704 |
+| 2 | Mem0 platform | 0.565 | 0.368 | 0.716 | 0.830 |
+| 3 | Zep platform | 0.449 | 0.304 | 0.649 | 0.722 |
 
 Identical questions, answerer, and judges for every row. All pairwise
 differences in answerable accuracy are significant (paired McNemar:
-Provem>Mem0 p = 7×10⁻¹⁴, Provem>Zep p = 1×10⁻³⁵, Mem0>Zep p = 7×10⁻⁵) and the
+Provem>Mem0 p = 2.5×10⁻⁴, Provem>Zep p = 1×10⁻³⁴, Mem0>Zep p = 3×10⁻¹⁵) and the
 ordering is identical under all three judges; the abstention column's
 Provem-vs-Mem0 gap is a statistical tie and prompt-confounded (see above). Zep
 was configured following its own published evaluation checklist (proper user
@@ -246,10 +251,11 @@ LoCoMo-Refined (strict judge, 86% human agreement):
 ¹ Unrelated academic system (arXiv 2511.12960), no relation to this project.
 
 **The anchor that connects the tables:** our strict-judge Mem0 measurement
-(0.509) matches LoCoMo-Refined's strict Mem0 (48.9) almost exactly; our
+(0.565, corrected) sits just above LoCoMo-Refined's strict Mem0 (48.9),
+consistent with our fully-settled stores and single-date input; our
 strict-judge Zep (0.449) lands next to the ENGRAM paper's independent Zep
 (42.3) — and far from Zep's self-reported 94.7. Under Mem0's own judge our
-Mem0 lands at 0.722, inside its published band. Our harness reproduces what
+Mem0 lands at 0.716, inside its published band. Our harness reproduces what
 independent evaluations find. MemOS and the remaining systems were not
 measured head-to-head, so we make no claims against them.
 
