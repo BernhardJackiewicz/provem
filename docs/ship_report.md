@@ -13,17 +13,17 @@ question-type routing. Mem0: its platform pipeline over the same conversations
 
 | Metric | **Provem** | Mem0 | Verdict |
 |---|---|---|---|
-| Answerable accuracy (n=1540), judge gpt-5 | **0.614** | 0.509 | **+10.5 pts, McNemar p=7.2×10⁻¹⁴** |
-| Answerable accuracy, judge claude-opus-5 | **0.502** | 0.419 | **+8.2 pts, p=5.1×10⁻¹⁰** (cross-vendor confirmed) |
-| Answerable accuracy, **Mem0's own published judge prompt** (gpt-5, partial credit + 14-day date tolerance) | **0.772** | 0.722 | **+5.0 pts, p=4.4×10⁻⁵** — we win under their scoring too; Mem0's 0.722 sits inside its published band (paper 66.9, independent k=20 64.7, own k=50 82.7), validating our harness |
-| Holdout-only (never tuned, n=752) | **0.617** | 0.503 | +11.4 pts, p=1.7×10⁻⁸ |
-| Neutral prompt (no tuning at all) | **0.596** | 0.509 | win survives without prompt tuning |
-| Abstention on adversarial (n=446) | 0.863 | 0.848 | statistical tie (p=0.49); Provem number is from the dev-tuned strict5 prompt — neutral-prompt abstention is 0.693, last of three |
-| multi-hop (n=282) | **0.411** | 0.397 | flipped in campaign 2 |
-| temporal (n=321) | **0.614** | 0.442 | clear win |
-| single-hop (n=841) | **0.717** | 0.592 | clear win |
-| open-domain (n=96) | 0.312 | 0.333 | statistical tie (2 questions; CIs overlap) |
-| Judge agreement (Cohen's κ, gpt-5 vs opus-5) | 0.70–0.72 (final artifacts) | — | substantial |
+| Answerable accuracy (n=1540), judge gpt-5 | **0.614** | 0.565 | **+4.9 pts, McNemar p=2.5×10⁻⁴** (v2 corrected; was +10.5 before Mem0's date-bug fix) |
+| Answerable accuracy, judge claude-opus-5 | **0.502** | 0.368 | **+13.4 pts, p=1.3×10⁻²³** (opus rejects more of Mem0's extra borderline answers; κ 0.54) |
+| Answerable accuracy, **Mem0's own published judge prompt** (gpt-5, partial credit + 14-day date tolerance) | **0.772** | 0.716 | **+5.6 pts, p=1.2×10⁻⁶** — we win under their scoring too; Mem0's 0.716 sits inside its published band (paper 66.9, independent k=20 64.7, own k=50 82.7), validating our harness |
+| Holdout-only (never tuned, n=752) | **0.617** | 0.582 | +3.5 pts, p=0.074 — **not significant on the holdout alone** with corrected Mem0 (the full-set Provem>Mem0 stays significant, p=2.5×10⁻⁴) |
+| Neutral prompt (no tuning at all) | **0.596** | 0.565 | win survives without prompt tuning |
+| Abstention on adversarial (n=446) | 0.863 | 0.830 | statistical tie (p=0.12); Provem number is from the dev-tuned strict5 prompt — neutral-prompt abstention is 0.693, last of three |
+| multi-hop (n=282) | **0.411** | 0.394 | narrow Provem lead (v2) |
+| temporal (n=321) | **0.614** | 0.523 | clear win |
+| single-hop (n=841) | **0.717** | 0.672 | clear win (narrower vs v1) |
+| open-domain (n=96) | **0.312** | 0.271 | Provem/Zep tie above Mem0 (n=96) |
+| Judge agreement (Cohen's κ, gpt-5 vs opus-5) | 0.54 (Mem0) – 0.70 (Provem) on v2 artifacts | — | Mem0 divergence noted |
 
 Wächter (no regressions): 490 unit tests OK; reliability headline exactly stable
 (governed 0.900 in the quality-gate config — seeds 1-5, 64 scenarios/seed, 320 trajectories; the published headline 0.893 uses seeds 1-10, 96 scenarios, 960 trajectories — 0 catastrophic violations, benign accuracy 1.0, poisoning 0);
@@ -42,10 +42,10 @@ verified per session. Answerer/judges identical to the other systems.
 
 | Judge | Provem | Mem0 | Zep |
 |---|---|---|---|
-| strict gpt-5 | **0.614** | 0.509 | 0.449 |
-| claude-opus-5 | **0.502** | 0.419 | 0.329 |
-| Mem0's own prompt | **0.772** | 0.722 | 0.632 |
-| Abstention (446) | **0.863** | 0.848 | 0.704 |
+| strict gpt-5 | **0.614** | 0.565 | 0.449 |
+| claude-opus-5 | **0.502** | 0.368 | 0.304 |
+| Mem0's own prompt | **0.772** | 0.716 | 0.649 |
+| Abstention (446) | **0.863** | 0.830 | 0.722 |
 
 Pairwise McNemar: Provem>Mem0 p=7.2e-14, Provem>Zep p=1.0e-35, Mem0>Zep
 p=7.4e-5. The ordering is invariant across all three judges. Congruence with
@@ -59,7 +59,7 @@ after read-back-verified ingestion and confirmed graph completion.
 ## Where Mem0 is still better (honest)
 
 1. **Nothing on this benchmark with statistical significance.** The single category
-   where Mem0's point estimate leads (open-domain n=96, 0.333 vs 0.312) is a 2-question gap on
+   where the open-domain gap (n=96, Provem 0.312 vs Mem0 0.271) is a small-sample
    n=96 — noise, not a finding. We chose not to iterate on it to avoid overfitting.
 2. **Write-time consolidation as a product capability.** Mem0 distills conversations
    into a compact, human-readable memory set (~150–250 facts/conversation). We
@@ -71,7 +71,7 @@ after read-back-verified ingestion and confirmed graph completion.
    Provem is a library + self-hosted MCP server; hosting, scaling and dashboards are
    the operator's job (documented trust model, no managed offering).
 4. **Keyless operation.** Without any API key, Provem's stdlib default is at ~0.39-0.45
-   answerable — below Mem0's 0.509. Keyless parity was analyzed and is NOT realistic
+   answerable — below Mem0's 0.565. Keyless parity was analyzed and is NOT realistic
    (the winning lever is semantic embeddings). Tier model: stdlib (governance-first,
    weakest recall) → optional local embeddings (unbuilt; projected ~0.47–0.50) →
    key-gated dense (0.614, the shipped benchmark config).

@@ -39,8 +39,8 @@ rejects more of the extra borderline answers the corrected Mem0 now attempts
 ¹ The abstention row is not a same-footing comparison: Provem's 0.863 comes
 from its dev-tuned strict5 prompt chain, while Mem0 and Zep answered under the
 neutral prompt. Under the shared neutral prompt Provem's abstention is 0.693
-(309/446) — behind Zep 0.704 and Mem0 0.848 — and the 0.863-vs-0.848 gap to
-Mem0 is a statistical tie either way (McNemar 42/35 discordants, p = 0.49).
+(309/446) — behind Zep 0.722 and Mem0 0.830 — and the 0.863-vs-0.830 gap to
+Mem0 is a statistical tie either way (McNemar 47/32 discordants, p = 0.12).
 Neutral-prompt answerable accuracy is 0.596, still ahead of Mem0's 0.565.
 
 Pairwise significance (paired exact McNemar, strict judge):
@@ -69,8 +69,11 @@ Mem0's official run files by question counts.
 ## Holdout confirmation (convs 1,3,5,7,9)
 
 Provem **0.617** (464/752) · Mem0 0.582 (438/752) · Zep 0.469 (353/752).
-The final configuration was chosen on the dev split (convs 0,2,4,6,8) only,
-and the ordering and margins hold on the holdout conversations. Caveat: this
+The final configuration was chosen on the dev split (convs 0,2,4,6,8) only.
+The ordering holds on the holdout, but note the honest weakening after the Mem0
+correction: on the holdout split alone the Provem→Mem0 gap is +3.5 pts and
+**not statistically significant** (McNemar 111/85, p = 0.074) — the full-set
+Provem>Mem0 result (p = 2.5×10⁻⁴) is what carries significance. Caveat: this
 is not a single-shot confirmatory test — full-set runs (including the holdout)
 were evaluated ~7 times across ~20 tried configurations during the campaign
 for ordering checks, and the reported p-values carry no multiplicity
@@ -83,10 +86,10 @@ marketing lands — for both competitors:
 
 | System | Ours (strict) | Independent published | Vendor self-report |
 |---|---|---|---|
-| Mem0 | 0.509 | 48.9 (LoCoMo-Refined, strict human-validated judge); 64.7 (ENGRAM paper, k=20 lenient) | 82.7–92.5 (top-50/200, gpt-5 CoT, tolerant judge) |
+| Mem0 | 0.565 (v2 corrected) | 48.9 (LoCoMo-Refined, strict human-validated judge); 64.7 (ENGRAM paper, k=20 lenient) | 82.7–92.5 (top-50/200, gpt-5 CoT, tolerant judge) |
 | Zep | 0.449 | 42.3 (ENGRAM paper, k=20) | 94.7 (own gpt-5.4-CoT setup; an earlier 84% figure was retracted) |
 
-Under Mem0's own judge prompt our Mem0 measurement (0.722) sits inside Mem0's
+Under Mem0's own judge prompt our Mem0 measurement (0.716) sits inside Mem0's
 published band — the bridge that validates the harness (see
 `lager_optimization_log.md`).
 
@@ -98,7 +101,7 @@ published band — the bridge that validates the harness (see
   run is a faithful default-configuration measurement, not a tuning contest.
 - Provem's answer prompts were tuned on a dev split (convs 0,2,4,6,8); the
   holdout confirms generalization, and the neutral-prompt control (0.596 vs
-  Mem0 0.509) shows the win does not depend on prompt tuning. Mem0 and Zep both
+  Mem0 0.565) shows the win does not depend on prompt tuning. Mem0 and Zep both
   used the same neutral answering prompt.
 - One benchmark (LoCoMo), LLM judges only (two vendors, κ ≈ 0.7–0.8 agreement),
   no human evaluation.
