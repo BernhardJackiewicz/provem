@@ -1,5 +1,13 @@
 # Lager optimization campaign log — beating Mem0 on LoCoMo E2E
 
+> **This is a chronological campaign log — every number reflects the state at
+> that step and many are v1 (pre-correction). The final PUBLISHED headline is
+> the v2 re-measurement (Provem 0.614 > Mem0 0.565 > Zep 0.449, Provem>Mem0
+> p=2.5e-4), after an audit fixed a Mem0 double-date input bug and Zep lexical
+> ingestion order. Do not quote figures from this log as current results — see
+> [`measurement_changelog.md`](measurement_changelog.md) and
+> [`three_system_benchmark.md`](three_system_benchmark.md).**
+
 > Category names throughout this log were corrected post-hoc (see the
 > 2026-07-31 correction note below): cat2=temporal, cat3=open-domain,
 > cat4=single-hop. All per-code numbers are unchanged.
