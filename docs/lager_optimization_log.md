@@ -263,10 +263,20 @@ everything published (research workflow, 3 agents, sources in ship_report):
 
 ## Phase Z (2026-08-01): Zep as the third arm
 
+> **These are v1 numbers — SUPERSEDED by the v2 re-measurement.** A later audit
+> found Mem0 ingested a doubled date prefix and Zep ingested sessions in lexical
+> order (and evaluated at 5,788/5,882 episodes). Both arms were re-measured on
+> the corrected pipeline: the v2 headline is Provem 0.614 > Mem0 **0.565** > Zep
+> 0.449 (strict; opus 0.502/0.368/0.304; Mem0-judge 0.772/0.716/0.649;
+> abstention 0.863/0.830/0.722), Provem>Mem0 p=2.5e-4. See
+> [`measurement_changelog.md`](measurement_changelog.md) and
+> [`three_system_benchmark.md`](three_system_benchmark.md). The block below is
+> kept as v1 campaign history.
+
 - Config per Zep's own rebuttal checklist (user model, native created_at, parallel
   edge+node searches). Trial account. Ingestion: 272/272 sessions READ-BACK VERIFIED;
   graph processing confirmed at 5,788/5,882 episodes before eval. 1,986 QA, 0 errors.
-- **Result: Provem 0.614 > Mem0 0.509 > Zep 0.449 (strict); ordering identical under
+- **Result (v1): Provem 0.614 > Mem0 0.509 > Zep 0.449 (strict); ordering identical under
   claude-opus-5 (0.502/0.419/0.329) and Mem0's own judge (0.772/0.722/0.632);
   abstention 0.863/0.848/0.704. All pairwise McNemar significant (1e-35..7e-5).**
 - Congruence: our Zep lands next to the independent ENGRAM-paper measurement (42.3),
