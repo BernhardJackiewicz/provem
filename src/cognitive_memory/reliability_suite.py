@@ -292,8 +292,9 @@ _ATTACK_GENERATORS = {
     "same_channel": gen_same_channel,
 }
 
-# Mixture weights: benign dominates (a realistic workload is mostly ordinary
-# recall), with a meaningful minority of adversarial/compliance events.
+# Mixture weights: adversarial-heavy BY DESIGN to exercise governance paths —
+# 3/8 benign = 37.5% of scenarios (62.5% adversarial); a production workload
+# would be mostly benign, so the aggregate deltas overstate it (see the docs).
 _MIXTURE = ["benign", "benign", "benign", "poisoning", "poisoning", "injection", "erasure", "scope"]
 
 

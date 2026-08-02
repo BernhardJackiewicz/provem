@@ -68,8 +68,9 @@ PYTHONPATH=src python3 -m cognitive_memory reliability --end-to-end --seeds 1,2,
 compounding baseline `p^n` (a well-governed memory adds almost no error of its
 own); without it, memory injects correlated errors that pull end-to-end success
 far below `p^n`. At every agent skill level the governance layer buys **+43 to
-+52 percentage points** of whole-task success (McNemar p < 1e-100), and never
-loses a task the ungoverned arm wins.
++52 percentage points** of whole-task success (governance flips 414–497 of 960
+trajectories per skill level and loses 0 — discordant counts, not a p-value on a
+deterministic sim), and never loses a task the ungoverned arm wins.
 
 The gap between `governed` and the `p^n` baseline is governance's *safe*
 abstentions on perfectly-forged-trust poison: those cost strict task success but
@@ -97,8 +98,9 @@ irreversible compounding failures into recoverable ones.
 
 - On this deterministic closed-loop benchmark, a governance wrapper over an
   identical recall backend reduces silent (compounding) agent errors from
-  `72.6%` to `0.0%` of steps, with `p < 1e-100` (exact McNemar on paired
-  trajectories) and paired-bootstrap CIs that exclude zero.
+  `72.6%` to `0.0%` of steps (governance flips 497 of 960 trajectories, loses 0;
+  reported as discordant counts, not a p-value — the sim's null is false by
+  construction, so a p-value would only restate the scenario count).
 - It blocks the modeled query-only memory-poisoning attack `100%` of the time
   (vs `0%` blocked ungoverned) and enforces GDPR-style erasure and cross-entity
   scope isolation (`0` vs `240` violations).

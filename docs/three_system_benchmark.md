@@ -103,7 +103,7 @@ published band — the bridge that validates the harness (see
   holdout confirms generalization, and the neutral-prompt control (0.596 vs
   Mem0 0.565) shows the win does not depend on prompt tuning. Mem0 and Zep both
   used the same neutral answering prompt.
-- One benchmark (LoCoMo), LLM judges only (two vendors, κ ≈ 0.7–0.8 agreement),
+- One benchmark (LoCoMo), LLM judges only (two vendors, κ 0.54–0.70 agreement, v2),
   no human evaluation.
 - Two harness bugs were found and fixed during the Zep run (invalid timestamp
   format producing 400s; a retry classifier that mistook those 400s for rate

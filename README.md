@@ -115,7 +115,8 @@ Reproduce the headline numbers:
 
 ```bash
 PYTHONPATH=src python3 -m cognitive_memory reliability --seeds 1,2,3,4,5,6,7,8,9,10 --scenarios 96
-sh scripts/replay_report.sh     # every LoCoMo-vs-Mem0 number, €0, from frozen caches
+sh scripts/fetch_locomo.sh      # one-time: fetch LoCoMo (CC BY-NC 4.0, not redistributed here), sha256-verified
+sh scripts/replay_report.sh     # every three-system number, €0, from frozen caches
 ```
 
 ## Choose your tier (honest numbers)
@@ -284,7 +285,7 @@ Sources and the full dispute history (including who retracted what):
 ## Honest limitations
 
 - **One recall benchmark** (LoCoMo). LongMemEval port is designed, not run.
-- **LLM judges only** (two vendors, κ ≈ 0.70–0.72 agreement on the final
+- **LLM judges only** (two vendors, κ 0.54 on Mem0 to 0.70 on Provem on the final
   artifacts); no human eval yet.
 - Answer prompts were tuned on a dev split — the answerable-accuracy win
   survives with a fully neutral prompt (+8.7 pts) and on held-out conversations

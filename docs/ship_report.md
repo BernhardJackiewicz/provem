@@ -47,8 +47,8 @@ verified per session. Answerer/judges identical to the other systems.
 | Mem0's own prompt | **0.772** | 0.716 | 0.649 |
 | Abstention (446) | **0.863** | 0.830 | 0.722 |
 
-Pairwise McNemar: Provem>Mem0 p=7.2e-14, Provem>Zep p=1.0e-35, Mem0>Zep
-p=7.4e-5. The ordering is invariant across all three judges. Congruence with
+Pairwise McNemar (v2 corrected): Provem>Mem0 p=2.5e-4, Provem>Zep p=1.1e-34,
+Mem0>Zep p=3.1e-15. The ordering is invariant across all three judges. Congruence with
 independent evidence: our strict Zep (0.449) sits next to the ENGRAM paper's
 independent Zep measurement (42.3); Zep self-reports 94.7 under its own
 gpt-5.4-CoT setup. Caveats: Zep ran on a trial account; two harness bugs
@@ -82,7 +82,7 @@ after read-back-verified ingestion and confirmed graph completion.
   1986 QA). LongMemEval was not ported (designed, ~€4.5+1.5d, in the backlog). LoCoMo
   itself has known annotation quirks; we scored both systems identically, so the
   *difference* is meaningful, the absolute numbers less so.
-- **Two judges, both LLMs.** gpt-5 and claude-opus-5 agree (κ≈0.7–0.8) and both give
+- **Two judges, both LLMs.** gpt-5 and claude-opus-5 agree (κ 0.54 on Mem0 to 0.70 on Provem, v2 artifacts) and both give
   us a significant win, but no human evaluation was done. Opus-5 is stricter in
   absolute terms (all numbers lower); differences are what's robust.
 - **Prompt tuning asymmetry (bounded).** The strict5/agg/temporal answer prompts were
@@ -103,7 +103,7 @@ after read-back-verified ingestion and confirmed graph completion.
 - **Answerer dependency.** E2E accuracy is answerer-sensitive (a weak answerer favors
   Mem0's distilled contexts). Our numbers use gpt-5-mini/medium for both systems.
 - **Governance benchmark is separate evidence.** The governance numbers (silent errors
-  72.6%→0, poisoning 100%→0, 240→0 violations, p≈5e-150) come from the deterministic
+  72.6%→0, poisoning 100%→0, 240→0 violations; governance flips 497 of 960 trajectories and loses 0, so we report discordant counts rather than a p-value on a deterministic sim) come from the deterministic
   closed-loop reliability benchmark, NOT from LoCoMo, and use a scripted agent by
   design (documented limitation; isolates the memory layer's causal contribution).
 
@@ -130,7 +130,7 @@ both axes.** Concretely:
    small human eval, optional local-embeddings tier, wave-3 fact rollups (would also
    give the curated-memories UX where Mem0 still shines).
 
-**Bottom line: shippable.** The governance layer is proven, and the memory now beats the market
+**Bottom line: shippable.** The governance layer is validated on the closed-loop benchmark, and the memory now beats the measured baselines
 reference on the standard benchmark with cross-vendor significance, every limitation
 above is documented and none of them reverses the sign of the result.
 

@@ -44,7 +44,7 @@ gateway/host in front of the stdio server; Engram documents the boundary and pro
 **DEFERRED-ROADMAP (documented, not built):** schema-migration tooling, dependency lockfile
 (constraints.txt guidance given instead), explicit EU-AI-Act transparency markers.
 
-Governance headline unchanged throughout (0.375→0.893, 240→0, benign 1.0, p≈5e-150);
+Governance headline unchanged throughout (0.375→0.893, 240→0, benign 1.0, 497/0 discordant trajectories);
 quality gate PASS; 463 tests green. The per-finding detail below is the original audit.
 
 ## Second-round bug-hunt (2026-07-30): 11 confirmed, all fixed

@@ -4,7 +4,12 @@
 > bug SYMMETRICALLY on both sides and closing the multi-hop gap, the final paired
 > result is **0.614 vs 0.509 (+10.5 pts, p=7.2e-14)** under gpt-5 and **0.502 vs
 > 0.419 (+8.2, p=5.1e-10)** under the independent claude-opus-5 judge; abstention
-> parity 0.863 vs 0.848; multi-hop flipped (0.411 vs 0.397). See `ship_report.md`
+> parity 0.863 vs 0.848; multi-hop flipped (0.411 vs 0.397).
+>
+> **These are the v1 numbers. A later audit found Mem0's input was double-date-
+> prefixed; after the corrected re-measurement Mem0 is 0.565 / 0.368 and the
+> Provem lead is +4.9 pts (p=2.5e-4). See `measurement_changelog.md` and
+> `three_system_benchmark.md` for the v2 headline; this file is v1 history.** See `ship_report.md`
 > for the full scoreboard and honest limitations.**
 >
 > **UPDATE (2026-07-31): after an iterative, failure-driven optimization campaign

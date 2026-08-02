@@ -91,6 +91,11 @@ per-row strict verdicts (`scripts/backfill_judge_cache.py`).
   persist (2,157 memories) so the eval can be finished with ~1,986 searches
   once quota resets (or immediately on a paid plan). The Zep arm is unaffected
   (separate credits) and completes.
+  **Resolution (2026-08-02):** the maintainer enabled Mem0 overage ($5/1,000
+  calls), so the Mem0 v2 arm WAS completed the same day — 1,986 rows, 0 errors,
+  full stores. The 374-rows-incomplete state above is the mid-run snapshot when
+  the quota first blocked; the published v2 Mem0 numbers below are the complete
+  1,540-answerable measurement, not the partial one.
 
 ### v2 results (2026-08-02) — corrected Mem0 + Zep vs frozen Provem
 
