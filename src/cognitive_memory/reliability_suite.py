@@ -564,8 +564,9 @@ def format_report(result: BenchmarkResult) -> str:
     lines.append("## Governed vs ungoverned (paired)")
     lines.append("")
     lines.append(
-        "- Task-success McNemar: governed-only wins=%d, ungoverned-only wins=%d, discordant=%d, p=%.3g"
-        % (cmp.traj_mcnemar_b, cmp.traj_mcnemar_c, cmp.traj_mcnemar_n, cmp.traj_mcnemar_p)
+        "- Task-success pairing: governed-only wins=%d, ungoverned-only wins=%d, discordant=%d "
+        "(counts, not a p-value: deterministic sim, null false by construction)"
+        % (cmp.traj_mcnemar_b, cmp.traj_mcnemar_c, cmp.traj_mcnemar_n)
     )
     lines.append(
         "- Per-step correctness gain (governed - ungoverned): %+.3f  95%% CI [%+.3f, %+.3f]"
@@ -724,7 +725,7 @@ def format_e2e_report(result: E2EResult) -> str:
     )
     lines.append("")
     lines.append(
-        "| Agent skill p | no_memory | ungoverned | governed | governed vs p^n | mem. delta | McNemar p |"
+        "| Agent skill p | no_memory | ungoverned | governed | governed vs p^n | mem. delta | discordant (gov-only / ung-only) |"
     )
     lines.append("| ---: | ---: | ---: | ---: | --- | ---: | ---: |")
     for sk in result.per_skill:
@@ -733,8 +734,10 @@ def format_e2e_report(result: E2EResult) -> str:
         nm = sk.arms["no_memory"]
         gr, glo, ghi = wilson_point_and_interval(g.task_success, g.n_traj)
         ur, ulo, uhi = wilson_point_and_interval(u.task_success, u.n_traj)
+        # discordant counts, not a p-value: this is a deterministic sim whose
+        # null is false by construction, so a McNemar p only restates the count
         lines.append(
-            "| %.2f | %.3f | %.3f [%.3f, %.3f] | %.3f [%.3f, %.3f] | %.3f vs %.3f | %+.3f | %.2g |"
+            "| %.2f | %.3f | %.3f [%.3f, %.3f] | %.3f [%.3f, %.3f] | %.3f vs %.3f | %+.3f | %d / %d |"
             % (
                 sk.skill,
                 nm.task_success_rate,
@@ -742,7 +745,7 @@ def format_e2e_report(result: E2EResult) -> str:
                 gr, glo, ghi,
                 g.task_success_rate, sk.independence_baseline,
                 sk.memory_delta,
-                sk.mcnemar_p,
+                sk.mcnemar_b, sk.mcnemar_c,
             )
         )
     lines.append("")

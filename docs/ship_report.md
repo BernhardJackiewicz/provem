@@ -36,9 +36,9 @@ Zep was added as a third arm, ingested per Zep's own published evaluation
 checklist (one graph owner per conversation with proper user/assistant roles and
 speaker names; timestamps via the native created_at field, NOT appended to text;
 retrieval via parallel edge+node graph searches composed into dated facts +
-entity summaries, k-capped like the others). Graph processing was verified
-complete (5,788/5,882 episodes) before evaluation; ingestion was read-back
-verified per session. Answerer/judges identical to the other systems.
+entity summaries, k-capped like the others). Sessions were ingested in
+chronological order and graph processing completed for ALL 5,882 episodes
+(hard-gated before evaluation); ingestion was read-back verified per session. Answerer/judges identical to the other systems.
 
 | Judge | Provem | Mem0 | Zep |
 |---|---|---|---|
@@ -87,8 +87,9 @@ after read-back-verified ingestion and confirmed graph completion.
   absolute terms (all numbers lower); differences are what's robust.
 - **Prompt tuning asymmetry (bounded).** The strict5/agg/temporal answer prompts were
   tuned on DEV for our pipeline; Mem0's stored run used the neutral prompt. Control:
-  with the SAME neutral prompt we still win (+8.7 pts). The strict chain only buys
-  abstention calibration.
+  with the SAME neutral prompt we still win (+3.1 pts vs the corrected Mem0 0.565;
+  the +8.7 figure was against the v1 double-date-bugged Mem0). The strict chain
+  only buys abstention calibration.
 - **Empty-prediction bug history.** A harness bug (reasoning models returning empty
   content at token cap, HTTP 200) suppressed 12–23% of answerable predictions in ALL
   pre-fix runs. It was found late, fixed, and both sides were symmetrically re-asked
@@ -98,8 +99,10 @@ after read-back-verified ingestion and confirmed graph completion.
   empty-fix patch (favors Mem0 → conservative for us), and Mem0 was run with its
   platform defaults — a Mem0 expert might configure it better.
 - **DEV-iteration disclosure.** All feature selection happened on convs 0,2,4,6,8;
-  convs 1,3,5,7,9 were held out and only used for confirmation (they show the LARGER
-  win: +11.4). Judge verdict caching makes every historical number replayable at €0.
+  convs 1,3,5,7,9 were held out and only used for confirmation (Provem 0.617 vs the
+  corrected Mem0 0.582 = +3.5 pts; the holdout gap alone is not significant,
+  p=0.074 — the +11.4 figure was against v1's bugged Mem0). Judge verdict caching
+  makes every historical number replayable at €0.
 - **Answerer dependency.** E2E accuracy is answerer-sensitive (a weak answerer favors
   Mem0's distilled contexts). Our numbers use gpt-5-mini/medium for both systems.
 - **Governance benchmark is separate evidence.** The governance numbers (silent errors

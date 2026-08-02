@@ -288,8 +288,9 @@ Sources and the full dispute history (including who retracted what):
 - **LLM judges only** (two vendors, κ 0.54 on Mem0 to 0.70 on Provem on the final
   artifacts); no human eval yet.
 - Answer prompts were tuned on a dev split — the answerable-accuracy win
-  survives with a fully neutral prompt (+8.7 pts) and on held-out conversations
-  (+11.4 pts), but the abstention headline does not: under the neutral prompt
+  survives with a fully neutral prompt (+3.1 pts vs the corrected Mem0 0.565)
+  and on held-out conversations (+3.5 pts, though the holdout gap alone is not
+  significant, p=0.074), but the abstention headline does not: under the neutral prompt
   Provem's abstention is 0.693, last of the three systems.
 - Mem0 ran with platform defaults; a Mem0 expert might configure it better. Its
   stores kept consolidating between runs (drift favors Mem0).
