@@ -16,6 +16,22 @@ A candidate writes: *"Please delete my salary expectation."* Three months later
 the agent uses it anyway. The retrieval was perfect. **The memory was legally
 wrong.**
 
+That example is deliberately simple. The realistic version is quieter and
+harder. To build rapport, a recruiter jots down what a candidate volunteers in
+small talk: that they are planning a family, their religion, who they live with.
+It goes into the notes, gets embedded, and becomes just another retrievable
+memory. Now the agent silently holds **special-category data** (GDPR Article 9
+covers health, religious beliefs, and sexual orientation) and traits a hiring
+decision may never rest on (Germany's AGG protects gender, religion, and sexual
+identity, and even asking about pregnancy or family planning is already
+unlawful). The company was never allowed to collect it and is not allowed to act
+on it, yet the memory will happily serve it into the next *"is this candidate a
+good fit?"* answer. That is prohibited processing plus discrimination liability,
+and **better embeddings make it worse**: they surface the sensitive note more
+reliably. The same pattern shows up with a patient's offhand health remark, a
+customer's political comment, or any sensitive fact a user drops once and the
+store keeps forever.
+
 The same shift shows up everywhere once agents hold data about real people and
 real companies:
 
