@@ -1,19 +1,54 @@
 [build-system]
-requires = ["setuptools>=61"]
+requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "provem"
 version = "0.1.0"
-description = "Provem: a governed, GDPR-native memory layer for AI agents (formerly Engram)."
+description = "Governed, GDPR-native memory for AI agents: a governance layer (erasure, tenant isolation, prompt-injection defense, audit) over Mem0, Zep, or any store."
+readme = "README.md"
 requires-python = ">=3.9"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "Bernhard Jackiewicz", email = "bj@techport.io" }]
+keywords = [
+    "ai-agents",
+    "agent-memory",
+    "llm-memory",
+    "ai-governance",
+    "gdpr",
+    "prompt-injection",
+    "mem0",
+    "zep",
+    "rag",
+    "compliance",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Operating System :: OS Independent",
+]
 dependencies = []
 
 [project.optional-dependencies]
 graphiti = ["graphiti>=0.1.13"]
 mem0 = ["mem0ai>=2.0.0"]
+zep = ["zep-cloud>=3.0.0"]
 letta = ["letta-client>=1.10.3"]
-all = ["graphiti>=0.1.13", "mem0ai>=2.0.0", "letta-client>=1.10.3"]
+all = ["graphiti>=0.1.13", "mem0ai>=2.0.0", "zep-cloud>=3.0.0", "letta-client>=1.10.3"]
+
+[project.urls]
+Homepage = "https://github.com/BernhardJackiewicz/provem"
+Repository = "https://github.com/BernhardJackiewicz/provem"
+Issues = "https://github.com/BernhardJackiewicz/provem/issues"
 
 [project.scripts]
 cml = "cognitive_memory.cli:main"

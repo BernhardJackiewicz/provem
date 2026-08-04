@@ -1,5 +1,10 @@
 # Provem: GDPR-native governed memory for AI agents
 
+[![PyPI](https://img.shields.io/pypi/v/provem.svg)](https://pypi.org/project/provem/)
+[![Python](https://img.shields.io/badge/python-3.9%2B-blue.svg)](https://www.python.org/)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![Tests](https://img.shields.io/badge/tests-493%20passing-brightgreen.svg)](tests/)
+
 **Governed, GDPR-native memory for AI agents.** A governance layer (right-to-erasure, tenant isolation, injection defense, tamper-evident audit) that runs on top of *any* memory store (or as its own). On recall it holds its own: a clear win over Zep and roughly a tie with Mem0 on LoCoMo. Its real job is compliance: it drives violations to zero in a reproducible, self-authored closed-loop benchmark. Every number below is replayable from frozen artifacts at zero cost.
 
 ## The problem: recall is solved, governance is the hard part
@@ -382,3 +387,14 @@ enterprise wrapper (gateway auth/SSO, hosting, certifications) is deliberately
 out of scope for the core and documented in the trust model. Roadmap: LongMemEval
 port, local-embeddings tier, cross-session fact rollups, judge-diverse human eval.
 
+
+## Install
+
+```bash
+pip install provem            # dependency-free core, Python 3.9+
+pip install "provem[mem0]"    # optional backends: mem0, zep, letta, graphiti, or all
+```
+
+## License
+
+MIT, see [LICENSE](LICENSE). Use it, fork it, ship it commercially, no strings.
