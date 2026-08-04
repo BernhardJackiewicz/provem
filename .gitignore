@@ -31,6 +31,9 @@ docs/runs/*.err
 docs/runs/locomo_*.json
 
 # NOTE: the frozen run artifacts (docs/runs/*.jsonl, docs/runs/iter/,
-# docs/runs/caches/) ARE tracked — they back the EUR-0 replay in
+# docs/runs/caches/) ARE tracked (they back the EUR-0 replay in
 # scripts/verify_repro.sh; vector_cache.jsonl goes through Git LFS
 # (see .gitattributes). docs/runs/manifest.json pins their hashes.
+
+# Internal go-to-market notes (never published)
+docs/growth/
