@@ -1,4 +1,4 @@
-# Provem
+# Provem: GDPR-native governed memory for AI agents
 
 **Governed, GDPR-native memory for AI agents.** A governance layer (right-to-erasure, tenant isolation, injection defense, tamper-evident audit) that runs on top of *any* memory store (or as its own). On recall it holds its own: a clear win over Zep and roughly a tie with Mem0 on LoCoMo. Its real job is compliance: it drives violations to zero in a reproducible, self-authored closed-loop benchmark. Every number below is replayable from frozen artifacts at zero cost.
 
@@ -32,10 +32,11 @@ Better retrieval fixes none of this. These are governance problems, and today
 they are mostly "solved" in prompts (unenforceable) or in per-app code
 (unauditable).
 
-## What Provem is
+## What Provem is: a governance layer for AI agent memory
 
-Provem is an open-source research project: a governance layer that sits between
-the agent and whatever actually stores the memories.
+Provem is an open-source research project: a governance layer for AI agent
+memory that sits between the agent and whatever actually stores the memories
+(Mem0, Zep, or your own database).
 
 ```text
    Agent  (any model: GPT, Claude, Llama, Gemini, ...)
