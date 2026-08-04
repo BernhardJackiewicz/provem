@@ -1,13 +1,24 @@
 # Provem
 
-**Governed, GDPR-native memory for AI agents — stronger measured recall than Mem0 and Zep on LoCoMo, and zero compliance violations across the 960-trajectory governance benchmark.**
+**Governed, GDPR-native memory for AI agents.** A governance layer — right-to-erasure, tenant isolation, injection defense, tamper-evident audit — that runs on top of *any* memory store (or as its own). On recall it holds its own: a clear win over Zep and roughly a tie with Mem0 on LoCoMo. Its real job is compliance: it drives violations to zero in a reproducible, self-authored closed-loop benchmark. Every number below is replayable from frozen artifacts at zero cost.
 
 Two results, one system, every number reproducible from frozen artifacts at zero cost:
 
 | Axis | Result |
 |---|---|
 | **Governance** | Compliance violations **240 → 0**, memory-poisoning success **100% → 0%**, silent compounding errors **72.6% → 0.0%** (paired: governance flips 497 of 960 trajectories, loses 0; deterministic, no API key) |
-| **Memory** | **Beats Mem0 and Zep on full LoCoMo**: 0.614 vs 0.565 vs 0.449 answerable accuracy (paired; Provem>Mem0 p = 2.5×10⁻⁴, Provem>Zep p = 1×10⁻³⁴) — the ordering holds under an independent Claude judge **and under Mem0's own published judge prompt** (0.772 / 0.716 / 0.649). Both baselines re-measured after fixing input bugs that had understated them |
+| **Memory** (recall) | **Provem's own memory vs theirs, head-to-head on full LoCoMo** — 0.614 vs 0.565 vs 0.449 answerable accuracy. That is a **clear win over Zep** (+16.5 pts) and **about a tie with Mem0** (+4.9 pts, p = 2.5×10⁻⁴ over the full set but **not** significant on the held-out split). Ordering holds under an independent Claude judge and under Mem0's own published judge prompt (0.772 / 0.716 / 0.649). Measured in the **dense tier (needs an embeddings key)**; both baselines were re-measured after fixing input bugs that had understated them |
+
+### How to read this — two modes, and what the numbers mean
+
+Provem runs in **two modes**, and the recall numbers apply to only one of them:
+
+1. **As your memory** — Provem's *own* retrieval (the "dense" tier). This is what the **0.614** is: our engine measured head-to-head against Mem0's and Zep's engines, each standalone. Honest margins: clearly ahead of Zep, essentially level with Mem0.
+2. **As a governance layer over someone else's store** — plug Mem0, Zep, or your own DB in as the backend. Then you keep **that backend's** recall and Provem adds erasure, tenant isolation, injection defense, and audit *on top*.
+
+**Governance filters; it never invents recall.** Putting Provem in front of Mem0 does **not** raise Mem0's recall — a gate can only serve, refuse, or say "I don't know", never retrieve a memory the store missed. So "better recall" always means mode 1 (our own engine); it never means "we make Mem0 or Zep recall better." What we add to *their* stores is compliance and safety, not more recall.
+
+So the honest one-liner: **on recall we're a peer of Mem0 and ahead of Zep; the reason to run Provem is the governance layer that works on any of them.**
 
 ## The problem
 
@@ -60,7 +71,10 @@ Two design decisions make the pieces swappable:
 
 - **Backend-agnostic.** The storage engine is a plug-in behind a small
   `MemoryBackend` protocol. Erasure, scoping, trust, and audit live *above* the
-  store and do not change when you swap it.
+  store and do not change when you swap it. Note the direction: sitting above a
+  store, the layer can *filter* what that store returns (serve / refuse /
+  abstain) but never *improve its recall* — so wrapping Mem0 or Zep gives you
+  their recall plus Provem's governance, not higher recall.
 - **Model-agnostic.** The rules have nothing to do with which LLM you run.
   Support on GPT, legal on Claude, internal tools on Llama? The erasure duty is
   the same, tenant isolation is the same, the audit trail is the same. One
