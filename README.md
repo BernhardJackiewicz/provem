@@ -2,25 +2,7 @@
 
 **Governed, GDPR-native memory for AI agents.** A governance layer (right-to-erasure, tenant isolation, injection defense, tamper-evident audit) that runs on top of *any* memory store (or as its own). On recall it holds its own: a clear win over Zep and roughly a tie with Mem0 on LoCoMo. Its real job is compliance: it drives violations to zero in a reproducible, self-authored closed-loop benchmark. Every number below is replayable from frozen artifacts at zero cost.
 
-Two results, one system, every number reproducible from frozen artifacts at zero cost:
-
-| Axis | Result |
-|---|---|
-| **Governance** | Compliance violations **240 → 0**, memory-poisoning success **100% → 0%**, silent compounding errors **72.6% → 0.0%** (paired: governance flips 497 of 960 trajectories, loses 0; deterministic, no API key) |
-| **Memory** (recall) | **Provem's own memory vs theirs, head-to-head on full LoCoMo**: 0.614 vs 0.565 vs 0.449 answerable accuracy. That is a **clear win over Zep** (+16.5 pts) and **about a tie with Mem0** (+4.9 pts, p = 2.5×10⁻⁴ over the full set but **not** significant on the held-out split). Ordering holds under an independent Claude judge and under Mem0's own published judge prompt (0.772 / 0.716 / 0.649). Measured in the **dense tier (needs an embeddings key)**; both baselines were re-measured after fixing input bugs that had understated them |
-
-### How to read this: two modes, and what the numbers mean
-
-Provem runs in **two modes**, and the recall numbers apply to only one of them:
-
-1. **As your memory**: Provem's *own* retrieval (the "dense" tier). This is what the **0.614** is: our engine measured head-to-head against Mem0's and Zep's engines, each standalone. Honest margins: clearly ahead of Zep, essentially level with Mem0.
-2. **As a governance layer over someone else's store**: plug Mem0, Zep, or your own DB in as the backend. Then you keep **that backend's** recall and Provem adds erasure, tenant isolation, injection defense, and audit *on top*.
-
-**Governance filters; it never invents recall.** Putting Provem in front of Mem0 does **not** raise Mem0's recall: a gate can only serve, refuse, or say "I don't know", never retrieve a memory the store missed. So "better recall" always means mode 1 (our own engine); it never means "we make Mem0 or Zep recall better." What we add to *their* stores is compliance and safety, not more recall.
-
-So the honest one-liner: **on recall we're a peer of Mem0 and ahead of Zep; the reason to run Provem is the governance layer that works on any of them.**
-
-## The problem
+## The problem: recall is solved, governance is the hard part
 
 Take a recruiting agent. It picks up information from everywhere: email, the
 CRM, Slack, web pages, PDFs, meetings, the user chat. All of it lands in a
@@ -95,6 +77,26 @@ Concretely, the layer enforces:
 This is a research project first: every claim on this page has a reproducible
 benchmark behind it, negative results are documented alongside the wins, and
 the whole evidence chain replays from frozen artifacts at zero cost.
+
+## The two results, and how to read them
+
+Two results, one system, every number reproducible from frozen artifacts at zero cost:
+
+| Axis | Result |
+|---|---|
+| **Governance** | Compliance violations **240 → 0**, memory-poisoning success **100% → 0%**, silent compounding errors **72.6% → 0.0%** (paired: governance flips 497 of 960 trajectories, loses 0; deterministic, no API key) |
+| **Memory** (recall) | **Provem's own memory vs theirs, head-to-head on full LoCoMo**: 0.614 vs 0.565 vs 0.449 answerable accuracy. That is a **clear win over Zep** (+16.5 pts) and **about a tie with Mem0** (+4.9 pts, p = 2.5×10⁻⁴ over the full set but **not** significant on the held-out split). Ordering holds under an independent Claude judge and under Mem0's own published judge prompt (0.772 / 0.716 / 0.649). Measured in the **dense tier (needs an embeddings key)**; both baselines were re-measured after fixing input bugs that had understated them |
+
+### How to read this: two modes, and what the numbers mean
+
+Provem runs in **two modes**, and the recall numbers apply to only one of them:
+
+1. **As your memory**: Provem's *own* retrieval (the "dense" tier). This is what the **0.614** is: our engine measured head-to-head against Mem0's and Zep's engines, each standalone. Honest margins: clearly ahead of Zep, essentially level with Mem0.
+2. **As a governance layer over someone else's store**: plug Mem0, Zep, or your own DB in as the backend. Then you keep **that backend's** recall and Provem adds erasure, tenant isolation, injection defense, and audit *on top*.
+
+**Governance filters; it never invents recall.** Putting Provem in front of Mem0 does **not** raise Mem0's recall: a gate can only serve, refuse, or say "I don't know", never retrieve a memory the store missed. So "better recall" always means mode 1 (our own engine); it never means "we make Mem0 or Zep recall better." What we add to *their* stores is compliance and safety, not more recall.
+
+So the honest one-liner: **on recall we're a peer of Mem0 and ahead of Zep; the reason to run Provem is the governance layer that works on any of them.**
 
 ## Quick start
 
