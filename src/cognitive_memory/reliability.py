@@ -1237,6 +1237,12 @@ class GovernedMemory:
                 return "purpose_mismatch"
             if rule.get("require_consent") and purpose not in record.consented_purposes:
                 return "purpose_mismatch"
+            # Consent per channel: a purpose may be limited to records whose
+            # source channel's collection terms cover it ("lawful to hold,
+            # unlawful for this purpose" becomes checkable).
+            channels = rule.get("source_channels") or ()
+            if channels and record.source not in channels:
+                return "purpose_mismatch"
         return ""
 
     def _resolve_group(

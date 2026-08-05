@@ -36,21 +36,23 @@ def _validate_purpose_rules(rules: Mapping[str, Any]) -> None:
             raise ComplianceConfigError("purpose_rules keys must be non-empty strings")
         if not isinstance(rule, Mapping):
             raise ComplianceConfigError("purpose_rules[%r] must be a mapping" % purpose)
-        unknown = set(rule) - {"allowed_relations", "require_consent"}
+        unknown = set(rule) - {"allowed_relations", "require_consent", "source_channels"}
         if unknown:
             raise ComplianceConfigError(
                 "unknown purpose rule keys for %r: %s" % (purpose, sorted(unknown))
             )
-        allowed = rule.get("allowed_relations")
-        if allowed is not None:
-            if isinstance(allowed, str) or not hasattr(allowed, "__iter__"):
+        for list_key in ("allowed_relations", "source_channels"):
+            values = rule.get(list_key)
+            if values is None:
+                continue
+            if isinstance(values, str) or not hasattr(values, "__iter__"):
                 raise ComplianceConfigError(
-                    "allowed_relations for %r must be a list of strings" % purpose
+                    "%s for %r must be a list of strings" % (list_key, purpose)
                 )
-            for relation in allowed:
-                if not isinstance(relation, str):
+            for value in values:
+                if not isinstance(value, str):
                     raise ComplianceConfigError(
-                        "allowed_relations for %r must be a list of strings" % purpose
+                        "%s for %r must be a list of strings" % (list_key, purpose)
                     )
         if "require_consent" in rule and not isinstance(rule["require_consent"], bool):
             raise ComplianceConfigError("require_consent for %r must be a bool" % purpose)
@@ -199,8 +201,9 @@ class CompliancePolicy:
             rules: Dict[str, Any] = {}
             for purpose, rule in dict(kwargs["purpose_rules"]).items():
                 rule = dict(rule)
-                if rule.get("allowed_relations") is not None:
-                    rule["allowed_relations"] = tuple(str(r) for r in rule["allowed_relations"])
+                for list_key in ("allowed_relations", "source_channels"):
+                    if rule.get(list_key) is not None:
+                        rule[list_key] = tuple(str(v) for v in rule[list_key])
                 rules[str(purpose)] = rule
             kwargs["purpose_rules"] = rules
         if "source_trust" in kwargs:

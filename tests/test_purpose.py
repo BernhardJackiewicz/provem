@@ -117,6 +117,48 @@ class PurposeGateTests(unittest.TestCase):
         self.assertEqual(step.outcome, CORRECT)
 
 
+class ChannelConsentTests(unittest.TestCase):
+    """Consent per channel: purpose_rules can restrict a purpose to records
+    from channels whose collection terms cover that purpose. 'Lawful to hold,
+    unlawful for this purpose' becomes checkable."""
+
+    POLICY = {"name": "p", "purpose_rules": {"hiring": {"source_channels": ["application_form"]}}}
+
+    def test_purpose_rule_source_channels_gate(self):
+        blocked_mem = GovernedMemory(policy=dict(self.POLICY))
+        blocked_mem.remember("alice seniority senior", subject="alice", relation="seniority",
+                             object="senior", tenant="t", entity="alice", source="notes")
+        blocked = blocked_mem.recall_value("alice seniority", tenant="t", entity="alice", purpose="hiring")
+        self.assertTrue(blocked.abstained)
+        self.assertIn("purpose_mismatch", {reason for _, reason in blocked.excluded})
+        served_mem = GovernedMemory(policy=dict(self.POLICY))
+        served_mem.remember("alice seniority senior", subject="alice", relation="seniority",
+                            object="senior", tenant="t", entity="alice", source="application_form")
+        served = served_mem.recall_value("alice seniority", tenant="t", entity="alice", purpose="hiring")
+        self.assertFalse(served.abstained)
+
+    def test_same_fact_two_channels_only_consented_serves(self):
+        # The Grabdoc case: the same value arrived via recruiter notes AND via
+        # the application form; under hiring only the form record may serve.
+        mem = GovernedMemory(policy=dict(self.POLICY))
+        mem.remember("alice seniority senior", subject="alice", relation="seniority",
+                     object="senior", tenant="t", entity="alice", source="notes")
+        mem.remember("alice seniority senior", subject="alice", relation="seniority",
+                     object="senior", tenant="t", entity="alice", source="application_form")
+        result = mem.recall_value("alice seniority", tenant="t", entity="alice", purpose="hiring")
+        self.assertFalse(result.abstained)
+        self.assertEqual(result.answer, "senior")
+        self.assertEqual(result.selected[0].source, "application_form")
+        self.assertIn("purpose_mismatch", {reason for _, reason in result.excluded})
+
+    def test_source_channels_round_trip(self):
+        from cognitive_memory.compliance import CompliancePolicy
+
+        policy = CompliancePolicy(name="p", purpose_rules={"hiring": {"source_channels": ("application_form",)}})
+        restored = CompliancePolicy.from_json(policy.to_json())
+        self.assertEqual(restored, policy)
+
+
 class PurposeClassTests(unittest.TestCase):
     def test_purpose_leak_is_compliance_violation(self):
         from cognitive_memory.reliability import RecallResult, classify_step
