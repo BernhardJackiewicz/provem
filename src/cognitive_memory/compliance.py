@@ -125,6 +125,12 @@ class CompliancePolicy:
     #   free-text erasure is handled elsewhere.
     erasure_mode: str = "strict"
 
+    # -- semantic erasure (opt-in) ----------------------------------------
+    # cosine threshold for paraphrase matching against raw erased terms.
+    # None (default) = off: token erasure stays the deterministic, offline
+    # baseline. Requires an embedder injected into GovernedMemory.
+    semantic_erasure_threshold: Optional[float] = None
+
     # -- deduplication ----------------------------------------------------
     # skip writing a record identical to an existing one (same subject/relation/
     # object/tenant/scope-subject). Off by default (preserves record counts).
@@ -164,6 +170,8 @@ class CompliancePolicy:
         thresholds = [self.relevance_floor, self.trust_margin, self.min_store_trust]
         if self.unlisted_source_trust is not None:
             thresholds.append(self.unlisted_source_trust)
+        if self.semantic_erasure_threshold is not None:
+            thresholds.append(self.semantic_erasure_threshold)
         for value in thresholds:
             if not 0.0 <= float(value) <= 1.0:
                 raise ComplianceConfigError("trust/relevance thresholds must be in [0,1]")
@@ -227,6 +235,8 @@ class CompliancePolicy:
                 kwargs[scalar] = float(kwargs[scalar])
         if kwargs.get("unlisted_source_trust") is not None:
             kwargs["unlisted_source_trust"] = float(kwargs["unlisted_source_trust"])
+        if kwargs.get("semantic_erasure_threshold") is not None:
+            kwargs["semantic_erasure_threshold"] = float(kwargs["semantic_erasure_threshold"])
         return cls(**kwargs)
 
     def to_json(self, indent: int = 2) -> str:

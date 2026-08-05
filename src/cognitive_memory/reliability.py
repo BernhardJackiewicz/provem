@@ -410,6 +410,7 @@ class GovernedMemory:
         trust_margin: Optional[float] = None,
         audit_path: Optional[str] = None,
         now_fn: Optional[Callable[[], datetime]] = None,
+        embedder: Optional[Any] = None,
     ) -> None:
         from .compliance import resolve_policy
 
@@ -447,6 +448,9 @@ class GovernedMemory:
         # derivative stores (embeddings, summaries, caches) swept on erasure
         # and retention cleanup
         self._derivative_stores: List[DerivativeStore] = []
+        # duck-typed embed(texts) -> vectors; only consulted when the policy
+        # sets semantic_erasure_threshold (tests inject a deterministic fake)
+        self._embedder = embedder
         from .audit import AuditLog
 
         self.audit = AuditLog(persist_path=audit_path)
@@ -1201,6 +1205,7 @@ class GovernedMemory:
             {er[1] for er in excluded}
             & {
                 "erased",
+                "erased_semantic",
                 "erased_term_reingest",
                 "do_not_use",
                 "consent_revoked",
@@ -1295,6 +1300,10 @@ class GovernedMemory:
         erasure_tokens = self._erasure_tokens(record)
         if any(term <= erasure_tokens for term in self.erased_terms.get(record.scope.tenant, [])):
             return "erased"
+        if self.policy.semantic_erasure_threshold and self._embedder is not None:
+            semantic_reason = self._semantic_erasure_reason(record)
+            if semantic_reason:
+                return semantic_reason
         restrict_tokens = tokenize(record.text) | tokenize(record.object) | tokenize(record.subject)
         if any(term <= restrict_tokens for term in self.restricted_terms.get(record.scope.tenant, [])):
             return "do_not_use"
@@ -1325,6 +1334,31 @@ class GovernedMemory:
         record_scan = " ".join(part for part in (record.text, record.subject, record.relation, record.object) if part)
         if self.policy.detect_injection and instruction_risk_reason(record_scan, self.policy.extra_injection_patterns):
             return "possible_prompt_injection"
+        return ""
+
+    def _semantic_erasure_reason(self, record: MemoryRecord) -> str:
+        """Opt-in paraphrase matching against the raw erased term strings.
+
+        Catches similarity leaks token subsets cannot ("wants kids" vs
+        "planning a family"). Fails OPEN with an audit entry: token erasure
+        stays the deterministic baseline and a flaky embedding provider must
+        not take recall down (documented trade-off).
+        """
+        terms = self.erased_term_texts.get(record.scope.tenant, [])
+        if not terms or not record.text:
+            return ""
+        threshold = float(self.policy.semantic_erasure_threshold or 0.0)
+        try:
+            from .embeddings import cosine
+
+            vectors = self._embedder.embed([record.text] + list(terms))
+            record_vector = vectors[0]
+            for term_vector in vectors[1:]:
+                if cosine(record_vector, term_vector) >= threshold:
+                    return "erased_semantic"
+        except Exception as error:
+            self.audit.record("semantic_erasure_error",
+                              tenant=record.scope.tenant, error=str(error))
         return ""
 
     def _purpose_block_reason(self, record: MemoryRecord, turn: QueryTurn) -> str:

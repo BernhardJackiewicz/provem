@@ -46,5 +46,96 @@ class ErasedTermRetentionTests(unittest.TestCase):
         self.assertEqual(PolicyStore.from_dict(legacy).do_not_use_term_texts, [])
 
 
+class FakeSemanticEmbedder:
+    """Deterministic test embedder: texts in the same configured group share a
+    unit vector, everything else gets a stable distinct direction (no
+    network, no keys, no per-process hash salt)."""
+
+    def __init__(self, groups=()):
+        self._group_of = {}
+        for index, group in enumerate(groups):
+            for text in group:
+                self._group_of[text.lower()] = index
+
+    def embed(self, texts):
+        import hashlib
+
+        vectors = []
+        for text in texts:
+            vector = [0.0] * 16
+            index = self._group_of.get(text.lower())
+            if index is not None:
+                vector[index] = 1.0
+            else:
+                digest = int(hashlib.sha256(text.lower().encode("utf-8")).hexdigest(), 16)
+                vector[8 + (digest % 8)] = 1.0
+            vectors.append(vector)
+        return vectors
+
+
+class _RaisingEmbedder:
+    def embed(self, texts):
+        raise RuntimeError("provider down")
+
+
+PARAPHRASE = "alice is planning a family"
+
+
+class SemanticErasureTests(unittest.TestCase):
+    def _mem(self, embedder=None, threshold=0.8):
+        policy = {"name": "s"}
+        if threshold is not None:
+            policy["semantic_erasure_threshold"] = threshold
+        mem = GovernedMemory(policy=policy, embedder=embedder)
+        mem.remember(PARAPHRASE, subject="alice", relation="note", object="",
+                     tenant="t", entity="alice")
+        mem.forget("wants kids", Scope(tenant="t"))
+        return mem
+
+    def test_off_by_default_paraphrase_leaks(self):
+        # Documents the gap AND guards the headline: without opt-in, token
+        # matching alone runs and the paraphrase is served.
+        mem = GovernedMemory()
+        mem.remember(PARAPHRASE, subject="alice", relation="note", object="",
+                     tenant="t", entity="alice")
+        mem.forget("wants kids", Scope(tenant="t"))
+        result = mem.recall_value("alice planning family", tenant="t", entity="alice")
+        self.assertFalse(result.abstained)
+
+    def test_paraphrase_refused_with_reason_erased_semantic(self):
+        embedder = FakeSemanticEmbedder(groups=[("wants kids", PARAPHRASE)])
+        mem = self._mem(embedder=embedder)
+        result = mem.recall_value("alice planning family", tenant="t", entity="alice")
+        self.assertTrue(result.abstained)
+        self.assertIn("erased_semantic", {reason for _, reason in result.excluded})
+
+    def test_below_threshold_not_blocked(self):
+        embedder = FakeSemanticEmbedder(groups=[])  # everything orthogonal
+        mem = self._mem(embedder=embedder)
+        result = mem.recall_value("alice planning family", tenant="t", entity="alice")
+        self.assertFalse(result.abstained)
+
+    def test_threshold_without_embedder_is_token_only(self):
+        mem = self._mem(embedder=None)
+        result = mem.recall_value("alice planning family", tenant="t", entity="alice")
+        self.assertFalse(result.abstained)
+
+    def test_embedder_failure_fails_open_with_audit(self):
+        mem = self._mem(embedder=_RaisingEmbedder())
+        result = mem.recall_value("alice planning family", tenant="t", entity="alice")
+        self.assertFalse(result.abstained, "a flaky provider must not take recall down")
+        self.assertTrue(mem.audit.filter("semantic_erasure_error"),
+                        "the degradation must be visible in the audit trail")
+
+    def test_policy_threshold_serialization_and_bounds(self):
+        from cognitive_memory.compliance import CompliancePolicy, ComplianceConfigError
+
+        policy = CompliancePolicy(name="s", semantic_erasure_threshold=0.8)
+        restored = CompliancePolicy.from_json(policy.to_json())
+        self.assertEqual(restored, policy)
+        with self.assertRaises(ComplianceConfigError):
+            CompliancePolicy(semantic_erasure_threshold=1.5)
+
+
 if __name__ == "__main__":
     unittest.main()
