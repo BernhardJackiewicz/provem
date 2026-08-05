@@ -137,5 +137,31 @@ class SemanticErasureTests(unittest.TestCase):
             CompliancePolicy(semantic_erasure_threshold=1.5)
 
 
+class PrototypeSemanticErasureTests(unittest.TestCase):
+    def _policy_with_term(self):
+        from cognitive_memory.policy import PolicyStore
+
+        policy = PolicyStore()
+        policy.apply_deletion_term("wants kids")
+        return policy
+
+    def test_matches_do_not_use_term_semantic_opt_in(self):
+        policy = self._policy_with_term()
+
+        def matcher(text, term):
+            related = {"wants kids", PARAPHRASE.lower()}
+            return 1.0 if text.lower() in related and term.lower() in related else 0.0
+
+        policy.set_semantic_matcher(matcher, threshold=0.8)
+        # covers facts, events AND reflections: every exclusion path funnels
+        # through matches_do_not_use_term
+        self.assertTrue(policy.matches_do_not_use_term(PARAPHRASE))
+        self.assertFalse(policy.matches_do_not_use_term("bob prefers tea"))
+
+    def test_off_by_default(self):
+        policy = self._policy_with_term()
+        self.assertFalse(policy.matches_do_not_use_term(PARAPHRASE))
+
+
 if __name__ == "__main__":
     unittest.main()

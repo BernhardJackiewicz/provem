@@ -236,3 +236,16 @@
 - Domain-specific privacy and consent policies.
 - Cross-backend reconciliation tests before enabling multiple memory systems at
   once.
+
+## Erasure coverage boundaries (updated)
+
+- Token-level tombstones are the deterministic baseline: a paraphrase sharing
+  no tokens with the erased term escapes them. Opt-in semantic erasure
+  (semantic_erasure_threshold plus an injected embedder on the governed
+  stack, set_semantic_matcher on the prototype PolicyStore) closes the
+  paraphrase-similarity case but NOT inference-level leakage, and it fails
+  open with an audited error when the provider is unavailable.
+- Write-side erasure quarantines re-ingested erased terms; channel-level
+  quarantine (sensitive_sources) holds free-text note channels where
+  volunteered special-category data lands. Both are provenance mechanisms:
+  recognition of novel sensitive content in ordinary text remains unsolved.

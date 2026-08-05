@@ -35,6 +35,11 @@ class PolicyStore:
         # opt-in: quarantine candidates from sensitive channels (recruiter
         # notes etc.) unless consent is explicit
         self.enforce_channel_sensitivity: bool = False
+        # opt-in semantic matcher for erased-term paraphrases; runtime
+        # injected, deliberately not serialized (a function does not survive
+        # a snapshot; re-inject after load)
+        self.semantic_matcher = None
+        self.semantic_threshold: float = 0.0
         self.audit_log: List[str] = []
 
     def evaluate_candidate(self, candidate: MemoryCandidate) -> str:
@@ -220,12 +225,31 @@ class PolicyStore:
                 return "not_yet_valid"
         return None
 
+    def set_semantic_matcher(self, matcher, threshold: float = 0.8) -> None:
+        """Enable paraphrase matching for erased terms.
+
+        ``matcher(text, term)`` returns a similarity in [0,1]. Consulted by
+        matches_do_not_use_term after the token check, which covers facts,
+        events and reflections (all exclusion paths funnel through it).
+        """
+        self.semantic_matcher = matcher
+        self.semantic_threshold = float(threshold)
+
     def matches_do_not_use_term(self, text: str) -> bool:
         text_tokens = tokenize(text)
         for term in self.do_not_use_terms:
             term_tokens = tokenize(term)
             if term_tokens and term_tokens <= text_tokens:
                 return True
+        if self.semantic_matcher is not None and self.semantic_threshold > 0.0:
+            for term_text in self.do_not_use_term_texts:
+                try:
+                    if float(self.semantic_matcher(text, term_text)) >= self.semantic_threshold:
+                        return True
+                except Exception:
+                    # fail open: token matching stays the deterministic baseline
+                    self.audit_log.append("semantic_matcher_error")
+                    return False
         return False
 
     def _matches_do_not_use_term(self, text: str) -> bool:

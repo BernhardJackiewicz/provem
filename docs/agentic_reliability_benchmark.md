@@ -244,6 +244,15 @@ canonical run.
 
 ## Honest limitations
 
+- **Semantic erasure is opt-in and bounded.** By default, erasure matching is
+  token-based; a paraphrase that shares no tokens with the erased term
+  ("wants kids" erased, a note says "planning a family") is only caught when
+  a semantic_erasure_threshold is set AND an embedding provider is injected.
+  Even then it catches paraphrase SIMILARITY, not inference-level leakage (a
+  rollup implying the erased fact in dissimilar words), it fails open with an
+  audited error when the provider is down (token erasure stays the
+  deterministic baseline), and erasures performed before the raw-term
+  retention existed have no surface form to compare against.
 - **The agent is a fixed policy, not an LLM.** This isolates the memory signal by
   design. It is therefore *not* a claim about any specific model's end-to-end
   task success; it is a claim about the memory layer's causal contribution to
