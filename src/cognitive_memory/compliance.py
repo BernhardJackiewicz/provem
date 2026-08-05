@@ -125,6 +125,15 @@ class CompliancePolicy:
     #   free-text erasure is handled elsewhere.
     erasure_mode: str = "strict"
 
+    # -- conflict resolution ----------------------------------------------
+    # trust_margin (default): the original scalar resolution, byte-identical.
+    # lineage: corroboration counts first -- a value asserted by 2+ distinct
+    # sources beats a single fresh contradicting assertion even at equal
+    # trust (the corroborated same-channel case); everything else falls
+    # through to the original logic. Equal-trust 1-vs-1 contradictions stay
+    # with supersession plus write-side review (documented, not solved).
+    conflict_resolution: str = "trust_margin"
+
     # -- semantic erasure (opt-in) ----------------------------------------
     # cosine threshold for paraphrase matching against raw erased terms.
     # None (default) = off: token erasure stays the deterministic, offline
@@ -167,6 +176,8 @@ class CompliancePolicy:
     def __post_init__(self) -> None:
         if self.erasure_mode not in ("strict", "lenient"):
             raise ComplianceConfigError("erasure_mode must be 'strict' or 'lenient'")
+        if self.conflict_resolution not in ("trust_margin", "lineage"):
+            raise ComplianceConfigError("conflict_resolution must be 'trust_margin' or 'lineage'")
         thresholds = [self.relevance_floor, self.trust_margin, self.min_store_trust]
         if self.unlisted_source_trust is not None:
             thresholds.append(self.unlisted_source_trust)

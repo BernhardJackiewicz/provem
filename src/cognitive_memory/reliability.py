@@ -577,7 +577,12 @@ class GovernedMemory:
         if quarantined:
             self.audit.record("quarantine", reason=reason, subject=turn.subject, source=turn.source)
         if not quarantined and self.policy.deduplicate and self._is_duplicate(turn):
-            self.audit.record("dedup_skip", subject=turn.subject, relation=turn.relation)
+            if self.policy.conflict_resolution == "lineage":
+                # a duplicate write is a corroborating assertion, not noise
+                self._merge_assertion(turn, trust)
+                self.audit.record("assertion_merged", subject=turn.subject, relation=turn.relation)
+            else:
+                self.audit.record("dedup_skip", subject=turn.subject, relation=turn.relation)
             return
         record = MemoryRecord(
             subject=turn.subject or turn.text,
@@ -596,7 +601,55 @@ class GovernedMemory:
             consented_purposes=tuple(turn.consented_purposes),
             assertions=[{"source": turn.source, "trust": trust, "valid_at": self.clock}],
         )
+        if self.policy.conflict_resolution == "lineage" and not quarantined:
+            self._write_with_lineage_links(record)
+            return
         self.backend.write(record)
+
+    def _write_with_lineage_links(self, record: MemoryRecord) -> None:
+        """Reify supersedes/contradicts links at write time (lineage mode).
+
+        The new record's links always persist (written with the record); the
+        reverse link on the older record is best-effort: in-memory backends
+        share object references, durable backends would need a rewrite.
+        """
+        contradicted: List[MemoryRecord] = []
+        for other in self.backend.all_records():
+            if (
+                other.scope.tenant != record.scope.tenant
+                or other.scope.subject != record.scope.subject
+                or other.subject != record.subject
+                or other.relation != record.relation
+                or other.object == record.object
+            ):
+                continue
+            if other.source == record.source:
+                if other.id and other.id not in record.supersedes_ids:
+                    record.supersedes_ids.append(other.id)
+            else:
+                if other.id and other.id not in record.contradicts_ids:
+                    record.contradicts_ids.append(other.id)
+                contradicted.append(other)
+        new_id = self.backend.write(record)
+        for other in contradicted:
+            if new_id not in other.contradicts_ids:
+                other.contradicts_ids.append(new_id)
+
+    def _merge_assertion(self, turn: IngestTurn, trust: float) -> None:
+        subject = turn.subject or turn.text
+        relation = turn.relation or turn.kind
+        for record in self.backend.all_records():
+            if (
+                record.scope.tenant == turn.scope.tenant
+                and record.scope.subject == turn.scope.subject
+                and record.subject == subject
+                and record.relation == relation
+                and record.object == turn.object
+            ):
+                incoming = {"source": turn.source, "trust": trust, "valid_at": self.clock}
+                if incoming not in record.assertions:
+                    record.assertions.append(incoming)
+                return
 
     def _is_duplicate(self, turn: IngestTurn) -> bool:
         subject = turn.subject or turn.text
@@ -1409,6 +1462,35 @@ class GovernedMemory:
         objects = {r.object for r in group}
         if len(objects) <= 1:
             return (top_record, "")
+
+        # Lineage mode: corroboration counts before the scalar margin. A value
+        # asserted by 2+ distinct sources beats competitors that each rest on
+        # a single source -- the corroborated same-channel poison case, where
+        # equal trust and recency give the margin no signal. Anything else
+        # falls through to the original logic verbatim.
+        if self.policy.conflict_resolution == "lineage":
+            sources_by_value: Dict[str, set] = {}
+            for record in group:
+                bucket = sources_by_value.setdefault(record.object, set())
+                bucket.add(record.source)
+                for assertion in record.assertions:
+                    source = assertion.get("source")
+                    if source:
+                        bucket.add(source)
+            corroborated = [value for value, sources in sources_by_value.items() if len(sources) >= 2]
+            if len(corroborated) == 1 and all(
+                len(sources) <= 1
+                for value, sources in sources_by_value.items()
+                if value != corroborated[0]
+            ):
+                chosen = max((r for r in group if r.object == corroborated[0]),
+                             key=lambda r: r.valid_at)
+                self.audit.record(
+                    "conflict_resolved_by_corroboration",
+                    subject=chosen.subject, relation=chosen.relation,
+                    distinct_sources=len(sources_by_value[corroborated[0]]),
+                )
+                return (chosen, "")
 
         if len({r.source for r in group}) == 1:
             chosen = max(group, key=lambda r: r.valid_at)

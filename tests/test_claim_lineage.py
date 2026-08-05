@@ -95,5 +95,98 @@ class LineageFieldTests(unittest.TestCase):
         self.assertEqual(fact.source_trust, "authoritative")
 
 
+class LineageResolutionTests(unittest.TestCase):
+    """Opt-in conflict_resolution='lineage': corroboration counts before the
+    scalar trust margin. Default behaviour stays byte-identical."""
+
+    LINEAGE = {"name": "lineage", "conflict_resolution": "lineage"}
+
+    def _fact(self, mem, obj, source="user", trust=0.9):
+        from cognitive_memory.reliability import IngestTurn
+
+        scope = Scope("t", "alex_1")
+        mem.ingest(IngestTurn("fact", "alex salary %s" % obj, "alex_1", "salary", obj,
+                              scope, source, trust))
+
+    def _recall(self, mem):
+        from cognitive_memory.reliability import QueryTurn
+
+        return mem.recall(QueryTurn("alex salary", Scope("t", "alex_1"), None))
+
+    def test_default_policy_conflict_behavior_pinned(self):
+        # byte-compat pin of the existing PoisoningTests fixtures under an
+        # explicitly constructed default-valued policy
+        mem = GovernedMemory(policy={"name": "default-pin"})
+        self._fact(mem, "120k", "user", 0.96)
+        self._fact(mem, "200k", "external", 0.5)
+        resolved = self._recall(mem)
+        self.assertEqual(resolved.answer, "120k")
+        abstain_mem = GovernedMemory(policy={"name": "default-pin"})
+        self._fact(abstain_mem, "120k", "user", 0.96)
+        self._fact(abstain_mem, "200k", "external", 0.9)
+        abstained = self._recall(abstain_mem)
+        self.assertTrue(abstained.abstained)
+        self.assertEqual(abstained.reason, "source_conflict")
+
+    def test_corroborated_claim_beats_single_fresh_same_channel_assertion(self):
+        # the same-channel MINJA case with history: the true value is asserted
+        # by two independent sources; the poison arrives later through the
+        # trusted user channel at equal trust
+        mem = GovernedMemory(policy=dict(self.LINEAGE))
+        self._fact(mem, "120k", "user", 0.9)
+        self._fact(mem, "120k", "crm", 0.9)
+        self._fact(mem, "200k", "user", 0.9)
+        result = self._recall(mem)
+        self.assertFalse(result.abstained)
+        self.assertEqual(result.answer, "120k")
+        self.assertTrue(mem.audit.filter("conflict_resolved_by_corroboration"))
+
+    def test_uncorroborated_same_channel_still_latest_wins(self):
+        # the honest punt: 1-vs-1 same source IS a benign update pattern;
+        # lineage must not break supersession
+        mem = GovernedMemory(policy=dict(self.LINEAGE))
+        self._fact(mem, "120k", "user", 0.9)
+        self._fact(mem, "130k", "user", 0.9)
+        result = self._recall(mem)
+        self.assertEqual(result.answer, "130k")
+        self.assertTrue(mem.audit.filter("supersession"))
+
+    def test_lineage_falls_back_to_trust_margin_across_sources(self):
+        mem = GovernedMemory(policy=dict(self.LINEAGE))
+        self._fact(mem, "120k", "user", 0.96)
+        self._fact(mem, "200k", "external", 0.5)
+        result = self._recall(mem)
+        self.assertEqual(result.answer, "120k")
+        self.assertTrue(mem.audit.filter("conflict_resolved_by_trust"))
+
+    def test_write_time_links_recorded_in_lineage_mode(self):
+        mem = GovernedMemory(policy=dict(self.LINEAGE))
+        self._fact(mem, "120k", "user", 0.9)
+        self._fact(mem, "200k", "crm", 0.9)
+        records = {r.object: r for r in mem.backend.all_records()}
+        self.assertIn(records["120k"].id, records["200k"].contradicts_ids)
+        self.assertIn(records["200k"].id, records["120k"].contradicts_ids)
+        mem2 = GovernedMemory(policy=dict(self.LINEAGE))
+        self._fact(mem2, "120k", "user", 0.9)
+        self._fact(mem2, "130k", "user", 0.9)
+        records2 = {r.object: r for r in mem2.backend.all_records()}
+        self.assertIn(records2["120k"].id, records2["130k"].supersedes_ids)
+
+    def test_dedup_merges_assertion_in_lineage_mode(self):
+        policy = {"name": "lineage", "conflict_resolution": "lineage", "deduplicate": True}
+        mem = GovernedMemory(policy=policy)
+        self._fact(mem, "120k", "user", 0.9)
+        self._fact(mem, "120k", "user", 0.9)
+        records = mem.backend.all_records()
+        self.assertEqual(len(records), 1)
+        self.assertTrue(mem.audit.filter("assertion_merged"))
+
+    def test_invalid_conflict_resolution_rejected(self):
+        from cognitive_memory.compliance import CompliancePolicy, ComplianceConfigError
+
+        with self.assertRaises(ComplianceConfigError):
+            CompliancePolicy(conflict_resolution="bogus")
+
+
 if __name__ == "__main__":
     unittest.main()
