@@ -87,6 +87,8 @@ class Episode:
     id: str = field(default_factory=lambda: make_id("ep"))
     hash: Optional[str] = None
     created_at: datetime = field(default_factory=now_utc)
+    # purpose limitation: empty list means unrestricted
+    allowed_purposes: List[str] = field(default_factory=list)
 
     def __post_init__(self) -> None:
         self.timestamp = ensure_datetime(self.timestamp)
@@ -165,6 +167,8 @@ class TemporalFact:
     conflict_with: List[str] = field(default_factory=list)
     id: str = field(default_factory=lambda: make_id("tf"))
     created_at: datetime = field(default_factory=now_utc)
+    # purpose limitation: empty list means unrestricted
+    allowed_purposes: List[str] = field(default_factory=list)
 
     def __post_init__(self) -> None:
         self.valid_at = ensure_datetime(self.valid_at)
@@ -369,6 +373,8 @@ class MemoryEvent:
     source_fact_id: str = ""
     id: str = field(default_factory=lambda: make_id("me"))
     created_at: datetime = field(default_factory=now_utc)
+    # purpose limitation: empty list means unrestricted
+    allowed_purposes: List[str] = field(default_factory=list)
 
     def __post_init__(self) -> None:
         self.timestamp = ensure_datetime(self.timestamp)
@@ -399,6 +405,7 @@ class MemoryEvent:
             "source_fact_id": self.source_fact_id,
             "id": self.id,
             "created_at": iso(self.created_at),
+            "allowed_purposes": list(self.allowed_purposes),
         }
 
 
@@ -719,6 +726,8 @@ class RetrievalRequest:
     memory_policy: RetrievalMemoryPolicy = field(default_factory=RetrievalMemoryPolicy)
     top_k: int = 5
     min_score: float = 0.05
+    # declared, untrusted purpose of use; None = no purpose gating
+    purpose: Optional[str] = None
 
     def __post_init__(self) -> None:
         if self.as_of is not None:

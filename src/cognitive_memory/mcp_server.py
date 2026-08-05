@@ -172,6 +172,8 @@ class GovernedMemoryService:
             source=str(args.get("source", "user")),
             trust=self._coerce_trust(args.get("trust")),
             consent=bool(args.get("consent", False)),
+            allowed_purposes=tuple(str(v) for v in (args.get("allowed_purposes") or ())),
+            consented_purposes=tuple(str(v) for v in (args.get("consented_purposes") or ())),
         )
         quarantined = [e.to_dict() for e in mem.audit.entries()[before:] if e.action == "quarantine"]
         return {
@@ -188,13 +190,17 @@ class GovernedMemoryService:
         if not query:
             raise ValueError("recall requires non-empty 'query'")
         mem = self.memory_for(tenant)
-        result = mem.recall_value(query, tenant=tenant, entity=str(args.get("entity", "")))
+        result = mem.recall_value(
+            query, tenant=tenant, entity=str(args.get("entity", "")),
+            purpose=str(args.get("purpose") or "") or None,
+        )
         return {
             "answer": result.answer,
             "abstained": result.abstained,
             "reason": result.reason,
             "provenance": list(result.provenance),
             "record_ids": [r.id for r in result.selected],
+            "excluded_reasons": sorted({reason for _, reason in result.excluded}),
         }
 
     def forget(self, args: Dict[str, Any]) -> Dict[str, Any]:
@@ -272,6 +278,10 @@ _TOOLS: List[Dict[str, Any]] = [
                 "object": {"type": "string"},
                 "source": {"type": "string", "description": "e.g. user, external_tool, scraper."},
                 "trust": {"type": "number"},
+                "allowed_purposes": {"type": "array", "items": {"type": "string"},
+                                     "description": "Purposes this record may be served for; empty = unrestricted."},
+                "consented_purposes": {"type": "array", "items": {"type": "string"},
+                                       "description": "Purposes the data subject consented to."},
             },
             "required": ["text", "tenant"],
         },
@@ -285,6 +295,8 @@ _TOOLS: List[Dict[str, Any]] = [
                 "query": {"type": "string"},
                 "tenant": {"type": "string"},
                 "entity": {"type": "string"},
+                "purpose": {"type": "string",
+                            "description": "Declared, untrusted purpose of use; policy decides what it may be served."},
             },
             "required": ["query", "tenant"],
         },

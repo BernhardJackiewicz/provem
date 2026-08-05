@@ -67,6 +67,28 @@ class PolicySerializationTests(unittest.TestCase):
         self.assertEqual(resolve_policy(load_profile("finance")).name, "finance")
 
 
+class PurposeProfileTests(unittest.TestCase):
+    def test_recruitment_profile_has_purpose_rules(self):
+        profile = load_profile("recruitment")
+        self.assertIn("hiring", profile.purpose_rules)
+        self.assertIn("scheduling", profile.purpose_rules)
+
+    def test_pharma_research_requires_consent(self):
+        profile = load_profile("pharma")
+        self.assertTrue(profile.purpose_rules["research"]["require_consent"])
+
+    def test_profiles_inert_without_declared_purpose(self):
+        # Purpose rules only fire when a purpose is declared; a purposeless
+        # recall behaves exactly as before the rules existed.
+        from cognitive_memory.reliability import GovernedMemory
+
+        mem = GovernedMemory(policy="recruitment")
+        mem.remember("alice location berlin", subject="alice", relation="location",
+                     object="berlin", tenant="t", entity="alice")
+        result = mem.recall_value("alice location", tenant="t", entity="alice")
+        self.assertFalse(result.abstained)
+
+
 class PolicyBehaviourTests(unittest.TestCase):
     def test_default_profile_quarantines_injection(self):
         mem = GovernedMemory()  # default policy

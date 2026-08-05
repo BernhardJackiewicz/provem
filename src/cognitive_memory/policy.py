@@ -109,6 +109,10 @@ class PolicyStore:
             return "deleted_evidence"
         if self._matches_do_not_use_term(fact.claim_text):
             return "do_not_use_term"
+        # Purpose limitation: a declared purpose outside the fact's allowlist
+        # is refused; no declared purpose means no purpose gating.
+        if request.purpose and fact.allowed_purposes and request.purpose not in fact.allowed_purposes:
+            return "purpose_mismatch"
         if request.time_scope == "current" and request.memory_policy.exclude_invalidated and fact.invalid_at is not None:
             return "invalidated"
         if request.time_scope == "as_of_date":
@@ -158,6 +162,9 @@ class PolicyStore:
             return "deleted_evidence"
         if self.matches_do_not_use_term(event.claim_text):
             return "do_not_use_term"
+        # Purpose limitation: same gate as facts.
+        if request.purpose and event.allowed_purposes and request.purpose not in event.allowed_purposes:
+            return "purpose_mismatch"
         if instruction_risk_reason(event.claim_text) or sensitive_risk_reason(event.claim_text):
             return "possible_prompt_injection"
         if request.time_scope == "current" and not event.is_active():

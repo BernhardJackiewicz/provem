@@ -131,6 +131,32 @@ class ToolFlowTests(unittest.TestCase):
         self.assertIn("head_hash", out["audit"])
 
 
+class PurposeRecallTests(unittest.TestCase):
+    def setUp(self):
+        self.server = MCPServer()
+        _call(self.server, "remember", {"text": "alice salary 120k", "subject": "alice",
+                                        "relation": "salary", "object": "120k", "tenant": "t",
+                                        "entity": "alice", "allowed_purposes": ["scheduling"]})
+
+    def test_recall_purpose_blocks_mismatch(self):
+        out = _call(self.server, "recall", {"query": "alice salary", "tenant": "t",
+                                            "entity": "alice", "purpose": "hiring"})
+        self.assertTrue(out["abstained"])
+        self.assertIn("purpose_mismatch", out["excluded_reasons"])
+
+    def test_recall_purpose_allows_match(self):
+        out = _call(self.server, "recall", {"query": "alice salary", "tenant": "t",
+                                            "entity": "alice", "purpose": "scheduling"})
+        self.assertFalse(out["abstained"])
+        self.assertEqual(out["answer"], "120k")
+
+    def test_recall_without_purpose_unchanged(self):
+        out = _call(self.server, "recall", {"query": "alice salary", "tenant": "t", "entity": "alice"})
+        self.assertFalse(out["abstained"])
+        for key in ("answer", "abstained", "reason", "provenance", "record_ids"):
+            self.assertIn(key, out)
+
+
 class StrictRevocationTests(unittest.TestCase):
     def test_strict_tenant_forget_without_requester_is_held(self):
         config = ServerConfig.from_dict({

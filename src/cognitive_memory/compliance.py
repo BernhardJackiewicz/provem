@@ -290,6 +290,10 @@ _BUILTIN: Dict[str, CompliancePolicy] = {
         scope_isolation=True,
         cross_tenant_allowed=False,
         retention_days={"high": 365, "restricted": 180},
+        purpose_rules={
+            "scheduling": {"allowed_relations": ("notice_period", "location", "work_mode", "availability")},
+            "hiring": {"allowed_relations": ("seniority", "skill"), "require_consent": True},
+        },
     ),
     "pharma": CompliancePolicy(
         name="pharma",
@@ -304,6 +308,10 @@ _BUILTIN: Dict[str, CompliancePolicy] = {
         cross_tenant_allowed=False,
         erasure_mode="strict",
         retention_days={"restricted": 3650, "high": 1825},
+        purpose_rules={
+            "treatment": {},
+            "research": {"require_consent": True},
+        },
     ),
     "finance": CompliancePolicy(
         name="finance",

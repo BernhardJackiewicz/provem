@@ -117,5 +117,62 @@ class PurposeGateTests(unittest.TestCase):
         self.assertEqual(step.outcome, CORRECT)
 
 
+class PrototypePurposeTests(unittest.TestCase):
+    def setUp(self):
+        from cognitive_memory.controller import MemoryController
+        from cognitive_memory.retrieval import RetrievalPlanner
+
+        self.controller = MemoryController()
+        self.retrieval = RetrievalPlanner(self.controller.store, self.controller.policy)
+
+    def _ingest_fact(self):
+        from datetime import datetime, timezone
+
+        from cognitive_memory.models import Episode
+
+        self.controller.ingest_episode(
+            Episode("FACT user|target_rate|120k", timestamp=datetime(2026, 1, 1, 10, 0, tzinfo=timezone.utc))
+        )
+        return [f for f in self.controller.store.list_facts() if f.object == "120k"][0]
+
+    def test_retrieval_request_purpose_defaults_none(self):
+        from cognitive_memory.models import RetrievalRequest
+
+        self.assertIsNone(RetrievalRequest(query="q").purpose)
+
+    def test_fact_purpose_mismatch_excluded(self):
+        from cognitive_memory.models import RetrievalRequest
+
+        fact = self._ingest_fact()
+        fact.allowed_purposes = ["scheduling"]
+        result = self.retrieval.retrieve(RetrievalRequest(query="target rate", purpose="hiring"))
+        self.assertEqual(result.answer_text(), "ABSTAIN")
+        self.assertTrue(any(item.reason == "purpose_mismatch" for item in result.excluded_memories))
+
+    def test_fact_served_under_allowed_purpose(self):
+        from cognitive_memory.models import RetrievalRequest
+
+        fact = self._ingest_fact()
+        fact.allowed_purposes = ["scheduling"]
+        result = self.retrieval.retrieve(RetrievalRequest(query="target rate", purpose="scheduling"))
+        self.assertIn("120k", result.answer_text())
+
+    def test_event_purpose_mismatch_excluded(self):
+        from datetime import datetime, timezone
+
+        from cognitive_memory.models import MemoryEvent, RetrievalRequest
+
+        event = MemoryEvent("meeting", "call with alice",
+                            datetime(2026, 1, 1, tzinfo=timezone.utc),
+                            evidence_episode_ids=["ep1"],
+                            allowed_purposes=["scheduling"])
+        blocked = self.controller.policy.exclusion_reason(
+            event, RetrievalRequest(query="call", purpose="hiring"))
+        self.assertEqual(blocked, "purpose_mismatch")
+        served = self.controller.policy.exclusion_reason(
+            event, RetrievalRequest(query="call", purpose="scheduling"))
+        self.assertIsNone(served)
+
+
 if __name__ == "__main__":
     unittest.main()
