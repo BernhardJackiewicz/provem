@@ -183,7 +183,10 @@ class MemoryController:
                 affected.append(fact.id)
 
         for reflection in self.temporal_backend.list_reflections(user_id=user_id, project_id=project_id):
-            if term.lower() in reflection.claim.lower():
+            claim_tokens = tokenize(reflection.claim)
+            # substring OR token-subset: a rollup phrasing the erased term's
+            # tokens in another order must not survive
+            if term.lower() in reflection.claim.lower() or (term_tokens and term_tokens <= claim_tokens):
                 reflection.status = "invalidated"
                 self.policy.mark_memory_do_not_use(reflection.id)
                 self.temporal_backend.update_reflection(reflection)
@@ -206,7 +209,8 @@ class MemoryController:
                 affected.append(fact.id)
 
         for reflection in self.temporal_backend.list_reflections(user_id=user_id, project_id=project_id):
-            if term.lower() in reflection.claim.lower():
+            claim_tokens = tokenize(reflection.claim)
+            if term.lower() in reflection.claim.lower() or (term_tokens and term_tokens <= claim_tokens):
                 reflection.status = "invalidated"
                 self.policy.mark_memory_do_not_use(reflection.id)
                 self.temporal_backend.update_reflection(reflection)

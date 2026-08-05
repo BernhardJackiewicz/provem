@@ -83,6 +83,22 @@ class MemoryCoreTests(unittest.TestCase):
         result = self.retrieval.retrieve(RetrievalRequest(query="candidate tom email", task_type="compliance"))
         self.assertEqual(result.answer_text(), "ABSTAIN")
 
+    def test_forget_invalidates_paraphrase_token_subset_reflection(self):
+        # Reflections were only invalidated on a verbatim substring match; a
+        # rollup phrasing the erased term's tokens in another order survived.
+        from cognitive_memory.models import Reflection
+
+        self.controller.ingest_episode(Episode("FACT user|blocked_company|Acme Corp", timestamp=dt(1)))
+        self.controller.store.add_reflection(
+            Reflection(claim="corp acme is the blocked employer", confidence=0.8,
+                       supporting_evidence=["ep1", "ep2"])
+        )
+        self.controller.request_forget("Acme Corp", user_id="user", project_id="default")
+        reflection = [r for r in self.controller.store.reflections.values()
+                      if "acme" in r.claim.lower()][0]
+        self.assertEqual(reflection.status, "invalidated",
+                         "token-subset paraphrase escaped reflection invalidation")
+
     def test_request_forget_records_requester_in_audit(self):
         self.controller.ingest_episode(Episode("FACT user|blocked_company|Acme", timestamp=dt(1)))
         self.controller.request_forget("Acme", user_id="user", project_id="default", requester="ops_1")

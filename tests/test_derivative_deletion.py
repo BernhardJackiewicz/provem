@@ -130,5 +130,39 @@ class DerivativeSweepTests(unittest.TestCase):
         self.assertIsInstance(store, DerivativeStore)
 
 
+class PrototypePurgeTests(unittest.TestCase):
+    def _controller_with_deleted_fact(self):
+        from datetime import datetime, timezone
+
+        from cognitive_memory.controller import MemoryController
+        from cognitive_memory.models import Episode
+
+        controller = MemoryController()
+        controller.ingest_episode(Episode("FACT candidate_tom|email|tom@example.com",
+                                          timestamp=datetime(2026, 1, 2, tzinfo=timezone.utc)))
+        controller.ingest_episode(Episode("DELETE tom@example.com",
+                                          timestamp=datetime(2026, 1, 3, tzinfo=timezone.utc)))
+        return controller
+
+    def test_purge_deleted_removes_rows_physically(self):
+        controller = self._controller_with_deleted_fact()
+        deleted_facts = [f for f in controller.store.facts.values() if f.privacy_policy == "deleted"]
+        self.assertTrue(deleted_facts)
+        counts = controller.store.purge_deleted(controller.policy)
+        self.assertGreaterEqual(counts["facts"], 1)
+        self.assertFalse([f for f in controller.store.facts.values() if f.privacy_policy == "deleted"],
+                         "deleted-flagged fact still physically present")
+        remaining_episode_ids = set(controller.store.episodes)
+        self.assertFalse(remaining_episode_ids & controller.policy.deleted_episode_ids,
+                         "deleted episode raw text still physically present")
+
+    def test_purge_respects_legal_hold(self):
+        controller = self._controller_with_deleted_fact()
+        held = [f for f in controller.store.facts.values() if f.privacy_policy == "deleted"][0]
+        controller.policy.legal_hold_memory_ids.add(held.id)
+        controller.store.purge_deleted(controller.policy)
+        self.assertIn(held.id, controller.store.facts, "legal hold must survive the purge")
+
+
 if __name__ == "__main__":
     unittest.main()

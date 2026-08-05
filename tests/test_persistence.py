@@ -91,6 +91,41 @@ class PersistenceTests(unittest.TestCase):
         self.assertEqual(salary_result.answer_text(), "ABSTAIN")
         self.assertEqual(salary_result.abstain_reason, "forbidden_memory")
 
+    def test_save_snapshot_purge_deleted_excludes_flagged(self):
+        import json as _json
+
+        controller = MemoryController()
+        controller.ingest_episode(Episode("FACT candidate_tom|email|tom@example.com", timestamp=dt(1)))
+        controller.ingest_episode(Episode("DELETE tom@example.com", timestamp=dt(2)))
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, "snapshot.jsonl")
+            save_snapshot(path, controller.store, controller.policy, purge_deleted=True)
+            with open(path, encoding="utf-8") as handle:
+                rows = [_json.loads(line) for line in handle if line.strip()]
+            # erased raw text must not persist in any CONTENT record; the
+            # audit trail keeps the erasure request itself (like the governed
+            # stack's erasure certificate keeps the term)
+            for row in rows:
+                if row.get("type") in ("episode", "fact", "candidate", "reflection", "event"):
+                    self.assertNotIn("tom@example.com", _json.dumps(row),
+                                     "erased raw text persisted in a %s record" % row["type"])
+            loaded = load_snapshot(path)
+            self.assertTrue(loaded.policy.matches_do_not_use_term("tom@example.com"),
+                            "tombstone state must survive the purged export")
+
+    def test_default_snapshot_serializes_verbatim(self):
+        # The default stays verbatim: eval harnesses assert on counts and the
+        # export-stability invariant byte-compares snapshots.
+        controller = MemoryController()
+        controller.ingest_episode(Episode("FACT candidate_tom|email|tom@example.com", timestamp=dt(1)))
+        controller.ingest_episode(Episode("DELETE tom@example.com", timestamp=dt(2)))
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, "snapshot.jsonl")
+            save_snapshot(path, controller.store, controller.policy)
+            with open(path, encoding="utf-8") as handle:
+                content = handle.read()
+            self.assertIn("tom@example.com", content)
+
     def test_policy_merge_preserves_tombstones_on_older_snapshot_restore(self):
         # Restoring an older snapshot silently rolls back later tombstones;
         # the supported repair is load-then-merge with the live policy state.

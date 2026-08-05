@@ -45,28 +45,58 @@ def save_snapshot(
     store: InMemoryStore,
     policy: PolicyStore,
     retrieval_traces: Optional[Iterable[Dict[str, Any]]] = None,
+    purge_deleted: bool = False,
 ) -> None:
     """Write an inspectable JSONL snapshot.
 
     This is local research persistence, not a production database. Records are
     line-delimited so snapshots are easy to diff and inspect without extra
     dependencies.
+
+    ``purge_deleted=False`` (default) serializes verbatim: eval harnesses
+    assert on record counts and the export-stability invariant byte-compares
+    snapshots. ``purge_deleted=True`` is the GDPR-export path: content records
+    that are deleted-flagged, tombstoned or invalidated stay out of the
+    artifact (legal holds survive); the policy tombstones and the audit trail
+    of the erasure requests are kept.
     """
 
     target = Path(path)
     if target.parent and not target.parent.exists():
         target.parent.mkdir(parents=True, exist_ok=True)
 
+    episodes = store.list_episodes()
+    candidates = sorted(store.candidates.values(), key=lambda item: item.created_at)
+    facts = store.list_facts()
+    events = store.list_events()
+    reflections = store.list_reflections()
+    if purge_deleted:
+        held = policy.legal_hold_memory_ids
+        episodes = [e for e in episodes
+                    if (e.id not in policy.deleted_episode_ids
+                        and not policy.matches_do_not_use_term(e.content))
+                    or e.id in held]
+        facts = [f for f in facts if f.privacy_policy != "deleted" or f.id in held]
+        events = [ev for ev in events
+                  if (ev.status not in ("deleted", "do_not_use")
+                      and not policy.matches_do_not_use_term(ev.claim_text)
+                      and not any(eid in policy.deleted_episode_ids
+                                  for eid in ev.evidence_episode_ids))
+                  or ev.id in held]
+        reflections = [r for r in reflections if r.status != "invalidated" or r.id in held]
+        candidates = [c for c in candidates
+                      if not policy.matches_do_not_use_term(c.claim)]
+
     traces = list(retrieval_traces if retrieval_traces is not None else store.retrieval_traces)
     records = [
         _record("metadata", {"version": SNAPSHOT_VERSION}, version=SNAPSHOT_VERSION),
         _record("policy", policy.to_dict()),
     ]
-    records.extend(_record("episode", item.to_dict()) for item in store.list_episodes())
-    records.extend(_record("candidate", item.to_dict()) for item in sorted(store.candidates.values(), key=lambda item: item.created_at))
-    records.extend(_record("fact", item.to_dict()) for item in store.list_facts())
-    records.extend(_record("event", item.to_dict()) for item in store.list_events())
-    records.extend(_record("reflection", item.to_dict()) for item in store.list_reflections())
+    records.extend(_record("episode", item.to_dict()) for item in episodes)
+    records.extend(_record("candidate", item.to_dict()) for item in candidates)
+    records.extend(_record("fact", item.to_dict()) for item in facts)
+    records.extend(_record("event", item.to_dict()) for item in events)
+    records.extend(_record("reflection", item.to_dict()) for item in reflections)
     records.extend(_record("consolidation_run", item.to_dict()) for item in store.list_consolidation_runs())
     records.extend(_record("review_queue", item.to_dict()) for item in store.list_review_queues())
     records.extend(_record("store_audit", dict(item)) for item in store.audit_log)

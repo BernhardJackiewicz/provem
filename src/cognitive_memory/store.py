@@ -188,6 +188,50 @@ class InMemoryStore:
         for reflection in self.reflections.values():
             yield reflection
 
+    def purge_facts(self, fact_ids: Iterable[str]) -> int:
+        removed = 0
+        for fact_id in list(fact_ids):
+            if self.facts.pop(fact_id, None) is not None:
+                removed += 1
+                self.audit("fact_purged", fact_id)
+        return removed
+
+    def purge_episodes(self, episode_ids: Iterable[str]) -> int:
+        removed = 0
+        for episode_id in list(episode_ids):
+            if self.episodes.pop(episode_id, None) is not None:
+                removed += 1
+                self.audit("episode_purged", episode_id)
+        return removed
+
+    def purge_reflections(self, reflection_ids: Iterable[str]) -> int:
+        removed = 0
+        for reflection_id in list(reflection_ids):
+            if self.reflections.pop(reflection_id, None) is not None:
+                removed += 1
+                self.audit("reflection_purged", reflection_id)
+        return removed
+
+    def purge_deleted(self, policy) -> Dict[str, int]:
+        """Physically remove deleted-flagged rows (the GDPR-erasure path).
+
+        Tombstone flags mark rows unusable but leave the raw text in memory
+        and in snapshots; this removes the rows themselves. Legal holds
+        survive the purge.
+        """
+        held = policy.legal_hold_memory_ids
+        fact_ids = [f.id for f in self.facts.values()
+                    if f.privacy_policy == "deleted" and f.id not in held]
+        episode_ids = [eid for eid in policy.deleted_episode_ids
+                       if eid in self.episodes and eid not in held]
+        reflection_ids = [r.id for r in self.reflections.values()
+                          if r.status == "invalidated" and r.id not in held]
+        return {
+            "facts": self.purge_facts(fact_ids),
+            "episodes": self.purge_episodes(episode_ids),
+            "reflections": self.purge_reflections(reflection_ids),
+        }
+
     def audit(self, event: str, target_id: str) -> None:
         self.audit_log.append({"event": event, "target_id": target_id})
 
