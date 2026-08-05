@@ -107,6 +107,11 @@ class MemoryRecord:
     # Purpose limitation: empty tuples mean unrestricted (backward compatible).
     allowed_purposes: Tuple[str, ...] = ()    # use-side allowlist for this record
     consented_purposes: Tuple[str, ...] = ()  # purposes the data subject consented to
+    # Claim lineage (additive; default resolution never reads these):
+    # every assertion of this claim as {"source", "trust", "valid_at"}
+    assertions: List[Dict[str, Any]] = field(default_factory=list)
+    supersedes_ids: List[str] = field(default_factory=list)
+    contradicts_ids: List[str] = field(default_factory=list)
 
     def __post_init__(self) -> None:
         if not self.text:
@@ -589,6 +594,7 @@ class GovernedMemory:
             created_at=self._now_fn().isoformat(),
             allowed_purposes=tuple(turn.allowed_purposes),
             consented_purposes=tuple(turn.consented_purposes),
+            assertions=[{"source": turn.source, "trust": trust, "valid_at": self.clock}],
         )
         self.backend.write(record)
 

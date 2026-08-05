@@ -36,7 +36,10 @@ CREATE TABLE IF NOT EXISTS records (
     quarantined INTEGER NOT NULL DEFAULT 0,
     quarantine_reason TEXT NOT NULL DEFAULT '',
     valid_at INTEGER NOT NULL DEFAULT 0,
-    created_at TEXT NOT NULL DEFAULT ''
+    created_at TEXT NOT NULL DEFAULT '',
+    assertions TEXT NOT NULL DEFAULT '[]',
+    supersedes_ids TEXT NOT NULL DEFAULT '[]',
+    contradicts_ids TEXT NOT NULL DEFAULT '[]'
 );
 CREATE INDEX IF NOT EXISTS idx_records_tenant ON records(tenant);
 CREATE TABLE IF NOT EXISTS tombstones (
@@ -71,8 +74,20 @@ class SqliteBackend:
         self._conn = sqlite3.connect(path)
         self._conn.row_factory = sqlite3.Row
         self._conn.executescript(_SCHEMA)
+        self._ensure_lineage_columns()
         self._conn.commit()
         self._counter = self._max_counter()
+
+    def _ensure_lineage_columns(self) -> None:
+        # Guarded migration for DB files created before the lineage fields:
+        # CREATE TABLE IF NOT EXISTS does not add columns to existing tables.
+        cur = self._conn.execute("PRAGMA table_info(records)")
+        existing = {row["name"] for row in cur.fetchall()}
+        for column in ("assertions", "supersedes_ids", "contradicts_ids"):
+            if column not in existing:
+                self._conn.execute(
+                    "ALTER TABLE records ADD COLUMN %s TEXT NOT NULL DEFAULT '[]'" % column
+                )
 
     def _max_counter(self) -> int:
         # Seed from the highest existing auto-id ('s<N>'), NOT COUNT(*): after a
@@ -90,13 +105,16 @@ class SqliteBackend:
         record.id = record.id or "s%d" % self._counter
         self._conn.execute(
             "INSERT OR REPLACE INTO records (id, tenant, scope_subject, scope_session, subject, relation, "
-            "object, text, source, trust, provenance, quarantined, quarantine_reason, valid_at, created_at) "
-            "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            "object, text, source, trust, provenance, quarantined, quarantine_reason, valid_at, created_at, "
+            "assertions, supersedes_ids, contradicts_ids) "
+            "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
             (
                 record.id, record.scope.tenant, record.scope.subject, record.scope.session,
                 record.subject, record.relation, record.object, record.text, record.source,
                 float(record.trust), record.provenance, 1 if record.quarantined else 0,
                 record.quarantine_reason, int(record.valid_at), getattr(record, "created_at", "") or "",
+                json.dumps(list(record.assertions)), json.dumps(list(record.supersedes_ids)),
+                json.dumps(list(record.contradicts_ids)),
             ),
         )
         # Purpose metadata lives in an additive side table so legacy DB files
@@ -137,6 +155,20 @@ class SqliteBackend:
         return [(row["kind"], row["tenant"], row["term"]) for row in cur.fetchall()]
 
     @staticmethod
+    def _json_list_from(row: sqlite3.Row, key: str) -> list:
+        try:
+            raw = row[key]
+        except (IndexError, KeyError):
+            return []
+        if not raw:
+            return []
+        try:
+            parsed = json.loads(raw)
+            return parsed if isinstance(parsed, list) else []
+        except (ValueError, TypeError):
+            return []
+
+    @staticmethod
     def _purposes_from(row: sqlite3.Row, key: str) -> Tuple[str, ...]:
         try:
             raw = row[key]
@@ -158,6 +190,9 @@ class SqliteBackend:
             quarantine_reason=row["quarantine_reason"], valid_at=int(row["valid_at"]), id=row["id"],
             allowed_purposes=self._purposes_from(row, "p_allowed"),
             consented_purposes=self._purposes_from(row, "p_consented"),
+            assertions=self._json_list_from(row, "assertions"),
+            supersedes_ids=[str(v) for v in self._json_list_from(row, "supersedes_ids")],
+            contradicts_ids=[str(v) for v in self._json_list_from(row, "contradicts_ids")],
         )
         # created_at exists once F4 adds it to MemoryRecord; set if attribute present
         if hasattr(record, "created_at"):

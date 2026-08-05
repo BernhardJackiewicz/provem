@@ -45,6 +45,9 @@ def _record_to_metadata(record: MemoryRecord) -> Dict[str, Any]:
         "valid_at": record.valid_at,
         "allowed_purposes": list(record.allowed_purposes),
         "consented_purposes": list(record.consented_purposes),
+        "assertions": list(record.assertions),
+        "supersedes_ids": list(record.supersedes_ids),
+        "contradicts_ids": list(record.contradicts_ids),
     }
 
 
@@ -70,6 +73,9 @@ def _metadata_to_record(meta: Dict[str, Any], tenant: str) -> Optional[MemoryRec
         id=str(meta.get("engram_id", "")),
         allowed_purposes=tuple(str(v) for v in (meta.get("allowed_purposes") or ())),
         consented_purposes=tuple(str(v) for v in (meta.get("consented_purposes") or ())),
+        assertions=list(meta.get("assertions") or []),
+        supersedes_ids=[str(v) for v in (meta.get("supersedes_ids") or [])],
+        contradicts_ids=[str(v) for v in (meta.get("contradicts_ids") or [])],
     )
 
 

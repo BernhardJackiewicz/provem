@@ -169,6 +169,10 @@ class TemporalFact:
     created_at: datetime = field(default_factory=now_utc)
     # purpose limitation: empty list means unrestricted
     allowed_purposes: List[str] = field(default_factory=list)
+    # claim lineage: every assertion of this claim as
+    # {"source_type", "source_trust", "at"} (additive; single-source fields
+    # above stay authoritative for default resolution)
+    assertions: List[Dict[str, Any]] = field(default_factory=list)
 
     def __post_init__(self) -> None:
         self.valid_at = ensure_datetime(self.valid_at)

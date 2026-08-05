@@ -91,6 +91,30 @@ class PersistenceTests(unittest.TestCase):
         self.assertEqual(salary_result.answer_text(), "ABSTAIN")
         self.assertEqual(salary_result.abstain_reason, "forbidden_memory")
 
+    def test_fact_assertions_snapshot_roundtrip_and_old_snapshot_loads(self):
+        import json as _json
+
+        controller = MemoryController()
+        controller.ingest_episode(Episode("FACT user|work_mode|remote", timestamp=dt(1)))
+        fact = controller.store.list_facts()[0]
+        self.assertTrue(fact.assertions, "new facts must seed their own assertion")
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, "snapshot.jsonl")
+            save_snapshot(path, controller.store, controller.policy)
+            loaded = load_snapshot(path)
+            self.assertEqual(loaded.store.list_facts()[0].assertions, fact.assertions)
+            # a pre-lineage snapshot (no assertions key) loads with []
+            with open(path, encoding="utf-8") as handle:
+                rows = [_json.loads(line) for line in handle if line.strip()]
+            for row in rows:
+                if row.get("type") == "fact":
+                    row["data"].pop("assertions", None)
+            with open(path, "w", encoding="utf-8") as handle:
+                for row in rows:
+                    handle.write(_json.dumps(row) + "\n")
+            legacy = load_snapshot(path)
+            self.assertEqual(legacy.store.list_facts()[0].assertions, [])
+
     def test_save_snapshot_purge_deleted_excludes_flagged(self):
         import json as _json
 

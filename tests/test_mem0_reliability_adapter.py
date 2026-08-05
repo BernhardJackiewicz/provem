@@ -157,6 +157,18 @@ class Mem0AdapterTests(unittest.TestCase):
         self.assertEqual(restored.allowed_purposes, ())
         self.assertEqual(restored.consented_purposes, ())
 
+    def test_lineage_metadata_round_trips(self):
+        client = FakeMem0Client(rewrite=True)
+        backend = Mem0ReliabilityBackend(client=client)
+        rec = MemoryRecord("a", "r", "v", Scope(tenant="t"), text="a r v",
+                           assertions=[{"source": "user", "trust": 0.9, "valid_at": 3}],
+                           supersedes_ids=["x1"], contradicts_ids=["y2"])
+        backend.write(rec)
+        _, got = backend.candidates("a r v", "t")[0]
+        self.assertEqual(got.assertions, [{"source": "user", "trust": 0.9, "valid_at": 3}])
+        self.assertEqual(got.supersedes_ids, ["x1"])
+        self.assertEqual(got.contradicts_ids, ["y2"])
+
     def test_get_by_ids_fetches_live_records(self):
         backend = Mem0ReliabilityBackend(client=FakeMem0Client())
         rid = backend.write(MemoryRecord("a", "r", "1", Scope(tenant="t1"), text="a r 1"))

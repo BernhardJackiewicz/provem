@@ -278,6 +278,15 @@ class MemoryController:
             else:
                 old_fact.evidence = sorted(set(old_fact.evidence + list(candidate.evidence_episode_ids)))
                 old_fact.confidence = max(old_fact.confidence, candidate.confidence)
+                # accumulate the assertion BEFORE the source upgrade below:
+                # corroboration history must survive the overwrite
+                incoming = {
+                    "source_type": source_type,
+                    "source_trust": source_trust,
+                    "at": ensure_datetime(source_timestamp).isoformat(),
+                }
+                if incoming not in old_fact.assertions:
+                    old_fact.assertions.append(incoming)
                 if source_rank(source_trust) > source_rank(old_fact.source_trust):
                     old_fact.source_type = source_type
                     old_fact.source_trust = source_trust
@@ -319,6 +328,11 @@ class MemoryController:
             source_timestamp=source_timestamp,
             source_conflict_policy=source_conflict_policy,
             conflict_with=conflict_with,
+            assertions=[{
+                "source_type": source_type,
+                "source_trust": source_trust,
+                "at": ensure_datetime(source_timestamp).isoformat(),
+            }],
         )
         self.temporal_backend.add_fact(fact)
 
