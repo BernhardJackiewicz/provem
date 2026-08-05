@@ -81,6 +81,41 @@ class GovernedMemoryAuditTests(unittest.TestCase):
         self.assertTrue(mem.audit.filter("quarantine"))
         self.assertTrue(mem.verify_audit())
 
+    def test_successful_recall_is_audited(self):
+        # Blocked reads were audited; a served answer wrote no entry at all.
+        # An audit trail that only records refusals cannot answer "who saw
+        # this value and when".
+        mem = GovernedMemory()
+        mem.remember("alice salary 120k", subject="alice", relation="salary",
+                     object="120k", tenant="t", entity="alice")
+        result = mem.recall_value("alice salary", tenant="t", entity="alice")
+        self.assertFalse(result.abstained)
+        served = mem.audit.filter("recall_served")
+        self.assertEqual(len(served), 1)
+        details = served[0].details
+        self.assertEqual(details["tenant"], "t")
+        self.assertEqual(details["query"], "alice salary")
+        self.assertEqual(details["subject"], "alice")
+        self.assertEqual(details["relation"], "salary")
+        self.assertEqual(details["source"], "user")
+        self.assertTrue(details["record_id"])
+        self.assertTrue(mem.verify_audit())
+
+    def test_serve_audit_can_be_disabled(self):
+        mem = GovernedMemory(policy={"name": "quiet", "audit_serves": False})
+        mem.remember("alice salary 120k", subject="alice", relation="salary",
+                     object="120k", tenant="t", entity="alice")
+        mem.recall_value("alice salary", tenant="t", entity="alice")
+        self.assertEqual(mem.audit.filter("recall_served"), [])
+
+    def test_plain_abstention_is_not_audited(self):
+        # A no-match abstention is neither a serve nor a governance block.
+        mem = GovernedMemory()
+        result = mem.recall_value("nothing stored about this", tenant="t", entity="nobody")
+        self.assertTrue(result.abstained)
+        self.assertEqual(mem.audit.filter("recall_served"), [])
+        self.assertEqual(mem.audit.filter("recall_blocked"), [])
+
     def test_export_audit_is_serializable(self):
         mem = GovernedMemory()
         mem.remember("a b c", subject="s", relation="r", object="c", tenant="t", entity="s")

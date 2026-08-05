@@ -89,6 +89,15 @@ class ToolFlowTests(unittest.TestCase):
         self.assertTrue(out["quarantined"])
         self.assertEqual(out["quarantine_reason"], "erased_term_reingest")
 
+    def test_recall_served_appears_in_audit_export(self):
+        _call(self.server, "remember", {"text": "alice salary 120k", "subject": "alice",
+                                        "relation": "salary", "object": "120k", "tenant": "t", "entity": "alice"})
+        _call(self.server, "recall", {"query": "alice salary", "tenant": "t", "entity": "alice"})
+        out = _call(self.server, "audit_export", {"tenant": "t"})
+        actions = [entry["action"] for entry in out["audit"]["entries"]]
+        self.assertIn("recall_served", actions)
+        self.assertTrue(out["verified"])
+
     def test_forget_accepts_and_records_requester(self):
         _call(self.server, "remember", {"text": "bob secret99 note", "subject": "bob",
                                         "relation": "note", "object": "secret99", "tenant": "t", "entity": "bob"})

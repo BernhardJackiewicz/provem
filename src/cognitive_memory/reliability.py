@@ -867,6 +867,21 @@ class GovernedMemory:
                     excluded.append((rec.id, "source_conflict"))
                 return RecallResult(answer=None, abstained=True, reason="source_conflict", excluded=excluded, ops=ops)
 
+        # Audit the serve itself, not only blocks: the trail must be able to
+        # answer "who saw this value and when", which refusal-only logging
+        # cannot.
+        if self.policy.audit_serves:
+            self.audit.record(
+                "recall_served",
+                tenant=turn.scope.tenant,
+                query=turn.query,
+                record_id=chosen.id,
+                subject=chosen.scope.subject or chosen.subject,
+                relation=chosen.relation,
+                source=chosen.source,
+                trust=chosen.trust,
+                provenance=chosen.provenance,
+            )
         return RecallResult(
             answer=chosen.object,
             abstained=False,

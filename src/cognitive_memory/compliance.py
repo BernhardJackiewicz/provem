@@ -102,6 +102,12 @@ class CompliancePolicy:
     # only via an explicit cleanup pass). Off by default.
     enforce_retention_on_recall: bool = False
 
+    # -- audit ------------------------------------------------------------
+    # audit successful serves, not only blocks. On by default: an audit
+    # trail that only records refusals cannot answer "who saw this value
+    # and when". Plain no-match abstentions stay unaudited either way.
+    audit_serves: bool = True
+
     # -- revocation authority ---------------------------------------------
     # strict mode: an erasure/restriction request must carry a requester who
     # is either the scoped data subject or a listed operator, and must not
