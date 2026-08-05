@@ -98,6 +98,40 @@ class ErasureTests(unittest.TestCase):
         self.assertFalse(kept.abstained)
         self.assertEqual(kept.answer, "120k")
 
+    def test_reingest_after_forget_is_quarantined(self):
+        # Write-side erasure: an erased value arriving through a later write
+        # (summary, re-sync, re-ingest) must not land as a fresh clean record.
+        gov = GovernedMemory()
+        gov.ingest(_fact("alex_1", "health_note", "secret123", self.scope, text="alex health_note secret123"))
+        gov.ingest(IngestTurn("erasure", "please forget secret123", "alex_1", "health_note", "secret123", self.scope, "user", 1.0, term="secret123"))
+        gov.ingest(_fact("alex_1", "health_note", "secret123", self.scope, text="alex health_note secret123"))
+        res = gov.recall(QueryTurn("alex health_note secret123", self.scope, None, "erasure"))
+        self.assertTrue(res.abstained)
+        reasons = [e.details.get("reason") for e in gov.audit.filter("quarantine")]
+        self.assertIn("erased_term_reingest", reasons)
+
+    def test_reingest_quarantine_is_tenant_scoped(self):
+        gov = GovernedMemory()
+        scope_b = Scope("other_tenant", "bob_1")
+        gov.ingest(IngestTurn("erasure", "forget secret123", "alex_1", "health_note", "secret123", self.scope, "user", 1.0, term="secret123"))
+        gov.ingest(_fact("bob_1", "health_note", "secret123", scope_b, text="bob health_note secret123"))
+        res = gov.recall(QueryTurn("bob health_note secret123", scope_b, "secret123", "benign"))
+        self.assertFalse(res.abstained, "another tenant's erasure must not block this write")
+        self.assertEqual(res.answer, "secret123")
+
+    def test_restricted_term_reingest_is_stored_but_never_served(self):
+        # restrict means do-not-use, not do-not-store: the write is allowed,
+        # the read gate withholds it.
+        gov = GovernedMemory()
+        gov.ingest(IngestTurn("constraint", "do not use codename zeus", "", "", "", self.scope, "user", 1.0, term="zeus"))
+        gov.ingest(_fact("alex_1", "codename", "zeus", self.scope, text="alex codename zeus"))
+        stored = [r for r in gov.backend.all_records() if r.text == "alex codename zeus"]
+        self.assertEqual(len(stored), 1)
+        self.assertFalse(stored[0].quarantined)
+        res = gov.recall(QueryTurn("alex codename zeus", self.scope, None, "benign"))
+        self.assertTrue(res.abstained)
+        self.assertIn("do_not_use", {reason for _, reason in res.excluded})
+
 
 class ScopeTests(unittest.TestCase):
     def test_governed_isolates_cross_entity(self):

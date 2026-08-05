@@ -108,6 +108,21 @@ class TombstoneRestartTests(unittest.TestCase):
             self.assertTrue(result.abstained, "restricted term served after restart")
             self.assertIn("do_not_use", {reason for _, reason in result.excluded})
 
+    def test_reingest_after_restart_is_quarantined(self):
+        # The full loop: forget, restart, the erased value arrives again. The
+        # rebuilt registry must catch it on the write path, not just at read.
+        with tempfile.TemporaryDirectory() as tmp:
+            db = str(Path(tmp) / "mem.db")
+            mem = GovernedMemory(backend=SqliteBackend(db))
+            mem.forget("secret99", Scope(tenant="t"))
+            mem2 = GovernedMemory(backend=SqliteBackend(db))  # restart
+            mem2.remember("bob secret99 note", subject="bob", relation="note",
+                          object="secret99", tenant="t", entity="bob")
+            result = mem2.recall_value("bob note secret99", tenant="t", entity="bob")
+            self.assertTrue(result.abstained)
+            reasons = [e.details.get("reason") for e in mem2.audit.filter("quarantine")]
+            self.assertIn("erased_term_reingest", reasons)
+
     def test_restore_from_pre_erasure_backup_is_blocked_read_side(self):
         # The auditors' scenario: the store is restored from a backup taken
         # before the erasure. The restored DB has the row and no tombstone;

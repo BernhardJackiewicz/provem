@@ -80,6 +80,15 @@ class ToolFlowTests(unittest.TestCase):
         rec = _call(self.server, "recall", {"query": "bob note secret99", "tenant": "t", "entity": "bob"})
         self.assertTrue(rec["abstained"])
 
+    def test_remember_after_forget_reports_quarantine(self):
+        _call(self.server, "remember", {"text": "bob secret99 note", "subject": "bob",
+                                        "relation": "note", "object": "secret99", "tenant": "t", "entity": "bob"})
+        _call(self.server, "forget", {"term": "secret99", "tenant": "t", "subject": "bob"})
+        out = _call(self.server, "remember", {"text": "bob secret99 note", "subject": "bob",
+                                              "relation": "note", "object": "secret99", "tenant": "t", "entity": "bob"})
+        self.assertTrue(out["quarantined"])
+        self.assertEqual(out["quarantine_reason"], "erased_term_reingest")
+
     def test_audit_export_verified(self):
         _call(self.server, "remember", {"text": "a b c", "subject": "s", "relation": "r",
                                         "object": "c", "tenant": "t", "entity": "s"})

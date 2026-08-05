@@ -446,6 +446,13 @@ class GovernedMemory:
             # `trust < floor` check; treat a non-finite trust as below the floor.
             if trust != trust or trust < self.policy.min_store_trust:
                 reason = "low_source_trust"
+        # Write-side erasure: an erased value must not re-enter the store as a
+        # fresh clean record (re-ingest, summary, re-sync). Quarantine instead
+        # of refusing so the block is auditable and reported like any other
+        # governance hold. Restricted terms stay read-side only by design:
+        # restrict means do-not-use, not do-not-store.
+        if not reason and self._turn_hits_erased(turn):
+            reason = "erased_term_reingest"
         quarantined = bool(reason)
         if quarantined:
             self.audit.record("quarantine", reason=reason, subject=turn.subject, source=turn.source)
@@ -634,6 +641,15 @@ class GovernedMemory:
             return False
         return term_tokens <= self._erasure_tokens(record)
 
+    def _turn_hits_erased(self, turn: IngestTurn) -> bool:
+        # Token view mirrors _erasure_tokens exactly, so the write-side block
+        # matches precisely what read-side erasure would withhold.
+        if self.policy.erasure_mode == "lenient":
+            turn_tokens = tokenize(turn.object) | tokenize(turn.subject)
+        else:
+            turn_tokens = tokenize(turn.text) | tokenize(turn.object) | tokenize(turn.subject)
+        return any(term <= turn_tokens for term in self.erased_terms.get(turn.scope.tenant, []))
+
     # -- read side ----------------------------------------------------------
 
     def recall(self, turn: QueryTurn) -> RecallResult:
@@ -661,7 +677,15 @@ class GovernedMemory:
         # trail must not go silent just because the query was answered anyway.
         governance_reasons = sorted(
             {er[1] for er in excluded}
-            & {"erased", "do_not_use", "wrong_scope", "wrong_tenant", "possible_prompt_injection", "quarantined"}
+            & {
+                "erased",
+                "erased_term_reingest",
+                "do_not_use",
+                "wrong_scope",
+                "wrong_tenant",
+                "possible_prompt_injection",
+                "quarantined",
+            }
         )
         if governance_reasons:
             self.audit.record(
