@@ -1167,32 +1167,52 @@ class Scenario:
     ingest: List[IngestTurn]
     queries: List[QueryTurn]
     family: str
+    # Optional ordered step list (IngestTurn/QueryTurn mixed). When present,
+    # steps are dispatched in order so state can change between reads
+    # (policy drift, purpose transitions). When None (default), the legacy
+    # two-phase replay below runs unchanged -- the frozen headline mixture
+    # never sets steps.
+    steps: Optional[List[object]] = None
 
 
 def run_trajectory(memory, scenario: Scenario, agent: Optional[Agent] = None) -> TrajectoryResult:
-    """Ingest the scenario, then run each query step through the agent policy.
+    """Run the scenario through the agent policy.
 
-    ``agent`` defaults to :class:`DeterministicAgent` (the memory-isolation path).
-    Pass a :class:`NoisyAgent` to compose intrinsic agent error with memory error
-    for an end-to-end task-success measurement.
+    Legacy shape: ingest everything, then run each query. With
+    ``scenario.steps`` set, ingest and query turns execute in their given
+    order instead. ``agent`` defaults to :class:`DeterministicAgent` (the
+    memory-isolation path). Pass a :class:`NoisyAgent` to compose intrinsic
+    agent error with memory error for an end-to-end task-success measurement.
     """
     if agent is None:
         agent = DeterministicAgent()
-    for turn in scenario.ingest:
-        memory.ingest(turn)
     steps: List[StepResult] = []
     ops = 0
-    for query in scenario.queries:
+
+    def _query_step(query: QueryTurn) -> None:
+        nonlocal ops
         # Do not hand the ground-truth answer or the failure-class label to the
         # memory layer: recall must decide from the query and scope alone. The
         # trigger phrase, when present, lives in query.query (a realistic
         # attacker plants it in the prompt), so a scrubbed view still models the
-        # attack faithfully. recall() reads only .query/.scope, so this is
-        # behaviour-preserving for the existing arms.
+        # attack faithfully. recall() reads only .query/.scope/.purpose, so this
+        # is behaviour-preserving for the existing arms.
         recall_view = QueryTurn(query=query.query, scope=query.scope, expected=None,
                                 purpose=query.purpose)
         result = memory.recall(recall_view)
         ops += result.ops
         action = agent.act(query, result)
         steps.append(classify_action(query, action))
+
+    if scenario.steps is None:
+        for turn in scenario.ingest:
+            memory.ingest(turn)
+        for query in scenario.queries:
+            _query_step(query)
+    else:
+        for step in scenario.steps:
+            if isinstance(step, QueryTurn):
+                _query_step(step)
+            else:
+                memory.ingest(step)
     return TrajectoryResult(steps=steps, ops=ops)
