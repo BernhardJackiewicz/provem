@@ -40,6 +40,22 @@ class CoreInvariantTests(unittest.TestCase):
         self.assertInvariantResult(controller, email, RetrievalRequest(query="candidate tom email", task_type="compliance"))
         self.assertInvariantResult(controller, salary, RetrievalRequest(query="candidate sam salary expectation", task_type="compliance"))
 
+    def test_erased_term_is_never_resurrected_by_reingest(self):
+        # Invariant: after a DELETE, later matching FACT episodes from any
+        # source never produce a servable memory.
+        controller = MemoryController()
+        controller.ingest_episode(Episode("FACT candidate_tom|email|tom@example.com", timestamp=dt(1)))
+        controller.ingest_episode(Episode("DELETE tom@example.com", timestamp=dt(2)))
+        for day, source in ((3, "user"), (4, "tool"), (5, "crm")):
+            controller.ingest_episode(
+                Episode("FACT candidate_tom|email|tom@example.com", source=source, timestamp=dt(day))
+            )
+
+        request = RetrievalRequest(query="candidate tom email", task_type="compliance")
+        result = self._retrieve_request(controller, request)
+        self.assertEqual(result.answer_text(), "ABSTAIN")
+        self.assertInvariantResult(controller, result, request)
+
     def test_source_conflict_abstains_without_clear_precedence(self):
         controller = MemoryController()
         controller.ingest_episode(Episode("FACT client_nova|budget|130k", source="tool", timestamp=dt(1)))

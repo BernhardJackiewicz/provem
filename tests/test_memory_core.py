@@ -67,6 +67,32 @@ class MemoryCoreTests(unittest.TestCase):
         self.assertTrue(result.abstain_recommended)
         self.assertTrue(any(item.reason in ("deleted", "do_not_use", "deleted_evidence") for item in result.excluded_memories))
 
+    def test_erased_term_reingest_candidate_is_blocked(self):
+        # Write-side erasure for the prototype stack: after a DELETE, the same
+        # value arriving again must not be stored as a fresh clean fact.
+        self.controller.ingest_episode(Episode("FACT candidate_tom|email|tom@example.com", timestamp=dt(1)))
+        self.controller.ingest_episode(Episode("DELETE tom@example.com", timestamp=dt(2)))
+        self.controller.ingest_episode(Episode("FACT candidate_tom|email|tom@example.com", timestamp=dt(3)))
+
+        for fact in self.controller.store.list_facts():
+            if fact.object == "tom@example.com":
+                self.assertEqual(fact.privacy_policy, "deleted",
+                                 "re-ingested erased value stored as a fresh fact")
+        events = [entry["event"] for entry in self.controller.store.audit_log]
+        self.assertIn("candidate_blocked_erased_term", events)
+        result = self.retrieval.retrieve(RetrievalRequest(query="candidate tom email", task_type="compliance"))
+        self.assertEqual(result.answer_text(), "ABSTAIN")
+
+    def test_repeat_delete_command_is_not_self_blocked(self):
+        # A repeated revocation contains the erased term by construction; the
+        # write-side guard must exempt delete/constraint candidates or the
+        # second DELETE would block itself.
+        self.controller.ingest_episode(Episode("FACT candidate_tom|email|tom@example.com", timestamp=dt(1)))
+        self.controller.ingest_episode(Episode("DELETE tom@example.com", timestamp=dt(2)))
+        self.controller.ingest_episode(Episode("DELETE tom@example.com", timestamp=dt(3)))
+        events = [entry["event"] for entry in self.controller.store.audit_log]
+        self.assertEqual(events.count("forget_requested"), 2)
+
     def test_project_scope_excludes_cross_project_memory(self):
         self.controller.ingest_episode(Episode("FACT user|tech_stack|Python", project_id="alpha", timestamp=dt(1)))
         self.controller.ingest_episode(Episode("FACT user|tech_stack|Rust", project_id="beta", timestamp=dt(2)))

@@ -67,6 +67,18 @@ class MemoryController:
             self.temporal_backend.audit("candidate_quarantined", "%s:%s" % (candidate.id, quarantine_reason))
             return None
 
+        # Write-side erasure: a candidate restating an erased/do-not-use term
+        # must not be stored as a fresh fact. Constraint and revocation
+        # candidates are exempt (a repeated "DELETE X" contains X by
+        # construction and must still be processed).
+        if candidate.type != "constraint" and candidate.recommended_action not in ("delete", "do_not_use"):
+            scan_text = "%s %s" % (candidate.claim, candidate.metadata.get("object", ""))
+            if self.policy.matches_do_not_use_term(scan_text):
+                candidate.metadata["blocked_erased_term"] = True
+                candidate.recommended_action = "ignore"
+                self.temporal_backend.audit("candidate_blocked_erased_term", candidate.id)
+                return None
+
         action = self.policy.evaluate_candidate(candidate)
 
         if action == "ignore":
