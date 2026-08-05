@@ -528,6 +528,12 @@ class GovernedMemory:
             trust = self.policy.unlisted_source_trust
         else:
             trust = turn.trust
+        # Channel sensitivity: quarantine by WHERE the text came from, not by
+        # what it says. Explicit consent releases the channel hold (unlike
+        # the trust floor below, which models epistemic distrust and is
+        # deliberately not cleared by privacy consent).
+        if not reason and turn.source in self.policy.sensitive_sources and not turn.consent:
+            reason = "sensitive_channel"
         if not reason and self.policy.min_store_trust > 0.0:
             # NaN fails every ordered comparison, which would silently slip past a
             # `trust < floor` check; treat a non-finite trust as below the floor.

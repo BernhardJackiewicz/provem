@@ -98,6 +98,12 @@ class CompliancePolicy:
     # caller-supplied trust (backward compatible). Set it (e.g. 0.3) so an
     # unknown/omitted source cannot bypass a distrust policy via caller trust.
     unlisted_source_trust: Optional[float] = None
+    # channels that are sensitive BY PROVENANCE, not by content: writes from
+    # these sources are quarantined unless the write declares explicit
+    # consent. Models privacy (a human free-text note is where volunteered
+    # special-category data lands), unlike the trust floor which models
+    # epistemic distrust and is NOT cleared by consent.
+    sensitive_sources: Tuple[str, ...] = ()
     # writes below this trust are quarantined (0.0 = accept anything)
     min_store_trust: float = 0.0
     # cross-source value conflicts need at least this trust gap, else abstain
@@ -175,6 +181,7 @@ class CompliancePolicy:
         data["extra_injection_patterns"] = list(self.extra_injection_patterns)
         data["extra_sensitive_patterns"] = list(self.extra_sensitive_patterns)
         data["revocation_operators"] = list(self.revocation_operators)
+        data["sensitive_sources"] = list(self.sensitive_sources)
         data["purpose_rules"] = {
             purpose: {
                 key: (list(value) if isinstance(value, (list, tuple)) else value)
@@ -197,6 +204,8 @@ class CompliancePolicy:
             kwargs["extra_sensitive_patterns"] = tuple(kwargs["extra_sensitive_patterns"])
         if "revocation_operators" in kwargs:
             kwargs["revocation_operators"] = tuple(str(v) for v in kwargs["revocation_operators"])
+        if "sensitive_sources" in kwargs:
+            kwargs["sensitive_sources"] = tuple(str(v) for v in kwargs["sensitive_sources"])
         if "purpose_rules" in kwargs:
             rules: Dict[str, Any] = {}
             for purpose, rule in dict(kwargs["purpose_rules"]).items():
@@ -289,6 +298,7 @@ _BUILTIN: Dict[str, CompliancePolicy] = {
         extra_sensitive_patterns=_RECRUITING_SENSITIVE,
         source_trust={"user": 0.9, "recruiter": 0.9, "external_tool": 0.5, "scraper": 0.4},
         unlisted_source_trust=0.3,
+        sensitive_sources=("notes", "note", "recruiter_note"),
         trust_margin=0.2,
         scope_isolation=True,
         cross_tenant_allowed=False,
