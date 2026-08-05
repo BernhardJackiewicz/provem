@@ -139,6 +139,16 @@ PYTHONPATH=src python3 -m cognitive_memory reliability --attack-families --seeds
   review (a different mechanism, only weakly exercised by the `injection`
   family), and we say so plainly rather than omit the case.
 
+  One measured refinement: run with `--attack-families --lineage` to add a
+  `governed_lineage` arm (`conflict_resolution="lineage"`) and a
+  `same_channel_corroborated` family, where the true value carries assertions
+  from two independent sources before the poison arrives. There the default
+  arm already contains the poison but only by abstaining (the corroborating
+  record makes the conflict cross-source); the lineage arm serves the
+  corroborated true value instead, keeping utility at zero poison served. The
+  equal-trust, no-history 1-vs-1 case remains uncontained in every arm:
+  lineage does not solve it and we do not claim otherwise.
+
 ## Governance mechanisms under test
 
 The governed wrapper (`GovernedMemory`, backend-agnostic) adds:

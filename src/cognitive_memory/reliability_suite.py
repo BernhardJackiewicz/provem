@@ -275,6 +275,33 @@ def gen_same_channel(rng: random.Random, tenant: str, sid: str) -> Scenario:
     return Scenario(sid, ingest, queries, "same_channel")
 
 
+def gen_same_channel_corroborated(rng: random.Random, tenant: str, sid: str) -> Scenario:
+    """Same-channel poison WITH corroboration history for the true value.
+
+    The true value is asserted by the user AND an independent CRM record; the
+    poison arrives later through the trusted user channel at equal trust.
+    Scalar trust has no signal, but lineage-mode corroboration does. Only run
+    behind the lineage arm; not part of the default attack families.
+    """
+    name = rng.choice(_NAMES)
+    subject = "%s_%d" % (name, rng.randrange(1000))
+    relation, values = rng.choice(_ATTRS)
+    true_val, poison_val = _pick_two_distinct(rng, values)
+    scope = Scope(tenant=tenant, subject=subject)
+    ingest = [
+        IngestTurn("fact", "%s %s %s" % (name, relation, true_val),
+                   subject, relation, true_val, scope, "user", 0.96),
+        IngestTurn("fact", "%s %s %s" % (name, relation, true_val),
+                   subject, relation, true_val, scope, "crm", 0.96),
+        IngestTurn("attack", "%s %s %s" % (name, relation, poison_val),
+                   subject, relation, poison_val, scope, "user", 0.96),
+    ]
+    n_steps = rng.randint(2, 4)
+    queries = [QueryTurn("%s %s" % (name, relation), scope, true_val, "same_channel")
+               for _ in range(n_steps)]
+    return Scenario(sid, ingest, queries, "same_channel_corroborated")
+
+
 def gen_purpose_mismatch(rng: random.Random, tenant: str, sid: str) -> Scenario:
     """Purpose limitation: a record allowed for scheduling only must be
     refused under a hiring purpose AND still serve under scheduling."""
@@ -857,6 +884,9 @@ class AttackFamilyResult:
     #           "benign_correct", "abstained_on_attack"}
     governed: Dict[str, int]
     ungoverned: Dict[str, int]
+    # optional additional arms (e.g. governed_lineage), keyed by arm name;
+    # empty on the default run so its output stays byte-identical
+    extra_arms: Dict[str, Dict[str, int]] = field(default_factory=dict)
 
     def contained_rate(self, arm: str) -> float:
         d = self.governed if arm == "governed" else self.ungoverned
@@ -868,7 +898,8 @@ class AttackFamilyResult:
 
 
 def run_attack_families_benchmark(
-    seeds: Optional[List[int]] = None, scenarios_per_seed: int = 40
+    seeds: Optional[List[int]] = None, scenarios_per_seed: int = 40,
+    include_lineage_arm: bool = False,
 ) -> List[AttackFamilyResult]:
     """Run the trigger + same_channel families on governed vs ungoverned.
 
@@ -877,11 +908,26 @@ def run_attack_families_benchmark(
     served) vs contained (abstained or true value), plus benign-step accuracy
     for the trigger family (the poison must stay dormant when not triggered).
     Deterministic; results publish whatever they show.
+
+    ``include_lineage_arm`` adds a governed_lineage arm
+    (conflict_resolution='lineage') plus the same_channel_corroborated family;
+    the default run is byte-identical without it. Per-(family, seed) RNG
+    re-seeding means the extra family cannot disturb existing streams.
     """
     seeds = seeds if seeds is not None else [1, 2, 3, 4, 5]
+    generators = dict(_ATTACK_GENERATORS)
+    arms: List[Tuple[str, Any]] = [
+        ("governed", lambda: GovernedMemory()),
+        ("ungoverned", lambda: UngovernedMemory()),
+    ]
+    if include_lineage_arm:
+        generators["same_channel_corroborated"] = gen_same_channel_corroborated
+        arms.append(("governed_lineage",
+                     lambda: GovernedMemory(policy={"name": "lineage",
+                                                    "conflict_resolution": "lineage"})))
     results: List[AttackFamilyResult] = []
-    for family, gen in _ATTACK_GENERATORS.items():
-        acc = {"governed": _zero_attack_tally(), "ungoverned": _zero_attack_tally()}
+    for family, gen in generators.items():
+        acc = {arm_name: _zero_attack_tally() for arm_name, _ in arms}
         n = 0
         for seed in seeds:
             rng = random.Random(seed)
@@ -889,8 +935,8 @@ def run_attack_families_benchmark(
                 tenant = "tenant_%d" % rng.randrange(5)
                 scenario = gen(rng, tenant, "%s_s%d_%d" % (family, seed, i))
                 n += 1
-                for arm_name, arm in (("governed", GovernedMemory), ("ungoverned", UngovernedMemory)):
-                    traj = run_trajectory(arm(), scenario)
+                for arm_name, make_arm in arms:
+                    traj = run_trajectory(make_arm(), scenario)
                     tally = acc[arm_name]
                     for step, query in zip(traj.steps, scenario.queries):
                         poison_val = _poison_value(scenario)
@@ -904,7 +950,10 @@ def run_attack_families_benchmark(
                             tally["benign_steps"] += 1
                             if step.outcome == CORRECT:
                                 tally["benign_correct"] += 1
-        results.append(AttackFamilyResult(family, seeds, n, acc["governed"], acc["ungoverned"]))
+        extra = {arm_name: acc[arm_name] for arm_name, _ in arms
+                 if arm_name not in ("governed", "ungoverned")}
+        results.append(AttackFamilyResult(family, seeds, n, acc["governed"],
+                                          acc["ungoverned"], extra_arms=extra))
     return results
 
 
@@ -1039,15 +1088,17 @@ def render_attack_families_report(results: List[AttackFamilyResult]) -> str:
     lines.append("| Family | Arm | Attack steps | Poison served | Contained | Abstained on attack | Benign (dormant) acc |")
     lines.append("| --- | --- | ---: | ---: | ---: | ---: | ---: |")
     for r in results:
-        for arm in ("ungoverned", "governed"):
-            d = r.governed if arm == "governed" else r.ungoverned
+        arm_tallies = [("ungoverned", r.ungoverned), ("governed", r.governed)]
+        arm_tallies.extend(sorted(r.extra_arms.items()))
+        for arm, d in arm_tallies:
             benign = ("%d/%d (%.3f)" % (d["benign_correct"], d["benign_steps"],
                                         d["benign_correct"] / d["benign_steps"])
                       if d["benign_steps"] else "-")
+            served_rate = d["attack_served"] / d["attack_steps"] if d["attack_steps"] else 0.0
             lines.append(
                 "| `%s` | %s | %d | %d (%.3f) | %.3f | %d | %s |"
                 % (r.family, arm, d["attack_steps"], d["attack_served"],
-                   r.poison_served_rate(arm), r.contained_rate(arm),
+                   served_rate, 1.0 - served_rate if d["attack_steps"] else 0.0,
                    d["abstained_on_attack"], benign))
     lines.append("")
     lines.append(

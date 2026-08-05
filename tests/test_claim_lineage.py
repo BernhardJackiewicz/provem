@@ -188,5 +188,93 @@ class LineageResolutionTests(unittest.TestCase):
             CompliancePolicy(conflict_resolution="bogus")
 
 
+class PrototypeLineageRetrievalTests(unittest.TestCase):
+    def _controller(self):
+        from cognitive_memory.controller import MemoryController
+
+        return MemoryController()
+
+    def _episode(self, content, source="chat", day=1):
+        from datetime import datetime, timezone
+
+        from cognitive_memory.models import Episode
+
+        return Episode(content, source=source,
+                       timestamp=datetime(2026, 1, day, tzinfo=timezone.utc))
+
+    def test_boolean_abstain_default_unchanged(self):
+        from cognitive_memory.models import RetrievalRequest
+        from cognitive_memory.retrieval import RetrievalPlanner
+
+        controller = self._controller()
+        controller.ingest_episode(self._episode("FACT client_nova|budget|130k", source="tool", day=1))
+        controller.ingest_episode(self._episode("FACT client_nova|budget|300k", source="user", day=2))
+        planner = RetrievalPlanner(controller.store, controller.policy)
+        result = planner.retrieve(RetrievalRequest(query="client nova budget", task_type="temporal"))
+        self.assertEqual(result.answer_text(), "ABSTAIN")
+        self.assertEqual(result.abstain_reason, "source_conflict")
+
+    def test_lineage_mode_resolves_corroborated_claim(self):
+        from cognitive_memory.models import RetrievalRequest
+        from cognitive_memory.retrieval import RetrievalPlanner
+
+        controller = self._controller()
+        controller.ingest_episode(self._episode("FACT client_nova|budget|130k", source="tool", day=1))
+        controller.ingest_episode(self._episode("FACT client_nova|budget|130k", source="crm", day=2))
+        controller.ingest_episode(self._episode("FACT client_nova|budget|300k", source="user", day=3))
+        planner = RetrievalPlanner(controller.store, controller.policy, conflict_resolution="lineage")
+        result = planner.retrieve(RetrievalRequest(query="client nova budget", task_type="temporal"))
+        self.assertIn("130k", result.answer_text())
+        self.assertTrue(any(item.reason == "lineage_outvoted" for item in result.excluded_memories),
+                        "the outvoted claim must be excluded per claim, not via a global abstain")
+
+    def test_lineage_mode_still_abstains_1v1_equal(self):
+        from cognitive_memory.models import RetrievalRequest
+        from cognitive_memory.retrieval import RetrievalPlanner
+
+        controller = self._controller()
+        controller.ingest_episode(self._episode("FACT client_nova|budget|130k", source="tool", day=1))
+        controller.ingest_episode(self._episode("FACT client_nova|budget|300k", source="user", day=2))
+        planner = RetrievalPlanner(controller.store, controller.policy, conflict_resolution="lineage")
+        result = planner.retrieve(RetrievalRequest(query="client nova budget", task_type="temporal"))
+        self.assertEqual(result.answer_text(), "ABSTAIN",
+                         "1-vs-1 stays with write-side review; lineage claims no solution here")
+
+
+class LineageAttackArmTests(unittest.TestCase):
+    def test_attack_families_default_output_unchanged(self):
+        from cognitive_memory.reliability_suite import run_attack_families_benchmark
+
+        results = run_attack_families_benchmark(seeds=[1], scenarios_per_seed=4)
+        self.assertEqual([r.family for r in results], ["trigger", "same_channel"])
+        for result in results:
+            self.assertEqual(result.extra_arms, {}, "default run must not grow arms")
+
+    def test_corroborated_same_channel_contained_only_by_lineage_arm(self):
+        from cognitive_memory.reliability_suite import run_attack_families_benchmark
+
+        results = run_attack_families_benchmark(seeds=[1, 2], scenarios_per_seed=6,
+                                                include_lineage_arm=True)
+        by_family = {r.family: r for r in results}
+        self.assertIn("same_channel_corroborated", by_family)
+        corroborated = by_family["same_channel_corroborated"]
+        # The corroborating CRM record makes the conflict cross-source, so the
+        # DEFAULT arm already contains the poison, but only by abstaining
+        # (utility lost). The lineage arm's honest win: it answers the true
+        # value instead of abstaining, at zero poison served.
+        governed = corroborated.governed
+        lineage = corroborated.extra_arms["governed_lineage"]
+        self.assertEqual(governed["attack_served"], 0)
+        self.assertGreater(governed["abstained_on_attack"], 0,
+                           "default arm contains only via abstention here")
+        self.assertEqual(lineage["attack_served"], 0)
+        self.assertEqual(lineage["abstained_on_attack"], 0,
+                         "lineage must answer the corroborated true value, not abstain")
+        # the plain same-channel case stays uncontained in EVERY arm: honesty pin
+        plain = by_family["same_channel"]
+        self.assertEqual(plain.extra_arms["governed_lineage"]["attack_served"],
+                         plain.governed["attack_served"])
+
+
 if __name__ == "__main__":
     unittest.main()

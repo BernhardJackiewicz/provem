@@ -31,9 +31,17 @@ from .store import InMemoryStore
 class RetrievalPlanner:
     """Policy-aware memory retrieval with traceable exclusions."""
 
-    def __init__(self, store: InMemoryStore, policy: PolicyStore) -> None:
+    def __init__(self, store: InMemoryStore, policy: PolicyStore,
+                 conflict_resolution: str = "abstain") -> None:
         self.store = store
         self.policy = policy
+        # 'abstain' (default): any multi-source value conflict is a boolean
+        # abstain trigger (unchanged behaviour). 'lineage': a value
+        # corroborated by 2+ distinct assertion sources outvotes
+        # single-source competitors, which are excluded per claim as
+        # lineage_outvoted instead of a global abstain; 1-vs-1 equal cases
+        # still abstain (write-side review stays the escalation path).
+        self.conflict_resolution = conflict_resolution
 
     def retrieve_candidates(self, request: RetrievalRequest) -> RetrievalResult:
         """Phase-1 projection: ids, scores and exclusion reasons, no claims.
@@ -122,6 +130,9 @@ class RetrievalPlanner:
                         fact,
                     )
                 )
+
+        if self.conflict_resolution == "lineage":
+            selected, eligible_facts = self._lineage_suppress(selected, eligible_facts, excluded)
 
         for reflection in self.store.list_reflections():
             score = self._score_reflection(request, reflection)
@@ -352,6 +363,50 @@ class RetrievalPlanner:
             if instruction_risk_reason(text) or sensitive_risk_reason(text):
                 return True
         return False
+
+    def _lineage_suppress(self, selected, eligible_facts, excluded):
+        """Per-claim resolution over accumulated assertions (lineage mode).
+
+        A value whose assertions come from 2+ distinct sources outvotes
+        competitors resting on a single source each; the losers become
+        lineage_outvoted exclusions. Groups without a unique corroborated
+        winner are left for the boolean conflict abstain downstream.
+        """
+        grouped: Dict[Tuple[str, str], List[TemporalFact]] = {}
+        for fact in eligible_facts:
+            grouped.setdefault((fact.subject, fact.relation), []).append(fact)
+        outvoted_ids: set = set()
+        for group in grouped.values():
+            values = {fact.object for fact in group}
+            if len(values) <= 1:
+                continue
+            sources_by_value: Dict[str, set] = {}
+            for fact in group:
+                bucket = sources_by_value.setdefault(fact.object, set())
+                bucket.add(fact.source_type)
+                for assertion in fact.assertions:
+                    source_type = assertion.get("source_type")
+                    if source_type:
+                        bucket.add(source_type)
+            corroborated = [value for value, sources in sources_by_value.items() if len(sources) >= 2]
+            if len(corroborated) == 1 and all(
+                len(sources) <= 1
+                for value, sources in sources_by_value.items()
+                if value != corroborated[0]
+            ):
+                for fact in group:
+                    if fact.object != corroborated[0]:
+                        outvoted_ids.add(fact.id)
+        if not outvoted_ids:
+            return selected, eligible_facts
+        for fact in eligible_facts:
+            if fact.id in outvoted_ids:
+                excluded.append(ExcludedMemory(id=fact.id, reason="lineage_outvoted",
+                                               memory_type="temporal_fact", claim=fact.claim_text))
+        eligible_facts = [fact for fact in eligible_facts if fact.id not in outvoted_ids]
+        selected = [item for item in selected
+                    if not (isinstance(item[2], TemporalFact) and item[2].id in outvoted_ids)]
+        return selected, eligible_facts
 
     def _has_source_conflict(self, facts: List[TemporalFact]) -> bool:
         grouped: Dict[Tuple[str, str], List[TemporalFact]] = {}

@@ -56,7 +56,10 @@ def run_reliability(args: argparse.Namespace) -> int:
         seeds = [1, 2, 3, 4, 5]
 
     if getattr(args, "attack_families", False):
-        res = run_attack_families_benchmark(seeds=seeds, scenarios_per_seed=args.scenarios)
+        res = run_attack_families_benchmark(
+            seeds=seeds, scenarios_per_seed=args.scenarios,
+            include_lineage_arm=getattr(args, "lineage", False),
+        )
         if args.json:
             print(json.dumps([
                 {
@@ -768,6 +771,11 @@ def build_parser() -> argparse.ArgumentParser:
         "--attack-families",
         action="store_true",
         help="Run the extra trigger + same_channel attack families (reported separately)",
+    )
+    reliability.add_argument(
+        "--lineage",
+        action="store_true",
+        help="With --attack-families: add the governed_lineage arm and the same_channel_corroborated family",
     )
     reliability.add_argument("--json", action="store_true", help="Print machine-readable headline JSON")
     reliability.set_defaults(func=run_reliability)

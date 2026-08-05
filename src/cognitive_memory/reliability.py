@@ -34,6 +34,11 @@ Failure modes injected (faithful, simplified analogs of published attacks):
   later). Provenance/trust governance has no signal to distinguish it and serves
   it via latest-wins supersession -- BOTH arms fail. Catching this needs
   write-side detection/review, not provenance. Reported separately, never hidden.
+  The opt-in lineage arm (conflict_resolution="lineage") changes only the
+  CORROBORATED variant: when the true value carries assertions from 2+ distinct
+  sources, corroboration outvotes the fresh poison and the true value is served
+  instead of abstaining. The equal-trust, no-history 1-vs-1 case stays out of
+  provenance's reach.
 - ``benign``     -- ordinary current-fact recall. BOTH arms must get these right;
   this is what proves the governed arm is calibrated, not merely abstaining.
 
