@@ -123,7 +123,7 @@ So the honest one-liner: **on recall we're a peer of Mem0 and ahead of Zep; the 
 ## Quick start
 
 ```bash
-pip install -e .            # dependency-free core, Python 3.9+
+pip install provem          # dependency-free core, Python 3.9+
 ```
 
 Wrap a memory in four lines:
@@ -311,14 +311,31 @@ Sources and the full dispute history (including who retracted what):
 ## What the governance layer does
 
 - **Write-side:** prompt-injection quarantine, sensitive-without-consent hold,
-  provenance + source-trust tagging, natural-language erasure/do-not-use intents.
-- **Read-side:** erasure & do-not-use enforcement, tenant/entity scope isolation,
-  source-conflict resolution by provenance trust, retention enforcement, and
-  **calibrated abstention**: a recoverable "I don't know" instead of a confident
-  wrong answer that compounds.
-- **Accountability:** SHA-256 hash-chained tamper-evident audit log, GDPR erasure
-  certificates, per-tenant compliance profiles (recruitment / pharma / finance /
-  custom JSON-YAML), all decisions traceable.
+  channel sensitivity (a human free-text notes field is sensitive by
+  provenance, held until explicit consent releases it), write-side erasure
+  (a re-ingested erased value is quarantined, never stored as a fresh clean
+  record), provenance + source-trust tagging, natural-language
+  erasure/do-not-use intents, and requester authority: strict-mode profiles
+  hold unverified or suspicious revocations for review instead of executing
+  them.
+- **Read-side:** erasure & do-not-use enforcement with tombstones that survive
+  restarts and store restores (plus an explicit audited reconcile step for
+  restored rows), consent revocation (blanket or per purpose), purpose
+  limitation (a declared, untrusted purpose checked against per-record
+  allowlists, per-purpose consent and per-channel collection terms),
+  tenant/entity scope isolation, source-conflict resolution by provenance
+  trust (opt-in lineage mode: a value corroborated by independent sources
+  outvotes a single fresh assertion), retention enforcement, short-lived
+  scoped views (TTL-bound capabilities), two-phase retrieval (candidate
+  metadata first, content re-gated at release time), opt-in semantic erasure
+  for paraphrases, and **calibrated abstention**: a recoverable "I don't
+  know" instead of a confident wrong answer that compounds.
+- **Accountability:** SHA-256 hash-chained tamper-evident audit log that
+  records serves as well as blocks, GDPR erasure certificates carrying the
+  requester plus derivative and backend-verification counts, an
+  execution-time `verify` re-check so a tool layer can ask whether a served
+  answer is still authorized, per-tenant compliance profiles (recruitment /
+  pharma / finance / custom JSON-YAML), all decisions traceable.
 
 ## Honest limitations
 
@@ -340,7 +357,20 @@ Sources and the full dispute history (including who retracted what):
   poison delivered through the same fully-trusted channel as the user (equal
   trust, later write) is served by both arms: provenance has no signal there;
   it needs write-side detection/review. Measured and reported in the
-  attack-family benchmark (`--attack-families`), not hidden.
+  attack-family benchmark (`--attack-families`), not hidden. One measured
+  refinement: when the true value has corroborating assertions from
+  independent sources, the opt-in lineage mode serves it instead of
+  abstaining (`--attack-families --lineage`); the equal-trust 1-vs-1 case
+  stays unsolved.
+- **Semantic erasure is opt-in and bounded.** Default erasure matching is
+  token-based; the paraphrase gap ("wants kids" erased, a note says
+  "planning a family") is only closed when a threshold and an embedding
+  provider are configured, catches similarity but not inference-level
+  leakage, and fails open (audited) when the provider is down.
+- **Purpose limitation gates knowing, not acting.** The declared purpose is
+  an untrusted input; the read gate enforces what may reach the model, and
+  the `verify` tool lets a tool layer re-check before acting, but binding the
+  final tool call is the tool layer's job, not a memory-side layer's.
 - No external security audit; not "production-certified"; self-hosted only.
 
 The complete disclosure list, where Mem0 remains genuinely better (curated
@@ -380,7 +410,7 @@ MCP server (JSON-RPC/stdio, per-tenant profiles)   or   direct library embedding
 
 ## Status
 
-Research-grade core with enterprise-ready foundations: 490 tests, deterministic
+Research-grade core with enterprise-ready foundations: 683 tests, deterministic
 quality gates, tamper-evident audit, tenant isolation, configurable compliance
 profiles. **Not** externally security-audited, no managed hosting, no SLA: the
 enterprise wrapper (gateway auth/SSO, hosting, certifications) is deliberately
@@ -398,3 +428,5 @@ pip install "provem[mem0]"    # optional backends: mem0, zep, letta, graphiti, o
 ## License
 
 MIT, see [LICENSE](LICENSE). Use it, fork it, ship it commercially, no strings.
+The product boundary (what stays MIT here vs. what a future enterprise layer
+covers) is documented in [LICENSING.md](LICENSING.md).

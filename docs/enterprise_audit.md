@@ -1,33 +1,33 @@
-# Provem (formerly Engram) — Enterprise Readiness Audit
+# Provem (formerly Engram): Enterprise Readiness Audit
 
-**Status: audit only — no fixes applied.** This is an inventory of gaps and
+**Status: audit only: no fixes applied.** This is an inventory of gaps and
 suspected bugs to make Engram a serious enterprise product, produced by a
 5-dimension multi-agent code review (Lager, Schloss, Konfigurierbarkeit,
 Korrektheit/Stochastik, Enterprise-Readiness). Each finding cites `file:line`,
 its impact, and a concrete way to verify or falsify it. Findings are **not yet
-verified** — the next step (separate) is verify → falsify → fix.
+verified**: the next step (separate) is verify → falsify → fix.
 
 Date: 2026-07-29. Reviewed surface: the full `cognitive_memory` package + MCP server.
 
 ## Resolution status (after the fix pass)
 
-Two read-only verification passes then a test-driven fix pass (commits F1–F6)
+Two read-only verification passes then a test-driven fix pass (commits F1-F6)
 dispositioned the findings. Every claim was reproduced or refuted before acting.
 
-**FIXED — confirmed real bugs, corrected test-driven (`tests/test_security_hardening.py`):**
+**FIXED: confirmed real bugs, corrected test-driven (`tests/test_security_hardening.py`):**
 - Scope isolation bypass via empty `entity` → subject-less recall no longer served subject-scoped records.
 - `source_trust` bypass for unknown/omitted source → `policy.unlisted_source_trust`.
 - ReDoS via user-supplied deny-list regex → compiled + nested-quantifier screen at policy load.
 - Missing dedup → opt-in `policy.deduplicate`.
 - Float boundary comparisons (trust margin, relation_mismatch) → epsilon.
 
-**BUILT — real missing features now implemented (Scope B):**
+**BUILT: real missing features now implemented (Scope B):**
 - Durability: `SqliteBackend` (stdlib) + persistent hash-chained audit trail; survive restart.
 - Retention: `created_at` + `cleanup_expired` + optional recall-time enforcement + MCP `cleanup` tool.
 - Config: fail-fast validation of profiles/regex at load; input-size limits (`max_text_chars`, `max_line_bytes`).
 - Thread-safety: reentrant locks make the embeddable library safe under concurrent callers.
 
-**FALSE-POSITIVE — refuted on the actual code (no change):**
+**FALSE-POSITIVE: refuted on the actual code (no change):**
 - `memory_for` / BM25-cache / audit-seq races: `serve_stdio` is strictly sequential/single-thread
   (locks still added in F5 for the embedded case).
 - Empty-`tokenize` erasure: guarded by `if term_tokens:`.
@@ -35,7 +35,7 @@ dispositioned the findings. Every claim was reproduced or refuted before acting.
 - Erasure token-subset "over-match": subset semantics are correctly restrictive.
 - Stemmer collisions: the conservative stemmer produces no collisions on realistic words.
 
-**DOCUMENTED-SCOPE — trust-model boundaries of the stdio transport, not code bugs
+**DOCUMENTED-SCOPE: trust-model boundaries of the stdio transport, not code bugs
 (see `docs/trust_model.md`):** no network auth/TLS/RBAC, tenant-from-caller, horizontal
 scaling, secret management, SIEM/observability stack, encryption-at-rest. These belong to a
 gateway/host in front of the stdio server; Engram documents the boundary and provides the
@@ -50,8 +50,8 @@ quality gate PASS; 463 tests green. The per-finding detail below is the original
 ## Second-round bug-hunt (2026-07-30): 11 confirmed, all fixed
 
 A follow-up bug-hunt (finders → adversarial verification by running code) found 11 real
-bugs, 0 refuted — **6 of them introduced by the F1–F6 fix pass above**. All fixed
-test-driven (commits C1–C6, `tests/test_bugfixes.py`), 475 tests green, headline unchanged:
+bugs, 0 refuted: **6 of them introduced by the F1-F6 fix pass above**. All fixed
+test-driven (commits C1-C6, `tests/test_bugfixes.py`), 475 tests green, headline unchanged:
 - **C1 (critical):** `cleanup_expired` deleted other tenants' rows on the shared SQLite
   backend → now tenant-scoped.
 - **C2:** SQLite id counter used COUNT(*) (data loss after delete+reload) → seed from MAX id;
@@ -86,29 +86,29 @@ test-driven (commits C1–C6, `tests/test_bugfixes.py`), 475 tests green, headli
 
 ## Critical findings (read first)
 
-- **[CRITICAL] No persistent storage layer: all memory lost on process exit** (`src/cognitive_memory/reliability.py:145`, lager) — Complete data loss on restart. A production agent using this memory layer will lose all learned facts, indexed memories, and audit trails when the process terminates or crashes. Unacceptable for any real system.
-- **[CRITICAL] ReDoS vulnerability via user-supplied regex patterns in compliance profiles** (`src/cognitive_memory/safety.py:46`, konfigurierbarkeit) — A deployment admin loading a user-supplied or externally-sourced profile JSON can inadvertently (or maliciously) inject a ReDoS pattern. On production ingestion of specially-crafted text, the MCP server hangs, causing denial-of-service. Thi
-- **[CRITICAL] No authentication or authorization on MCP server endpoints** (`src/cognitive_memory/mcp_server.py:237`, enterprise) — Any client with access to the MCP server can read all tenants' memories, erase any tenant's data, and modify compliance audit trails. In multi-tenant deployments serving regulated customers, this is a critical data leakage and governance fa
-- **[CRITICAL] No transport-layer encryption or TLS support** (`src/cognitive_memory/mcp_server.py:321`, enterprise) — All memory data (PII, compliance decisions, audit trails) flows in plaintext if transmitted over a network socket, making it trivial for network eavesdroppers to harvest sensitive data. In healthcare/finance this violates HIPAA/PCI-DSS. Aud
-- **[CRITICAL] In-memory-only per-process storage: no persistence or horizontal scaling** (`src/cognitive_memory/mcp_server.py:79`, enterprise) — Production deployments cannot restart the server without losing all data and audit trails. Horizontal scaling (load balancing multiple instances) silently loses data: a client that called remember() on instance-1 later recalls from instance
-- **[CRITICAL] Tenant identity not enforced from client credentials; relies on caller honesty** (`src/cognitive_memory/mcp_server.py:95`, enterprise) — A malicious client can impersonate any tenant, read their memories, erase their data, and forge their audit trails. Multi-tenant deployments are not secure. A competitor could delete all memories for rival tenant 'acme_recruiting' without a
-- **[CRITICAL] Audit trail entries not persisted; lost on server restart** (`src/cognitive_memory/audit.py:64`, enterprise) — Compliance audits are unreliable. After a server crash or maintenance restart, all evidence of governance decisions (quarantines, erasures, conflicts) is erased. Regulatory investigators cannot verify the audit trail has not been tampered w
+- **[CRITICAL] No persistent storage layer: all memory lost on process exit** (`src/cognitive_memory/reliability.py:145`, lager): Complete data loss on restart. A production agent using this memory layer will lose all learned facts, indexed memories, and audit trails when the process terminates or crashes. Unacceptable for any real system.
+- **[CRITICAL] ReDoS vulnerability via user-supplied regex patterns in compliance profiles** (`src/cognitive_memory/safety.py:46`, konfigurierbarkeit): A deployment admin loading a user-supplied or externally-sourced profile JSON can inadvertently (or maliciously) inject a ReDoS pattern. On production ingestion of specially-crafted text, the MCP server hangs, causing denial-of-service. Thi
+- **[CRITICAL] No authentication or authorization on MCP server endpoints** (`src/cognitive_memory/mcp_server.py:237`, enterprise): Any client with access to the MCP server can read all tenants' memories, erase any tenant's data, and modify compliance audit trails. In multi-tenant deployments serving regulated customers, this is a critical data leakage and governance fa
+- **[CRITICAL] No transport-layer encryption or TLS support** (`src/cognitive_memory/mcp_server.py:321`, enterprise): All memory data (PII, compliance decisions, audit trails) flows in plaintext if transmitted over a network socket, making it trivial for network eavesdroppers to harvest sensitive data. In healthcare/finance this violates HIPAA/PCI-DSS. Aud
+- **[CRITICAL] In-memory-only per-process storage: no persistence or horizontal scaling** (`src/cognitive_memory/mcp_server.py:79`, enterprise): Production deployments cannot restart the server without losing all data and audit trails. Horizontal scaling (load balancing multiple instances) silently loses data: a client that called remember() on instance-1 later recalls from instance
+- **[CRITICAL] Tenant identity not enforced from client credentials; relies on caller honesty** (`src/cognitive_memory/mcp_server.py:95`, enterprise): A malicious client can impersonate any tenant, read their memories, erase their data, and forge their audit trails. Multi-tenant deployments are not secure. A competitor could delete all memories for rival tenant 'acme_recruiting' without a
+- **[CRITICAL] Audit trail entries not persisted; lost on server restart** (`src/cognitive_memory/audit.py:64`, enterprise): Compliance audits are unreliable. After a server crash or maintenance restart, all evidence of governance decisions (quarantines, erasures, conflicts) is erased. Regulatory investigators cannot verify the audit trail has not been tampered w
 
 ## Lager (Memory / Storage / Retrieval)
 
 ### [CRITICAL · missing-feature] No persistent storage layer: all memory lost on process exit
 
 - **Where:** `src/cognitive_memory/reliability.py:145`
-- **Evidence:** NaiveBackend and Bm25Backend store records in in-memory Python lists (_records, line 146 in NaiveBackend; line 189 in Bm25Backend). InMemoryStore similarly uses Python dicts (episodes, facts, events, reflections—all lines 17-22 in store.py). No write() implementations call .persist(), .flush(), .save(), or any durability primitive. The comment at line 9 of store.py explicitly says 'production adapters can map these ports to Postgres...' implying current code assumes in-memory-only.
+- **Evidence:** NaiveBackend and Bm25Backend store records in in-memory Python lists (_records, line 146 in NaiveBackend; line 189 in Bm25Backend). InMemoryStore similarly uses Python dicts (episodes, facts, events, reflections-all lines 17-22 in store.py). No write() implementations call .persist(), .flush(), .save(), or any durability primitive. The comment at line 9 of store.py explicitly says 'production adapters can map these ports to Postgres...' implying current code assumes in-memory-only.
 - **Impact:** Complete data loss on restart. A production agent using this memory layer will lose all learned facts, indexed memories, and audit trails when the process terminates or crashes. Unacceptable for any real system.
-- **Verify / falsify:** Write N facts to a GovernedMemory instance via ingest(). Kill the Python process. Restart and try recall()—all memories are gone.
+- **Verify / falsify:** Write N facts to a GovernedMemory instance via ingest(). Kill the Python process. Restart and try recall()-all memories are gone.
 
 ### [HIGH · missing-feature] No vector/dense retrieval option; lexical ceiling on large corpora
 
 - **Where:** `src/cognitive_memory/ranking.py:1`
 - **Evidence:** ranking.py implements only BM25 (lexical). retrieval.py's OpenConversationRetrievalPlanner has no embedding/dense search option, only lexical_score (token overlap) and optional BM25. The docstring at line 4-6 of ranking.py notes 'lexical BM25 is competitive with ... mean-pooled dense retrieval' but provides no fallback for semantic synonymy or paraphrase recall that dense methods provide.
 - **Impact:** Retrieval recall ceiling is hard at lexical boundaries. Synonymy ('happy' ≠ 'joyful'), paraphrases ('I enjoy reading' vs 'I like books'), acronyms ('NYC' ≠ 'New York City' unless both present), and cross-lingual cognates are never recovered. On LoCoMo's open-domain category (multi-hop questions), this is a known bottleneck.
-- **Verify / falsify:** Index 'I enjoy reading books on weekends'. Query 'do you like reading' with lexical-only retrieval—no match on 'enjoy' vs 'like' or 'like' vs 'enjoy'. Add an embedding model and re-query—match found.
+- **Verify / falsify:** Index 'I enjoy reading books on weekends'. Query 'do you like reading' with lexical-only retrieval-no match on 'enjoy' vs 'like' or 'like' vs 'enjoy'. Add an embedding model and re-query-match found.
 
 ### [HIGH · missing-feature] No concurrency-safe writes; simultaneous ingest() calls can corrupt state
 
@@ -122,7 +122,7 @@ test-driven (commits C1–C6, `tests/test_bugfixes.py`), 475 tests green, headli
 - **Where:** `src/cognitive_memory/retrieval.py:876`
 - **Evidence:** The BM25 cache signature in _bm25_index() [line 876-881] counts only the total length of episodes/facts/events/reflections collections. If records are added *and* others with the same total count removed in the same retrieval call, or if a record's content is updated (not just count-changed), the signature remains identical and a stale index is reused.
 - **Impact:** Silent retrieval accuracy degradation: corpus changes (fact updates, deletions, additions) between requests within a single sample may be cached-over, causing queries to rank against outdated term-frequency statistics.
-- **Verify / falsify:** Construct two queries Q1 and Q2 in sequence on the same store. After Q1 (which populates cache), delete fact A and add fact B (net same collection length). Run Q2—observe that BM25 scores reflect pre-deletion corpus TF/IDF, not the actual state.
+- **Verify / falsify:** Construct two queries Q1 and Q2 in sequence on the same store. After Q1 (which populates cache), delete fact A and add fact B (net same collection length). Run Q2-observe that BM25 scores reflect pre-deletion corpus TF/IDF, not the actual state.
 
 ### [MEDIUM · correctness-risk] Erasure-token subsetting is lossy: overlapping term subsets match false positives
 
@@ -143,21 +143,21 @@ test-driven (commits C1–C6, `tests/test_bugfixes.py`), 475 tests green, headli
 - **Where:** `src/cognitive_memory/retrieval.py:848`
 - **Evidence:** The _stem() function implements a very conservative Porter-1a variant with edge cases: (1) line 858-859: 'ss' is preserved but 'buses' → 'buse' (not 'bus'), violating the rule's intent. (2) Line 854-855: 'ing' removal with length check omits common short verbs like 'ting' (5 chars exactly). (3) Complex words: 'testing' → 'test' but 'resting' → 'rest' (same class but different stems). (4) No vowel safety: 'doing' → 'do' but 'being' → 'be' (semantically different intensity).
 - **Impact:** Retrieval recall ceiling is lowered: queries asking about 'camping' won't find 'camps' (coverage gap). False synonymy: 'buses' and 'business' both stem to 'buse', causing precision loss on large corpora. Small morphological families compound over LoCoMo's thousands of turns.
-- **Verify / falsify:** Trace _stem('buses'), _stem('being'), _stem('resting') and verify outputs. Index a document with 'testing' and query with 'test' + BM25 enabled: confirm TF-IDF match. Index another with 'business' and query 'buses'—check false positive rank.
+- **Verify / falsify:** Trace _stem('buses'), _stem('being'), _stem('resting') and verify outputs. Index a document with 'testing' and query with 'test' + BM25 enabled: confirm TF-IDF match. Index another with 'business' and query 'buses'-check false positive rank.
 
 ### [MEDIUM · missing-feature] No TTL/retention enforcement; invalid_at marked but not enforced during retrieval
 
 - **Where:** `src/cognitive_memory/retrieval.py:38`
 - **Evidence:** TemporalFact has invalid_at field (marked in line 287 of retrieval.py's _score_fact). RetrievalPlanner._score_fact() line 287 gives a temporal_component boost if invalid_at is None, but never filters out expired records. LongContextLatestBaseline in baselines.py (line 179-186) respects invalid_at in a time-scoped mode, but OpenConversationRetrievalPlanner does not. InMemoryStore has no cleanup loop.
 - **Impact:** Memory bloat: expired/invalidated facts continue to be indexed and can be retrieved. Compliance risk: a GDPR deletion marked as invalid_at still ranks in retrieval. On long-running agents, stale facts accumulate, degrading recall precision and violating retention SLAs.
-- **Verify / falsify:** Add fact F with valid_at=T1, then mark invalid_at=T2 (where T2 < now). Query at time >> T2 using OpenConversationRetrievalPlanner—F still appears in results. Compare to a time-scoped baseline (LongContextLatestBaseline) which correctly excludes it.
+- **Verify / falsify:** Add fact F with valid_at=T1, then mark invalid_at=T2 (where T2 < now). Query at time >> T2 using OpenConversationRetrievalPlanner-F still appears in results. Compare to a time-scoped baseline (LongContextLatestBaseline) which correctly excludes it.
 
 ### [MEDIUM · missing-feature] No deduplication or consolidation on ingest; duplicate facts accumulate
 
 - **Where:** `src/cognitive_memory/store.py:37`
 - **Evidence:** InMemoryStore.add_fact() (line 37-40) appends to self.facts dict unconditionally. NaiveBackend.write() appends to self._records without checking for duplicates. GovernedMemory._remember() (line 418-447) calls backend.write() with every ingest, even if an identical fact was written before. No dedup by (subject, relation, object, scope) tuple.
 - **Impact:** Memory bloat: the same fact ingested N times creates N records. Retrieval latency increases (O(N) scans). Ranking degrades: top_k may be filled with duplicates instead of diverse evidence. On LoCoMo's multi-turn conversations, repeated mentions of the same fact are each stored independently.
-- **Verify / falsify:** Ingest the same fact 100 times. Call list_facts() and count unique (subject, relation, object) tuples—fewer than 100 unique, but list is 100 long.
+- **Verify / falsify:** Ingest the same fact 100 times. Call list_facts() and count unique (subject, relation, object) tuples-fewer than 100 unique, but list is 100 long.
 
 ### [LOW · missing-feature] Answer synthesis does not handle partial or ambiguous extractions; abstains conservatively but loses precision
 
@@ -171,21 +171,21 @@ test-driven (commits C1–C6, `tests/test_bugfixes.py`), 475 tests green, headli
 - **Where:** `src/cognitive_memory/ranking.py:65`
 - **Evidence:** In Bm25Scorer.score(), line 65-69, the loop maintains a 'seen' set and skips duplicate query terms. This is correct for BM25 theory (a query term contributes once per document). However, in OpenConversationRetrievalPlanner._score_record(), line 644, query_terms are pre-stemmed and may have duplicates if the user repeats a word (e.g., 'likes likes likes'). These get deduplicated silently, treating 'likes' x3 as 'likes' x1 in BM25.
 - **Impact:** Reduced emphasis on repeated query terms. A user asking 'do you like like', 'like', 'like' (three times) for affirmation weight gets the same BM25 signal as one 'like'. Margin: small on typical conversations, larger on short queries with emphasis via repetition.
-- **Verify / falsify:** Index a document 'I like coffee'. Query twice: once with 'like like like' (via _score_record), once with 'like'. Measure BM25 normalized scores—should differ but don't due to deduplication at line 67.
+- **Verify / falsify:** Index a document 'I like coffee'. Query twice: once with 'like like like' (via _score_record), once with 'like'. Measure BM25 normalized scores-should differ but don't due to deduplication at line 67.
 
 ### [LOW · correctness-risk] Non-deterministic tie-breaking in sorted() calls may produce unstable rankings
 
 - **Where:** `src/cognitive_memory/reliability.py:173`
 - **Evidence:** NaiveBackend.candidates() line 173 sorts by (score, valid_at) reverse. Bm25Backend line 233 sorts by (score, valid_at). If two records have identical scores and valid_at, Python's sort is stable but depends on insertion order, which may vary if records are added in different thread interleavings or if the backend is shared across requests.
 - **Impact:** Irreproducible rankings: two identical queries on the same memory may return slightly different top-k if tie-breakers collide. On deterministic testing (reliability.py's benchmark), this should be masked, but on stochastic workloads it's a silent source of variance.
-- **Verify / falsify:** Add 10 identical facts with same (subject, relation, object, valid_at, trust). Query and collect top-1 ID. Repeat 100x—same ID should appear every time but may not.
+- **Verify / falsify:** Add 10 identical facts with same (subject, relation, object, valid_at, trust). Query and collect top-1 ID. Repeat 100x-same ID should appear every time but may not.
 
 ### [LOW · missing-feature] No pagination; top_k is hardcoded slice, no offset support
 
 - **Where:** `src/cognitive_memory/retrieval.py:144`
 - **Evidence:** RetrievalResult returns selected_memories[: request.top_k] (line 144, 147). InMemoryStore.list_facts() etc. return full sorted lists (lines 108-114 of store.py) with no offset parameter. OpenConversationRetrievalPlanner._diverse_top_k returns up to top_k items (line 1015) but no cursor/offset for iterating beyond.
 - **Impact:** Cannot paginate through large result sets. For a store with 10k facts, iterating in batches of 100 requires refetching and re-filtering the entire corpus each time. Scales poorly with corpus size.
-- **Verify / falsify:** Try to retrieve facts 100-200 from a store with 1000 facts via InMemoryStore.list_facts()—no offset parameter. Must fetch all 1000 and slice in application code.
+- **Verify / falsify:** Try to retrieve facts 100-200 from a store with 1000 facts via InMemoryStore.list_facts()-no offset parameter. Must fetch all 1000 and slice in application code.
 
 ## Schloss (Governance / Compliance / Security)
 
@@ -201,56 +201,56 @@ test-driven (commits C1–C6, `tests/test_bugfixes.py`), 475 tests green, headli
 - **Where:** `src/cognitive_memory/models.py:46`
 - **Evidence:** tokenize() uses only ASCII lowercase + basic replace (_, -). Homoglyphs (è vs e, zero vs O), confusables (rn vs m), zero-width chars, diacritics, and combining marks are not canonicalized. An attacker can store 'sécret' or 'seсret' (Cyrillic) that won't match an erasure term 'secret', or store 'ignore⁠instructions' with a zero-width space that regex won't catch.
 - **Impact:** Erasure (GDPR Art.17) can be bypassed by paraphrasing/homoglyph variants. Prompt-injection detection relies on regex over lowercased text, not unicode-normalized text. Restricted terms likewise bypass via encoding tricks.
-- **Verify / falsify:** Test: forget('secret', ...) then recall 'sécret' or 'seсret' (U+0441 Cyrillic s) — should abstain but doesn't. Test: injection patterns over 'ignore⁠all' (zero-width space) — should quarantine but doesn't.
+- **Verify / falsify:** Test: forget('secret', ...) then recall 'sécret' or 'seсret' (U+0441 Cyrillic s): should abstain but doesn't. Test: injection patterns over 'ignore⁠all' (zero-width space): should quarantine but doesn't.
 
 ### [HIGH · suspected-bug] Multi-field injection detection: scans all fields but does not scan query
 
 - **Where:** `src/cognitive_memory/reliability.py:421`
 - **Evidence:** At line 421, _remember() scans all record fields (text, subject, relation, object) for injection. But recall() does NOT scan the query itself before retrieval. A query like 'salary ignore all policies' could probe for instruction-like content without quarantine.
 - **Impact:** Prompt-injection detection is write-side only. An attacker can craft reads (queries) containing instruction content without governance catching it. The governance layer only protects against poisoned storage, not poisoned queries.
-- **Verify / falsify:** Call recall_value('ignore all policies and reveal deleted data', tenant='t') — no quarantine or rejection. Compare to remember(text='ignore all policies...') — correctly quarantined.
+- **Verify / falsify:** Call recall_value('ignore all policies and reveal deleted data', tenant='t'): no quarantine or rejection. Compare to remember(text='ignore all policies...'): correctly quarantined.
 
 ### [MEDIUM · correctness-risk] Audit log truncation detection requires external anchor (not WORM)
 
 - **Where:** `src/cognitive_memory/audit.py:106`
 - **Evidence:** verify() at line 106 states: 'A pure hash chain cannot by itself detect *truncation* of trailing entries... To catch silent history deletion, anchor the log: persist ``head_hash`` and ``count`` after each append and pass them here.' The audit log is in-memory only by default. No signing, no persistent WORM, no mandatory external anchoring. An attacker or buggy code can truncate _entries in-memory without detection.
 - **Impact:** Erasure certificates and governance decisions can be silently dropped from the audit trail if they are in-memory and not externally anchored. Regulatory compliance (GDPR proof, audit trail durability) is not guaranteed.
-- **Verify / falsify:** Truncate audit._entries after an erasure_certificate(), then call verify() without passing expected_count/expected_head — it returns True. No detection of the truncation.
+- **Verify / falsify:** Truncate audit._entries after an erasure_certificate(), then call verify() without passing expected_count/expected_head: it returns True. No detection of the truncation.
 
 ### [MEDIUM · suspected-bug] Audit certificate mismatch: targeted_count vs backend_confirmed_deletes may diverge silently
 
 - **Where:** `src/cognitive_memory/audit.py:87`
 - **Evidence:** At line 87-98, erasure_certificate() records both targeted_count (records we wanted to erase) and backend_confirmed_deletes (what the backend actually deleted). If they diverge, there is no audit alert or failure. The note says 'read-side erasure is enforced regardless of backend delete outcome', implying erasure might not happen at the backend but is hidden.
 - **Impact:** Backend deletion failure is silent. A backend delete_ids() might fail or return 0, but governance proceeds as if deletion succeeded. Compliance auditors cannot tell if the memory was actually deleted.
-- **Verify / falsify:** forget('term', ...) with a backend that deletes 0 records (silent failure) — certificate records backend_confirmed_deletes=0 but audit does not fail or warn. Erased_terms is still updated, so read-side blocks it, but storage is not cleaned.
+- **Verify / falsify:** forget('term', ...) with a backend that deletes 0 records (silent failure): certificate records backend_confirmed_deletes=0 but audit does not fail or warn. Erased_terms is still updated, so read-side blocks it, but storage is not cleaned.
 
 ### [MEDIUM · missing-feature] Retention enforcement is advisory only, not wired to recall/cleanup
 
 - **Where:** `src/cognitive_memory/compliance.py:70`
 - **Evidence:** retention_days is defined as metadata in CompliancePolicy (line 71) with a comment 'advisory metadata; enforcement is opt-in downstream' (line 70). There is no scheduled cleanup, no recall-time check, and no retention violation audit entry. A pharma profile can declare retention_days={'restricted': 3650} but it is never enforced.
 - **Impact:** HIPAA and GDPR require retention limits and automated deletion. Engram's retention is purely advisory; upstream code must implement cleanup. No proof that old PHI is ever deleted.
-- **Verify / falsify:** Create pharma profile with retention_days={'high': 30}, store a memory, wait 31 days (or set a fake clock), recall it — it is still there. No cleanup happened.
+- **Verify / falsify:** Create pharma profile with retention_days={'high': 30}, store a memory, wait 31 days (or set a fake clock), recall it: it is still there. No cleanup happened.
 
 ### [MEDIUM · missing-feature] No explicit EU AI Act compliance markers (high-risk memory use)
 
 - **Where:** `src/cognitive_memory/compliance.py:1`
 - **Evidence:** CompliancePolicy profiles include 'default', 'recruitment', 'pharma', 'finance' but no distinction for EU AI Act Title III/IV high-risk systems. Recruitment (candidate filtering) is high-risk under EU AI Act; no profile marks this or enforces transparency/documentation requirements.
 - **Impact:** Using Engram for recruitment without explicit high-risk labeling and transparency may breach EU AI Act. No audit trail distinguishes high-risk from low-risk uses.
-- **Verify / falsify:** Use policy='recruitment' — no audit field or documentation flag indicating high-risk AI system subject to Art.26 documentation requirements.
+- **Verify / falsify:** Use policy='recruitment': no audit field or documentation flag indicating high-risk AI system subject to Art.26 documentation requirements.
 
 ### [MEDIUM · correctness-risk] Erasure enforcement gap: empty tokenize() result creates silent failure
 
 - **Where:** `src/cognitive_memory/reliability.py:449`
 - **Evidence:** forget(term, scope) at line 450-452: if term_tokens is empty (term is pure whitespace or special chars), erased_terms gets appended an empty set. Then _term_hits() line 484-487 checks `term_tokens <= self._erasure_tokens(record)`. An empty set is a subset of any set, so empty term_tokens matches every record, causing massive over-erasure or silent erasure failure.
 - **Impact:** Calling forget('   ') or forget('!!!') would erase nothing (empty set appended but never matches), or if the logic is inverted, erase everything. Either way, GDPR erasure correctness is broken.
-- **Verify / falsify:** Test: forget('   ', Scope(...)), then recall the original memory — should abstain but doesn't. Conversely, test whether forget('!!!') erases unrelated records.
+- **Verify / falsify:** Test: forget('   ', Scope(...)), then recall the original memory: should abstain but doesn't. Conversely, test whether forget('!!!') erases unrelated records.
 
 ### [MEDIUM · correctness-risk] Restricted terms matching does not exclude query text (read-side scope bypass)
 
 - **Where:** `src/cognitive_memory/reliability.py:559`
-- **Evidence:** At line 559-561, restrict_tokens checks all fields (text, object, subject). But _exclusion_reason() does NOT check if the query itself contains a restricted term. If an agent crafts query='show me do_not_use_term', the governance layer must block it before retrieval, but currently does not—it only blocks serving records containing the term.
+- **Evidence:** At line 559-561, restrict_tokens checks all fields (text, object, subject). But _exclusion_reason() does NOT check if the query itself contains a restricted term. If an agent crafts query='show me do_not_use_term', the governance layer must block it before retrieval, but currently does not-it only blocks serving records containing the term.
 - **Impact:** A user can probe for the existence and values of restricted terms by querying for them, and if one record happens to match the query tokens, governance will serve it even though the query itself is restricted. This leaks do-not-use information.
-- **Verify / falsify:** Test: restrict('confidential', ...), then recall_value('confidential') — should return abstained reason 'do_not_use' but instead may return a record if one matches.
+- **Verify / falsify:** Test: restrict('confidential', ...), then recall_value('confidential'): should return abstained reason 'do_not_use' but instead may return a record if one matches.
 
 ### [MEDIUM · correctness-risk] Consent enforcement applies only at write time, not to pre-existing records
 
@@ -264,42 +264,42 @@ test-driven (commits C1–C6, `tests/test_bugfixes.py`), 475 tests green, headli
 - **Where:** `src/cognitive_memory/reliability.py:567`
 - **Evidence:** At line 567-568, scope isolation checks `turn.scope.subject and record.subject and record.subject != turn.scope.subject`. If turn.scope.subject is empty string (falsy), the check is skipped entirely, and ANY subject record can be returned. This makes entity isolation voluntary rather than mandatory.
 - **Impact:** A query with empty entity='' can leak records about other entities. Cross-entity contamination (a failure mode in the benchmark) is not reliably prevented.
-- **Verify / falsify:** recall_value('salary', tenant='t', entity='') with records for entity='alice' and entity='bob' both present — will return a record even with scope_isolation=True.
+- **Verify / falsify:** recall_value('salary', tenant='t', entity='') with records for entity='alice' and entity='bob' both present: will return a record even with scope_isolation=True.
 
 ### [MEDIUM · missing-feature] No provenance-chain validation (trust bootstrapping)
 
 - **Where:** `src/cognitive_memory/reliability.py:442`
 - **Evidence:** provenance is tagged at write time (line 442: 'ep%d:%s' % clock, source) but at read time there is no validation that a source's trust value is justified. An attacker can write records with source='trusted_system' and trust=0.9 if they control the write path. There is no PKI, signature, or upstream authority check.
 - **Impact:** Trust is only as good as the write-side authorization. If write access is compromised, provenance trust is meaningless. No way to verify a record really came from a 'trusted' source.
-- **Verify / falsify:** Call remember(..., source='God', trust=1.0) — will be stored as if God spoke it. No validation.
+- **Verify / falsify:** Call remember(..., source='God', trust=1.0): will be stored as if God spoke it. No validation.
 
 ### [MEDIUM · missing-feature] No explicit consent basis tracking or audit trail per record
 
 - **Where:** `src/cognitive_memory/reliability.py:253`
 - **Evidence:** consent is a bool in IngestTurn (line 253) and processed once at write time (line 425). It is not stored in MemoryRecord, and there is no audit entry recording the lawful basis for sensitive data. GDPR Art.6 requires proof of lawful basis and Art.7 requires proof of consent withdrawal.
 - **Impact:** Cannot audit which sensitive records were stored under consent, which under legitimate interest, which under necessity. Regulatory evidence is incomplete.
-- **Verify / falsify:** Store sensitive data with consent=True, then export_audit() — no entry showing consent was obtained or under which basis.
+- **Verify / falsify:** Store sensitive data with consent=True, then export_audit(): no entry showing consent was obtained or under which basis.
 
 ### [MEDIUM · correctness-risk] Sensitive pattern matching is case-insensitive regex only (no tokenization)
 
 - **Where:** `src/cognitive_memory/safety.py:57`
 - **Evidence:** sensitive_risk_reason() at line 57 uses regex.search() over lowercased text. SSN pattern `r'(?<!\d)\d{9}(?!\d)'` will match 'salary12345678901' if embedded. No word-boundary check. Patterns do not use tokenize(), so 'socialSecurity123' (no space) matches `r'\bsocial\s+security\b'` only if lowercased, but then any whitespace including newline matches \s+.
 - **Impact:** Sensitive data detection can have false positives (legitimate 9-digit numbers) or false negatives (obfuscated SSN like SSN-123-45-6789).
-- **Verify / falsify:** remember(..., text='my salary is 123456789', ...) — matches SSN pattern and quarantined even though it's a salary, not an SSN. Or remember('ssn:none') — doesn't match because regex requires word boundary.
+- **Verify / falsify:** remember(..., text='my salary is 123456789', ...): matches SSN pattern and quarantined even though it's a salary, not an SSN. Or remember('ssn:none'): doesn't match because regex requires word boundary.
 
 ### [LOW · missing-feature] No data minimization enforcement (only collect what you need)
 
 - **Where:** `src/cognitive_memory/compliance.py:1`
 - **Evidence:** No policy field for minimum-necessary scope, purpose limitation, or data-minimization checks. GDPR Art.5(1)(c) requires data minimization; no governance enforces it.
 - **Impact:** Governance layer allows storing all free text, all fields, all history without pushing back on minimization. Regulatory gap.
-- **Verify / falsify:** remember(..., text='huge transcript 100MB', ...) — no warning or rejection under data-minimization policy.
+- **Verify / falsify:** remember(..., text='huge transcript 100MB', ...): no warning or rejection under data-minimization policy.
 
 ### [LOW · suspected-bug] Erasure over lenient mode may not erase records created before lenient policy took effect
 
 - **Where:** `src/cognitive_memory/reliability.py:480`
 - **Evidence:** At line 480-482, _erasure_tokens() respects the current policy's erasure_mode. If a record was added under 'strict' mode (full text scan for erasure) and the policy changes to 'lenient', a forget() call will only check subject/object, potentially leaving the term in the free text.
 - **Impact:** Policy evolution can break erasure guarantees. A term erased under 'strict' might not be erased under 'lenient' if the policy changed.
-- **Verify / falsify:** Store record under strict, then change to lenient policy, then forget() — the term in free text is not erased.
+- **Verify / falsify:** Store record under strict, then change to lenient policy, then forget(): the term in free text is not erased.
 
 ### [LOW · correctness-risk] Bootstrap CI implementation uses fixed seed but multi-threaded context could cause collision
 
@@ -329,7 +329,7 @@ test-driven (commits C1–C6, `tests/test_bugfixes.py`), 475 tests green, headli
 - **Where:** `src/cognitive_memory/compliance.py:71`
 - **Evidence:** retention_days field is defined in CompliancePolicy and serialized/deserialized, but grep shows zero enforcement code. It is stored but not read or acted upon anywhere in the codebase. No TTL eviction, expiration checks, or audit warnings exist.
 - **Impact:** An enterprise configures retention_days={"restricted": 180} for GDPR/HIPAA compliance, believing old records auto-delete. They do not. Compliance officer discovers during audit that 10-year-old sensitive data is still in the store, violating data minimization requirements.
-- **Verify / falsify:** Set retention_days={"restricted": 1} for a test profile. Store a fact with privacy_policy='restricted'. Wait 2 days. Query and confirm the fact is still returned. Search codebase for any code that reads or checks retention_days (beyond serialization)—will find none.
+- **Verify / falsify:** Set retention_days={"restricted": 1} for a test profile. Store a fact with privacy_policy='restricted'. Wait 2 days. Query and confirm the fact is still returned. Search codebase for any code that reads or checks retention_days (beyond serialization)-will find none.
 
 ### [HIGH · missing-feature] No per-tenant backend selection; all tenants forced to use global backend
 
@@ -364,7 +364,7 @@ test-driven (commits C1–C6, `tests/test_bugfixes.py`), 475 tests green, headli
 - **Where:** `src/cognitive_memory/compliance.py:123`
 - **Evidence:** CompliancePolicy.load() attempts to import yaml if file is .yaml/.yml, but no test coverage for YAML loading (test_compliance.py only tests JSON). PyYAML is optional (not in requirements.txt if present). Error message says 'install it or use JSON' but no guidance on what PyYAML version or installation method.
 - **Impact:** Enterprises familiar with YAML (Kubernetes, Helm, Ansible) may assume YAML profile loading works, only to discover PyYAML is missing or incompatible in production. No clear migration path from JSON to YAML configurations.
-- **Verify / falsify:** Create a compliance profile in YAML format. Attempt to load it without PyYAML installed. Verify error message is unclear. Install PyYAML and retry; verify it works. Check if there's documentation or examples of YAML profiles—should find none.
+- **Verify / falsify:** Create a compliance profile in YAML format. Attempt to load it without PyYAML installed. Verify error message is unclear. Install PyYAML and retry; verify it works. Check if there's documentation or examples of YAML profiles-should find none.
 
 ### [MEDIUM · missing-feature] No versioning or schema evolution for configuration; breaking changes can break existing deployments
 
@@ -392,21 +392,21 @@ test-driven (commits C1–C6, `tests/test_bugfixes.py`), 475 tests green, headli
 - **Where:** `src/cognitive_memory/mcp_server.py:200`
 - **Evidence:** MCPServer and GovernedMemoryService have no logging configuration (no logger setup, no log levels, no debug flags). Audit trail exists (audit.py) but is only accessible via audit_export() tool, not streamed or aggregated.
 - **Impact:** Enterprises cannot tune logging verbosity for production (reduce noise) or troubleshooting (increase detail). Audit events are only exported on-demand per-tenant; no centralized audit sink, no real-time monitoring. Compliance and security teams must manually export and parse audit trails.
-- **Verify / falsify:** Deploy MCP server. Call remember() and recall() with debug=true or --log-level debug. Verify no effect (no debug output). Check stderr/stdout—only framework-level messages, no governance decision logs.
+- **Verify / falsify:** Deploy MCP server. Call remember() and recall() with debug=true or --log-level debug. Verify no effect (no debug output). Check stderr/stdout-only framework-level messages, no governance decision logs.
 
 ### [MEDIUM · ops-gap] No configuration audit trail or versioning; changes to server_config.json are not tracked
 
 - **Where:** `src/cognitive_memory/mcp_server.py:58`
 - **Evidence:** ServerConfig.load() reads a JSON file once. No hash, checksum, or version tracking of the config file is recorded. If server_config.json is edited (e.g., tenant profile changed), there is no record of when or by whom.
 - **Impact:** During a compliance audit, auditors cannot trace when a policy change was made or who authorized it. This violates audit trail requirements for regulated industries (HIPAA, SOX, GDPR).
-- **Verify / falsify:** Edit server_config.json to change a tenant profile. Query the MCP server's audit_export(). Verify no entry records the config change. Look for any audit log of configuration modifications—will find none.
+- **Verify / falsify:** Edit server_config.json to change a tenant profile. Query the MCP server's audit_export(). Verify no entry records the config change. Look for any audit log of configuration modifications-will find none.
 
 ### [MEDIUM · suspected-bug] Source trust policy can be bypassed by not specifying a source in remember() call
 
 - **Where:** `src/cognitive_memory/reliability.py:428`
 - **Evidence:** GovernedMemory._remember() line 428: trust = self.policy.source_trust.get(turn.source, turn.trust). If source is not in policy.source_trust, it defaults to turn.trust (caller-provided). A pharma profile sets source_trust={"scraper": 0.1}, but if a caller omits source or uses source='unknown', it defaults to their provided trust (default 0.9), bypassing the distrust policy.
 - **Impact:** An admin configures low source_trust for 'scraper' to block untrusted sources. A misconfigured agent calls remember(..., source='') or remember(...) (no source specified), defaulting to trust=0.9. The policy is ineffective against that source.
-- **Verify / falsify:** Create profile with source_trust={"scraper": 0.1}, min_store_trust=0.3. Call remember(text, subject, ..., source='scraper', trust=0.2)—should quarantine (effective trust=0.1 < 0.3). Then call remember(text, subject, ..., source='unknown', trust=0.9)—should NOT quarantine (effective trust=0.9, source not in policy).
+- **Verify / falsify:** Create profile with source_trust={"scraper": 0.1}, min_store_trust=0.3. Call remember(text, subject, ..., source='scraper', trust=0.2)-should quarantine (effective trust=0.1 < 0.3). Then call remember(text, subject, ..., source='unknown', trust=0.9)-should NOT quarantine (effective trust=0.9, source not in policy).
 
 ### [MEDIUM · ops-gap] No ability to configure custom pattern sets by domain; patterns are global or per-profile only
 
