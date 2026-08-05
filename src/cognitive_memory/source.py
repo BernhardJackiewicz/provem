@@ -26,42 +26,51 @@ def source_metadata_for(source: str, actor: str = "user", memory_type: str = "")
             "source_type": "system_policy",
             "source_trust": "authoritative",
             "source_conflict_policy": "policy_wins",
+            "source_sensitivity": "",
         }
     if normalized in ("candidate", "candidate_statement"):
         return {
             "source_type": "candidate_statement",
             "source_trust": "high",
             "source_conflict_policy": "direct_statement_precedence",
+            "source_sensitivity": "",
         }
     if normalized in ("client", "client_statement"):
         return {
             "source_type": "client_statement",
             "source_trust": "high",
             "source_conflict_policy": "direct_statement_precedence",
+            "source_sensitivity": "",
         }
     if normalized in ("recruiter_note", "recruiter", "note"):
         return {
             "source_type": "recruiter_note",
             "source_trust": "low",
             "source_conflict_policy": "weak_assumption",
+            # a human free-text note is where volunteered special-category
+            # data lands: sensitive by provenance, not by content
+            "source_sensitivity": "high",
         }
     if normalized in ("verified_tool", "verified_crm"):
         return {
             "source_type": "tool_record",
             "source_trust": "authoritative",
             "source_conflict_policy": "abstain_on_conflict",
+            "source_sensitivity": "",
         }
     if normalized in ("crm", "crm_record"):
         return {
             "source_type": "crm_record",
             "source_trust": "medium",
             "source_conflict_policy": "abstain_on_conflict",
+            "source_sensitivity": "",
         }
     if normalized in ("tool", "tool_record"):
         return {
             "source_type": "tool_record",
             "source_trust": "high",
             "source_conflict_policy": "abstain_on_conflict",
+            "source_sensitivity": "",
         }
     if normalized in ("user", "chat", "user_statement"):
         source_type = "user_statement"
@@ -71,11 +80,13 @@ def source_metadata_for(source: str, actor: str = "user", memory_type: str = "")
             "source_type": source_type,
             "source_trust": "medium",
             "source_conflict_policy": "abstain_on_conflict",
+            "source_sensitivity": "",
         }
     return {
         "source_type": "unknown",
         "source_trust": "medium",
         "source_conflict_policy": "abstain_on_conflict",
+        "source_sensitivity": "",
     }
 
 

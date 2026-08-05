@@ -63,7 +63,7 @@ class MemoryController:
 
     def apply_candidate(self, candidate: MemoryCandidate, episode: Optional[Episode] = None) -> Optional[TemporalFact]:
         self.temporal_backend.add_candidate(candidate)
-        quarantine_reason = self._candidate_quarantine_reason(candidate)
+        quarantine_reason = self._candidate_quarantine_reason(candidate, episode=episode)
         if quarantine_reason:
             candidate.metadata["quarantine_reason"] = quarantine_reason
             candidate.metadata["untrusted_instruction_content"] = quarantine_reason == "possible_prompt_injection"
@@ -135,6 +135,27 @@ class MemoryController:
         candidate.metadata["reference_resolution_reason"] = resolution.reason
         self.temporal_backend.audit("reference_unresolved", "%s:%s" % (reference_type, resolution.reason))
         return ""
+
+    def release_candidate(self, candidate_id: str, *, override_injection: bool = False) -> Optional[TemporalFact]:
+        """Re-apply a quarantined candidate after review with explicit consent.
+
+        Injection-quarantined candidates require an explicit override.
+        Returns the stored fact, or None when nothing was released.
+        """
+        candidate = self.store.candidates.get(candidate_id)
+        if candidate is None:
+            return None
+        reason = str(candidate.metadata.get("quarantine_reason") or "")
+        if not reason:
+            return None
+        if reason == "possible_prompt_injection" and not override_injection:
+            return None
+        candidate.metadata["consent_basis"] = "explicit"
+        candidate.metadata.pop("quarantine_reason", None)
+        candidate.metadata.pop("untrusted_instruction_content", None)
+        candidate.recommended_action = "store"
+        self.temporal_backend.audit("candidate_released", candidate_id)
+        return self.apply_candidate(candidate)
 
     def _revocation_held(self, candidate: MemoryCandidate, action: str, term: str) -> bool:
         if not self.hold_untrusted_revocations:
@@ -556,13 +577,22 @@ class MemoryController:
             normalized = "company_%s" % normalized
         return normalized
 
-    def _candidate_quarantine_reason(self, candidate: MemoryCandidate) -> str:
+    def _candidate_quarantine_reason(self, candidate: MemoryCandidate, episode: Optional[Episode] = None) -> str:
         if candidate.type == "constraint" or candidate.recommended_action in ("delete", "do_not_use"):
             return ""
         metadata = candidate.metadata
         text = "%s %s" % (candidate.claim, metadata.get("object", ""))
+        # Channel sensitivity is opt-in for the prototype: recruiter_note
+        # facts are load-bearing in existing scenarios, so quarantining the
+        # channel by default would change benchmark behaviour.
+        source_sensitivity = ""
+        if getattr(self.policy, "enforce_channel_sensitivity", False):
+            source = str(metadata.get("source") or (episode.source if episode else "") or "")
+            actor = episode.actor if episode else "user"
+            source_sensitivity = source_metadata_for(source, actor)["source_sensitivity"]
         return unsafe_memory_reason(
             text,
             sensitivity=str(metadata.get("sensitivity") or "low"),
             consent_basis=str(metadata.get("consent_basis") or "implicit"),
+            source_sensitivity=source_sensitivity,
         )

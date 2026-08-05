@@ -145,5 +145,65 @@ class ReleaseApiTests(unittest.TestCase):
             self.assertFalse(result.abstained, "release must be durable")
 
 
+class PrototypeChannelSensitivityTests(unittest.TestCase):
+    def _controller(self, enforce=False):
+        from cognitive_memory.controller import MemoryController
+
+        controller = MemoryController()
+        controller.policy.enforce_channel_sensitivity = enforce
+        return controller
+
+    def _episode(self, consent_basis="implicit"):
+        from datetime import datetime, timezone
+
+        from cognitive_memory.models import Episode
+
+        return Episode("FACT candidate_ana|hobby|running", source="recruiter_note",
+                       consent_basis=consent_basis,
+                       timestamp=datetime(2026, 1, 1, tzinfo=timezone.utc))
+
+    def test_recruiter_note_channel_defaults_sensitive_metadata(self):
+        from cognitive_memory.source import source_metadata_for
+
+        self.assertEqual(source_metadata_for("recruiter_note")["source_sensitivity"], "high")
+        self.assertEqual(source_metadata_for("user")["source_sensitivity"], "")
+
+    def test_enforcement_off_by_default(self):
+        # recruiter_note facts are load-bearing in the existing suite and
+        # benchmark scenarios; channel enforcement is opt-in by design.
+        controller = self._controller()
+        controller.ingest_episode(self._episode())
+        facts = [f for f in controller.store.list_facts() if f.object == "running"]
+        self.assertEqual(len(facts), 1)
+
+    def test_channel_sensitive_candidate_quarantined_when_enabled(self):
+        controller = self._controller(enforce=True)
+        controller.ingest_episode(self._episode())
+        facts = [f for f in controller.store.list_facts() if f.object == "running"]
+        self.assertEqual(facts, [])
+        targets = [entry["target_id"] for entry in controller.store.audit_log
+                   if entry["event"] == "candidate_quarantined"]
+        self.assertTrue(any("sensitive_channel" in target for target in targets))
+
+    def test_explicit_consent_stores_from_sensitive_channel(self):
+        controller = self._controller(enforce=True)
+        controller.ingest_episode(self._episode(consent_basis="explicit"))
+        facts = [f for f in controller.store.list_facts() if f.object == "running"]
+        self.assertEqual(len(facts), 1)
+
+    def test_release_candidate_reapplies_with_consent(self):
+        controller = self._controller(enforce=True)
+        controller.ingest_episode(self._episode())
+        quarantined = [c for c in controller.store.candidates.values()
+                       if c.metadata.get("quarantine_reason") == "sensitive_channel"]
+        self.assertEqual(len(quarantined), 1)
+        fact = controller.release_candidate(quarantined[0].id)
+        self.assertIsNotNone(fact)
+        facts = [f for f in controller.store.list_facts() if f.object == "running"]
+        self.assertEqual(len(facts), 1)
+        events = [entry["event"] for entry in controller.store.audit_log]
+        self.assertIn("candidate_released", events)
+
+
 if __name__ == "__main__":
     unittest.main()

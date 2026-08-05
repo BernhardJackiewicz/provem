@@ -65,7 +65,12 @@ def sensitive_risk_reason(text: str, extra_patterns: tuple = ()) -> str:
     return ""
 
 
-def unsafe_memory_reason(text: str, sensitivity: str = "low", consent_basis: str = "implicit") -> str:
+def unsafe_memory_reason(
+    text: str,
+    sensitivity: str = "low",
+    consent_basis: str = "implicit",
+    source_sensitivity: str = "",
+) -> str:
     instruction_reason = instruction_risk_reason(text)
     if instruction_reason:
         return instruction_reason
@@ -76,5 +81,10 @@ def unsafe_memory_reason(text: str, sensitivity: str = "low", consent_basis: str
 
     if sensitivity in ("high", "restricted") and consent_basis != "explicit":
         return "sensitive_without_consent"
+
+    # Channel sensitivity: the field the text arrived in (a human free-text
+    # note) marks it sensitive even when every word is ordinary.
+    if source_sensitivity == "high" and consent_basis != "explicit":
+        return "sensitive_channel"
 
     return ""

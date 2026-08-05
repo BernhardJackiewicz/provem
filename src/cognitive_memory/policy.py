@@ -31,6 +31,9 @@ class PolicyStore:
         self.legal_hold_memory_ids: Set[str] = set()
         # consent withdrawals: (normalized term, purpose); "" = all purposes
         self.revoked_consent_terms: Set[Tuple[str, str]] = set()
+        # opt-in: quarantine candidates from sensitive channels (recruiter
+        # notes etc.) unless consent is explicit
+        self.enforce_channel_sensitivity: bool = False
         self.audit_log: List[str] = []
 
     def evaluate_candidate(self, candidate: MemoryCandidate) -> str:
@@ -230,6 +233,7 @@ class PolicyStore:
             "do_not_use_terms": sorted(self.do_not_use_terms),
             "legal_hold_memory_ids": sorted(self.legal_hold_memory_ids),
             "revoked_consent_terms": sorted(list(pair) for pair in self.revoked_consent_terms),
+            "enforce_channel_sensitivity": self.enforce_channel_sensitivity,
             "audit_log": list(self.audit_log),
         }
 
@@ -243,6 +247,7 @@ class PolicyStore:
         policy.revoked_consent_terms = {
             (str(pair[0]), str(pair[1])) for pair in data.get("revoked_consent_terms", [])
         }
+        policy.enforce_channel_sensitivity = bool(data.get("enforce_channel_sensitivity", False))
         policy.audit_log = list(data.get("audit_log", []))
         return policy
 
