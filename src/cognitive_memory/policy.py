@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Iterable, List, Optional, Set
+from typing import Iterable, List, Optional, Set, Tuple
 
 from .models import (
     Episode,
@@ -29,6 +29,8 @@ class PolicyStore:
         self.do_not_use_memory_ids: Set[str] = set()
         self.do_not_use_terms: Set[str] = set()
         self.legal_hold_memory_ids: Set[str] = set()
+        # consent withdrawals: (normalized term, purpose); "" = all purposes
+        self.revoked_consent_terms: Set[Tuple[str, str]] = set()
         self.audit_log: List[str] = []
 
     def evaluate_candidate(self, candidate: MemoryCandidate) -> str:
@@ -55,6 +57,29 @@ class PolicyStore:
     def mark_memory_do_not_use(self, memory_id: str) -> None:
         self.do_not_use_memory_ids.add(memory_id)
         self.audit_log.append("do_not_use_memory:%s" % memory_id)
+
+    def revoke_consent(self, term: str, purpose: str = "") -> None:
+        """Withdraw consent for a term, optionally scoped to one purpose.
+
+        Not deletion: matching memories stay stored but are refused at
+        retrieval with consent_revoked (for the revoked purpose, or entirely
+        when purpose is empty).
+        """
+        normalized = " ".join(sorted(tokenize(term))) if tokenize(term) else term.lower().strip()
+        if normalized:
+            self.revoked_consent_terms.add((normalized, purpose))
+            self.audit_log.append("consent_revoked:%s:%s" % (normalized, purpose or "*"))
+
+    def _consent_revoked_reason(self, text: str, request: RetrievalRequest) -> Optional[str]:
+        if not self.revoked_consent_terms:
+            return None
+        text_tokens = tokenize(text)
+        declared = request.purpose or ""
+        for normalized, purpose in self.revoked_consent_terms:
+            term_tokens = tokenize(normalized)
+            if term_tokens and term_tokens <= text_tokens and (not purpose or purpose == declared):
+                return "consent_revoked"
+        return None
 
     def mark_episode_deleted(self, episode_id: str) -> None:
         self.deleted_episode_ids.add(episode_id)
@@ -109,6 +134,9 @@ class PolicyStore:
             return "deleted_evidence"
         if self._matches_do_not_use_term(fact.claim_text):
             return "do_not_use_term"
+        consent_reason = self._consent_revoked_reason(fact.claim_text, request)
+        if consent_reason:
+            return consent_reason
         # Purpose limitation: a declared purpose outside the fact's allowlist
         # is refused; no declared purpose means no purpose gating.
         if request.purpose and fact.allowed_purposes and request.purpose not in fact.allowed_purposes:
@@ -143,6 +171,9 @@ class PolicyStore:
             return "deleted_evidence"
         if self._matches_do_not_use_term(reflection.claim):
             return "do_not_use_term"
+        consent_reason = self._consent_revoked_reason(reflection.claim, request)
+        if consent_reason:
+            return consent_reason
         if request.memory_policy.require_provenance and len(reflection.supporting_evidence) < 2:
             return "weak_reflection_evidence"
         return None
@@ -162,6 +193,9 @@ class PolicyStore:
             return "deleted_evidence"
         if self.matches_do_not_use_term(event.claim_text):
             return "do_not_use_term"
+        consent_reason = self._consent_revoked_reason(event.claim_text, request)
+        if consent_reason:
+            return consent_reason
         # Purpose limitation: same gate as facts.
         if request.purpose and event.allowed_purposes and request.purpose not in event.allowed_purposes:
             return "purpose_mismatch"
@@ -195,6 +229,7 @@ class PolicyStore:
             "do_not_use_memory_ids": sorted(self.do_not_use_memory_ids),
             "do_not_use_terms": sorted(self.do_not_use_terms),
             "legal_hold_memory_ids": sorted(self.legal_hold_memory_ids),
+            "revoked_consent_terms": sorted(list(pair) for pair in self.revoked_consent_terms),
             "audit_log": list(self.audit_log),
         }
 
@@ -205,6 +240,9 @@ class PolicyStore:
         policy.do_not_use_memory_ids = set(data.get("do_not_use_memory_ids", []))
         policy.do_not_use_terms = set(data.get("do_not_use_terms", []))
         policy.legal_hold_memory_ids = set(data.get("legal_hold_memory_ids", []))
+        policy.revoked_consent_terms = {
+            (str(pair[0]), str(pair[1])) for pair in data.get("revoked_consent_terms", [])
+        }
         policy.audit_log = list(data.get("audit_log", []))
         return policy
 

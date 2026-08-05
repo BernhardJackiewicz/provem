@@ -94,5 +94,119 @@ class ScenarioStepsTests(unittest.TestCase):
             self.assertIsNone(scenario.steps, "headline mixture must stay on the legacy path")
 
 
+class ConsentRevocationTests(unittest.TestCase):
+    def setUp(self):
+        self.scope = Scope("t", "alice")
+
+    def _mem_with_fact(self, consented=("research", "treatment")):
+        mem = GovernedMemory()
+        mem.remember("alice condition data cd77", subject="alice", relation="condition",
+                     object="cd77", tenant="t", entity="alice",
+                     consented_purposes=consented)
+        return mem
+
+    def test_revoke_blocks_use_but_keeps_record(self):
+        mem = self._mem_with_fact()
+        mem.revoke_consent("cd77", Scope(tenant="t"))
+        result = mem.recall_value("alice condition cd77", tenant="t", entity="alice")
+        self.assertTrue(result.abstained)
+        self.assertIn("consent_revoked", {reason for _, reason in result.excluded})
+        # revocation is not erasure: the record stays in the store
+        self.assertTrue(any("cd77" in r.text for r in mem.backend.all_records()))
+
+    def test_revocation_scoped_to_purpose(self):
+        mem = self._mem_with_fact()
+        mem.revoke_consent("cd77", Scope(tenant="t"), purpose="research")
+        blocked = mem.recall_value("alice condition cd77", tenant="t", entity="alice", purpose="research")
+        self.assertTrue(blocked.abstained)
+        served = mem.recall_value("alice condition cd77", tenant="t", entity="alice", purpose="treatment")
+        self.assertFalse(served.abstained)
+
+    def test_blanket_revocation_blocks_purposeless_reads(self):
+        mem = self._mem_with_fact()
+        mem.revoke_consent("cd77", Scope(tenant="t"))
+        result = mem.recall_value("alice condition cd77", tenant="t", entity="alice")
+        self.assertTrue(result.abstained)
+
+    def test_revocation_is_tenant_scoped(self):
+        mem = GovernedMemory()
+        for tenant in ("t", "u"):
+            mem.remember("alice condition data cd77", subject="alice", relation="condition",
+                         object="cd77", tenant=tenant, entity="alice")
+        mem.revoke_consent("cd77", Scope(tenant="t"))
+        other = mem.recall_value("alice condition cd77", tenant="u", entity="alice")
+        self.assertFalse(other.abstained)
+
+    def test_revocation_certificate_chains(self):
+        mem = self._mem_with_fact()
+        mem.revoke_consent("cd77", Scope(tenant="t"), purpose="research")
+        entries = mem.audit.filter("consent_revocation")
+        self.assertEqual(len(entries), 1)
+        self.assertEqual(entries[0].details["term"], "cd77")
+        self.assertEqual(entries[0].details["purpose"], "research")
+        self.assertTrue(mem.verify_audit())
+
+    def test_ingest_kind_revocation_dispatches(self):
+        mem = self._mem_with_fact()
+        mem.ingest(IngestTurn("revocation", "alice withdraws consent for cd77",
+                              "alice", "condition", "cd77", Scope(tenant="t"),
+                              "user", 1.0, term="cd77", purpose="research"))
+        blocked = mem.recall_value("alice condition cd77", tenant="t", entity="alice", purpose="research")
+        self.assertTrue(blocked.abstained)
+
+    def test_revocation_survives_restart_via_audit_replay(self):
+        import tempfile
+        from pathlib import Path
+
+        with tempfile.TemporaryDirectory() as tmp:
+            audit = str(Path(tmp) / "audit.jsonl")
+            mem = GovernedMemory(audit_path=audit)
+            mem.revoke_consent("cd77", Scope(tenant="t"), purpose="research")
+            mem2 = GovernedMemory(audit_path=audit)  # restart
+            entries = mem2.revoked_consent.get("t", [])
+            self.assertTrue(entries, "revocation state lost across restart")
+
+    def test_set_policy_rederives_thresholds(self):
+        mem = GovernedMemory()
+        mem.set_policy({"name": "drifted", "relevance_floor": 0.9, "trust_margin": 0.3})
+        self.assertEqual(mem.relevance_floor, 0.9)
+        self.assertEqual(mem.trust_margin, 0.3)
+        self.assertEqual(mem.policy.name, "drifted")
+        self.assertTrue(mem.audit.filter("policy_update"))
+
+
+class PrototypeRevocationTests(unittest.TestCase):
+    def test_policy_store_revoke_consent_excludes_fact(self):
+        from datetime import datetime, timezone
+
+        from cognitive_memory.controller import MemoryController
+        from cognitive_memory.models import Episode, RetrievalRequest
+        from cognitive_memory.retrieval import RetrievalPlanner
+
+        controller = MemoryController()
+        retrieval = RetrievalPlanner(controller.store, controller.policy)
+        controller.ingest_episode(
+            Episode("FACT user|study_code|cd77", timestamp=datetime(2026, 1, 1, tzinfo=timezone.utc))
+        )
+        controller.policy.revoke_consent("cd77", purpose="research")
+        blocked = retrieval.retrieve(RetrievalRequest(query="study code", purpose="research"))
+        self.assertEqual(blocked.answer_text(), "ABSTAIN")
+        self.assertTrue(any(item.reason == "consent_revoked" for item in blocked.excluded_memories))
+        served = retrieval.retrieve(RetrievalRequest(query="study code", purpose="treatment"))
+        self.assertIn("cd77", served.answer_text())
+
+    def test_revocation_survives_policy_round_trip(self):
+        from cognitive_memory.policy import PolicyStore
+
+        policy = PolicyStore()
+        policy.revoke_consent("cd77", purpose="research")
+        restored = PolicyStore.from_dict(policy.to_dict())
+        self.assertEqual(restored.revoked_consent_terms, policy.revoked_consent_terms)
+        # old snapshots without the key load with the default empty set
+        legacy = policy.to_dict()
+        legacy.pop("revoked_consent_terms", None)
+        self.assertEqual(PolicyStore.from_dict(legacy).revoked_consent_terms, set())
+
+
 if __name__ == "__main__":
     unittest.main()

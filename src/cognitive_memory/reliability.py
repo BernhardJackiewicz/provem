@@ -393,6 +393,8 @@ class GovernedMemory:
         # GovernedMemory instance is shared across tenants.
         self.erased_terms: Dict[str, List[set]] = {}
         self.restricted_terms: Dict[str, List[set]] = {}
+        # consent withdrawals: (term token-set, purpose); "" = all purposes
+        self.revoked_consent: Dict[str, List[Tuple[set, str]]] = {}
         self.pending_revocations: List[PendingRevocation] = []
         self._revocation_counter = 0
         from .audit import AuditLog
@@ -464,6 +466,11 @@ class GovernedMemory:
             if turn.kind == "constraint":
                 self.restrict(turn.term or turn.object, turn.scope,
                               requester=turn.requester, source=turn.source, request_text=turn.text)
+                return
+            if turn.kind == "revocation":
+                self.revoke_consent(turn.term or turn.object, turn.scope, purpose=turn.purpose,
+                                    requester=turn.requester, source=turn.source,
+                                    request_text=turn.text)
                 return
             # 'fact'/'attack' share the identical write path; the layer decides
             # from content, not from a caller-declared kind.
@@ -577,6 +584,46 @@ class GovernedMemory:
             self.audit.record("restrict", term=term, tenant=scope.tenant, requester=requester)
         else:
             self.audit.record("restrict", term=term, tenant=scope.tenant)
+
+    def revoke_consent(self, term: str, scope: Scope, purpose: str = "", *,
+                       requester: str = "", source: str = "user",
+                       request_text: str = "") -> None:
+        """Withdraw consent for a term, optionally scoped to one purpose.
+
+        Not erasure: the record stays stored; the read gate refuses it with
+        consent_revoked (for the revoked purpose, or entirely when purpose is
+        empty). The audit entry is the durable source for rebuild at startup.
+        Strict revocation mode holds suspicious withdrawals like forget/restrict.
+        """
+        with self._lock:
+            if self._hold_revocation("revocation", term, scope, requester, source,
+                                     request_text or term):
+                return
+            term_tokens = tokenize(term)
+            self._add_consent_revocation(scope.tenant, term_tokens, purpose)
+            self.audit.record("consent_revocation", term=term, tenant=scope.tenant, purpose=purpose)
+
+    def _add_consent_revocation(self, tenant: str, term_tokens: set, purpose: str) -> None:
+        if not term_tokens:
+            return
+        entries = self.revoked_consent.setdefault(tenant, [])
+        if (term_tokens, purpose) not in entries:
+            entries.append((term_tokens, purpose))
+
+    def set_policy(self, policy: Optional[object]) -> None:
+        """Swap the compliance policy mid-stream (policy drift).
+
+        Thresholds are cached at init, so a bare policy assignment would leave
+        relevance_floor/trust_margin stale; this re-derives them and audits
+        the change.
+        """
+        from .compliance import resolve_policy
+
+        with self._lock:
+            self.policy = resolve_policy(policy)
+            self.relevance_floor = self.policy.relevance_floor
+            self.trust_margin = self.policy.trust_margin
+            self.audit.record("policy_update", name=self.policy.name)
 
     # -- revocation authority (strict mode) ---------------------------------
 
@@ -694,6 +741,12 @@ class GovernedMemory:
             elif entry.action == "restrict":
                 tenant = str(entry.details.get("tenant", ""))
                 self._add_tombstone(self.restricted_terms, tenant, tokenize(str(entry.details.get("term", ""))))
+            elif entry.action == "consent_revocation":
+                tenant = str(entry.details.get("tenant", ""))
+                self._add_consent_revocation(
+                    tenant, tokenize(str(entry.details.get("term", ""))),
+                    str(entry.details.get("purpose", "")),
+                )
 
     def reconcile_tombstones(self, tenant: Optional[str] = None) -> int:
         """Re-apply erasure tombstones to the current store contents.
@@ -860,6 +913,7 @@ class GovernedMemory:
                 "erased",
                 "erased_term_reingest",
                 "do_not_use",
+                "consent_revoked",
                 "wrong_scope",
                 "wrong_tenant",
                 "possible_prompt_injection",
@@ -954,6 +1008,12 @@ class GovernedMemory:
         restrict_tokens = tokenize(record.text) | tokenize(record.object) | tokenize(record.subject)
         if any(term <= restrict_tokens for term in self.restricted_terms.get(record.scope.tenant, [])):
             return "do_not_use"
+        # Consent withdrawal: blanket ("" purpose) blocks every read; a
+        # purpose-scoped withdrawal blocks only that declared purpose.
+        declared = turn.purpose or ""
+        for term_tokens, revoked_purpose in self.revoked_consent.get(record.scope.tenant, []):
+            if term_tokens <= restrict_tokens and (not revoked_purpose or revoked_purpose == declared):
+                return "consent_revoked"
         # Cross-tenant defense in depth (backends that do not pre-filter by tenant).
         if not self.policy.cross_tenant_allowed and record.scope.tenant != turn.scope.tenant:
             return "wrong_tenant"
