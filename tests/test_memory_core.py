@@ -83,6 +83,28 @@ class MemoryCoreTests(unittest.TestCase):
         result = self.retrieval.retrieve(RetrievalRequest(query="candidate tom email", task_type="compliance"))
         self.assertEqual(result.answer_text(), "ABSTAIN")
 
+    def test_request_forget_records_requester_in_audit(self):
+        self.controller.ingest_episode(Episode("FACT user|blocked_company|Acme", timestamp=dt(1)))
+        self.controller.request_forget("Acme", user_id="user", project_id="default", requester="ops_1")
+        targets = [entry["target_id"] for entry in self.controller.store.audit_log
+                   if entry["event"] == "forget_requested"]
+        self.assertTrue(any("requester=ops_1" in target for target in targets))
+
+    def test_untrusted_source_nl_delete_is_held_when_enabled(self):
+        held = MemoryController(hold_untrusted_revocations=True)
+        held.ingest_episode(Episode("FACT candidate_tom|email|tom@example.com", timestamp=dt(1)))
+        held.ingest_episode(Episode("please forget tom@example.com", source="scraper", timestamp=dt(2)))
+        events = [entry["event"] for entry in held.store.audit_log]
+        self.assertIn("revocation_held", events)
+        self.assertNotIn("forget_requested", events)
+        fact = [f for f in held.store.list_facts() if f.object == "tom@example.com"][0]
+        self.assertNotEqual(fact.privacy_policy, "deleted")
+        # default-off guard: without the flag the same flow still executes
+        default = MemoryController()
+        default.ingest_episode(Episode("FACT candidate_tom|email|tom@example.com", timestamp=dt(1)))
+        default.ingest_episode(Episode("please forget tom@example.com", source="scraper", timestamp=dt(2)))
+        self.assertIn("forget_requested", [entry["event"] for entry in default.store.audit_log])
+
     def test_repeat_delete_command_is_not_self_blocked(self):
         # A repeated revocation contains the erased term by construction; the
         # write-side guard must exempt delete/constraint candidates or the

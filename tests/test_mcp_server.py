@@ -89,12 +89,39 @@ class ToolFlowTests(unittest.TestCase):
         self.assertTrue(out["quarantined"])
         self.assertEqual(out["quarantine_reason"], "erased_term_reingest")
 
+    def test_forget_accepts_and_records_requester(self):
+        _call(self.server, "remember", {"text": "bob secret99 note", "subject": "bob",
+                                        "relation": "note", "object": "secret99", "tenant": "t", "entity": "bob"})
+        out = _call(self.server, "forget", {"term": "secret99", "tenant": "t",
+                                            "subject": "bob", "requester": "bob"})
+        self.assertEqual(out["certificate"]["details"]["requester"], "bob")
+
     def test_audit_export_verified(self):
         _call(self.server, "remember", {"text": "a b c", "subject": "s", "relation": "r",
                                         "object": "c", "tenant": "t", "entity": "s"})
         out = _call(self.server, "audit_export", {"tenant": "t"})
         self.assertTrue(out["verified"])
         self.assertIn("head_hash", out["audit"])
+
+
+class StrictRevocationTests(unittest.TestCase):
+    def test_strict_tenant_forget_without_requester_is_held(self):
+        config = ServerConfig.from_dict({
+            "tenant_profiles": {
+                "strict_co": {"name": "strict", "strict_revocation": True,
+                              "revocation_operators": ["dpo_admin"]},
+            },
+        })
+        server = MCPServer(GovernedMemoryService(config))
+        _call(server, "remember", {"text": "bob secret99 note", "subject": "bob",
+                                   "relation": "note", "object": "secret99",
+                                   "tenant": "strict_co", "entity": "bob"})
+        out = _call(server, "forget", {"term": "secret99", "tenant": "strict_co", "subject": "bob"})
+        self.assertTrue(out["held"])
+        self.assertEqual(out["reason"], "missing_requester")
+        self.assertNotIn("certificate", out)
+        rec = _call(server, "recall", {"query": "bob note secret99", "tenant": "strict_co", "entity": "bob"})
+        self.assertFalse(rec["abstained"], "held revocation must not delete anything")
 
 
 class PerTenantProfileTests(unittest.TestCase):

@@ -116,10 +116,15 @@ class AuditLog:
         return self.record("log", message=str(message))
 
     def erasure_certificate(
-        self, term: str, removed_ids: List[str], tenant: str, backend_confirmed: int
+        self,
+        term: str,
+        removed_ids: List[str],
+        tenant: str,
+        backend_confirmed: int,
+        requester: str = "",
+        requester_source: str = "",
     ) -> AuditEntry:
-        return self.record(
-            "erasure",
+        details: Dict[str, Any] = dict(
             term=term,
             tenant=tenant,
             targeted_count=len(removed_ids),
@@ -127,6 +132,12 @@ class AuditLog:
             removed_ids=list(removed_ids),
             note="read-side erasure is enforced regardless of backend delete outcome",
         )
+        # Only present when known, so legacy certificates keep their shape.
+        if requester:
+            details["requester"] = requester
+        if requester_source:
+            details["requester_source"] = requester_source
+        return self.record("erasure", **details)
 
     def entries(self) -> List[AuditEntry]:
         return list(self._entries)

@@ -102,6 +102,15 @@ class CompliancePolicy:
     # only via an explicit cleanup pass). Off by default.
     enforce_retention_on_recall: bool = False
 
+    # -- revocation authority ---------------------------------------------
+    # strict mode: an erasure/restriction request must carry a requester who
+    # is either the scoped data subject or a listed operator, and must not
+    # carry instruction-risk content; anything else is held for review
+    # instead of executing destructively. Off by default: in-band user
+    # revocations execute immediately (the original behaviour).
+    strict_revocation: bool = False
+    revocation_operators: Tuple[str, ...] = ()
+
     def __post_init__(self) -> None:
         if self.erasure_mode not in ("strict", "lenient"):
             raise ComplianceConfigError("erasure_mode must be 'strict' or 'lenient'")
@@ -123,6 +132,7 @@ class CompliancePolicy:
         data["retention_days"] = dict(self.retention_days)
         data["extra_injection_patterns"] = list(self.extra_injection_patterns)
         data["extra_sensitive_patterns"] = list(self.extra_sensitive_patterns)
+        data["revocation_operators"] = list(self.revocation_operators)
         return data
 
     @classmethod
@@ -136,6 +146,8 @@ class CompliancePolicy:
             kwargs["extra_injection_patterns"] = tuple(kwargs["extra_injection_patterns"])
         if "extra_sensitive_patterns" in kwargs:
             kwargs["extra_sensitive_patterns"] = tuple(kwargs["extra_sensitive_patterns"])
+        if "revocation_operators" in kwargs:
+            kwargs["revocation_operators"] = tuple(str(v) for v in kwargs["revocation_operators"])
         if "source_trust" in kwargs:
             kwargs["source_trust"] = {str(k): float(v) for k, v in dict(kwargs["source_trust"]).items()}
         if "retention_days" in kwargs:

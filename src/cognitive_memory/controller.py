@@ -34,6 +34,7 @@ class MemoryController:
         extractor: Optional[DeterministicExtractor] = None,
         temporal_backend: Optional[TemporalGraphBackend] = None,
         reference_resolver: Optional[ReferenceResolver] = None,
+        hold_untrusted_revocations: bool = False,
     ) -> None:
         if temporal_backend is None:
             self.policy = policy or PolicyStore()
@@ -45,6 +46,10 @@ class MemoryController:
         self.store = getattr(self.temporal_backend, "store", store or InMemoryStore())
         self.extractor = extractor or DeterministicExtractor()
         self.reference_resolver = reference_resolver or DeterministicReferenceResolver()
+        # Opt-in: hold in-band revocations from untrusted (non-human) sources
+        # for review instead of executing them immediately.
+        self.hold_untrusted_revocations = hold_untrusted_revocations
+        self.pending_revocations: List[dict] = []
 
     def ingest_episode(self, episode: Episode) -> List[MemoryCandidate]:
         self.temporal_backend.add_episode(episode)
@@ -91,11 +96,15 @@ class MemoryController:
             term = self._policy_term(candidate)
             if not term:
                 return None
+            if self._revocation_held(candidate, "delete", term):
+                return None
             self.request_forget(term, user_id=candidate.user_id, project_id=candidate.project_id)
             return None
         if action == "do_not_use":
             term = self._policy_term(candidate)
             if not term:
+                return None
+            if self._revocation_held(candidate, "do_not_use", term):
                 return None
             self.request_do_not_use(term, user_id=candidate.user_id, project_id=candidate.project_id)
             return None
@@ -127,7 +136,19 @@ class MemoryController:
         self.temporal_backend.audit("reference_unresolved", "%s:%s" % (reference_type, resolution.reason))
         return ""
 
-    def request_forget(self, term: str, user_id: str, project_id: str) -> List[str]:
+    def _revocation_held(self, candidate: MemoryCandidate, action: str, term: str) -> bool:
+        if not self.hold_untrusted_revocations:
+            return False
+        source = str(candidate.metadata.get("source") or "").strip().lower()
+        if source in ("", "chat", "user", "human"):
+            return False
+        self.pending_revocations.append(
+            {"action": action, "term": term, "source": source, "candidate_id": candidate.id}
+        )
+        self.temporal_backend.audit("revocation_held", "%s:%s" % (candidate.id, source))
+        return True
+
+    def request_forget(self, term: str, user_id: str, project_id: str, requester: str = "") -> List[str]:
         self.policy.apply_deletion_term(term)
         affected: List[str] = []
         term_tokens = tokenize(term)
@@ -147,10 +168,11 @@ class MemoryController:
                 self.temporal_backend.update_reflection(reflection)
                 affected.append(reflection.id)
 
-        self.temporal_backend.audit("forget_requested", term)
+        target = term if not requester else "%s|requester=%s" % (term, requester)
+        self.temporal_backend.audit("forget_requested", target)
         return affected
 
-    def request_do_not_use(self, term: str, user_id: str, project_id: str) -> List[str]:
+    def request_do_not_use(self, term: str, user_id: str, project_id: str, requester: str = "") -> List[str]:
         self.policy.apply_deletion_term(term)
         affected: List[str] = []
         term_tokens = tokenize(term)
@@ -169,7 +191,8 @@ class MemoryController:
                 self.temporal_backend.update_reflection(reflection)
                 affected.append(reflection.id)
 
-        self.temporal_backend.audit("do_not_use_requested", term)
+        target = term if not requester else "%s|requester=%s" % (term, requester)
+        self.temporal_backend.audit("do_not_use_requested", target)
         return affected
 
     def invalidate_facts(self, fact_ids: Iterable[str], invalid_at: Optional[object] = None) -> None:

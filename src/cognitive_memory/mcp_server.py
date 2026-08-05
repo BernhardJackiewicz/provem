@@ -202,8 +202,22 @@ class GovernedMemoryService:
         if not term:
             raise ValueError("forget requires non-empty 'term'")
         mem = self.memory_for(tenant)
-        removed = mem.forget(term, Scope(tenant=tenant, subject=str(args.get("subject", ""))))
-        cert = mem.audit.filter("erasure")[-1].to_dict()
+        pending_before = len(mem.list_pending_revocations(tenant))
+        certs_before = len(mem.audit.filter("erasure"))
+        removed = mem.forget(
+            term,
+            Scope(tenant=tenant, subject=str(args.get("subject", ""))),
+            requester=str(args.get("requester", "")),
+        )
+        pending = mem.list_pending_revocations(tenant)
+        if len(pending) > pending_before:
+            held = pending[-1]
+            return {"term": term, "tenant": tenant, "held": True,
+                    "reason": held.reason, "pending_id": held.id}
+        # Count-based capture: filter(...)[-1] would return a stale certificate
+        # after a hold (or raise on the very first call).
+        certs = mem.audit.filter("erasure")
+        cert = certs[-1].to_dict() if len(certs) > certs_before else {}
         return {"term": term, "tenant": tenant, "backend_confirmed_deletes": removed, "certificate": cert}
 
     def list_profiles(self, args: Dict[str, Any]) -> Dict[str, Any]:
@@ -263,13 +277,14 @@ _TOOLS: List[Dict[str, Any]] = [
     },
     {
         "name": "forget",
-        "description": "Enforce erasure (GDPR Art. 17). Returns a tamper-evident erasure certificate.",
+        "description": "Enforce erasure (GDPR Art. 17). Returns a tamper-evident erasure certificate, or a held pending revocation under a strict-revocation profile.",
         "inputSchema": {
             "type": "object",
             "properties": {
                 "term": {"type": "string"},
                 "tenant": {"type": "string"},
                 "subject": {"type": "string"},
+                "requester": {"type": "string", "description": "Who is asking; recorded in the certificate and checked by strict-revocation profiles."},
             },
             "required": ["term", "tenant"],
         },

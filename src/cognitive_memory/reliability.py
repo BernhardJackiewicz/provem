@@ -244,6 +244,7 @@ class IngestTurn:
     trust: float = 0.9
     term: str = ""                # for erasure / constraint
     consent: bool = False         # explicit consent to store sensitive content
+    requester: str = ""           # who asked (erasure/constraint authority)
 
 
 @dataclass
@@ -253,6 +254,28 @@ class QueryTurn:
     expected: Optional[str]       # correct object, or None => correct behavior is to abstain
     failure_class: str = "benign" # benign | poisoning | erasure | scope | trigger
     trigger: str = ""             # for trigger scenarios
+
+
+@dataclass
+class PendingRevocation:
+    """An erasure/restriction request held for review (strict revocation mode).
+
+    Deliberately ReviewItem-shaped (pending/approved/rejected, reviewer
+    recorded on decision) but decoupled from consolidation runs: a revocation
+    hold is not a reflection proposal.
+    """
+
+    id: str
+    kind: str                     # 'erasure' | 'constraint'
+    term: str
+    tenant: str
+    subject: str
+    requester: str
+    source: str
+    reason: str                   # missing_requester | unauthorized_requester | possible_prompt_injection
+    status: str = "pending"       # pending | approved | rejected
+    created_at: str = ""
+    reviewer: str = ""
 
 
 # ---------------------------------------------------------------------------
@@ -363,6 +386,8 @@ class GovernedMemory:
         # GovernedMemory instance is shared across tenants.
         self.erased_terms: Dict[str, List[set]] = {}
         self.restricted_terms: Dict[str, List[set]] = {}
+        self.pending_revocations: List[PendingRevocation] = []
+        self._revocation_counter = 0
         from .audit import AuditLog
 
         self.audit = AuditLog(persist_path=audit_path)
@@ -414,10 +439,12 @@ class GovernedMemory:
         with self._lock:
             self.clock += 1
             if turn.kind == "erasure":
-                self.forget(turn.term or turn.object or turn.subject, turn.scope)
+                self.forget(turn.term or turn.object or turn.subject, turn.scope,
+                            requester=turn.requester, source=turn.source, request_text=turn.text)
                 return
             if turn.kind == "constraint":
-                self.restrict(turn.term or turn.object, turn.scope)
+                self.restrict(turn.term or turn.object, turn.scope,
+                              requester=turn.requester, source=turn.source, request_text=turn.text)
                 return
             # 'fact'/'attack' share the identical write path; the layer decides
             # from content, not from a caller-declared kind.
@@ -490,27 +517,126 @@ class GovernedMemory:
                 return True
         return False
 
-    def forget(self, term: str, scope: Scope) -> int:
+    def forget(self, term: str, scope: Scope, *, requester: str = "",
+               source: str = "user", request_text: str = "") -> int:
         with self._lock:
-            term_tokens = tokenize(term)
-            self._add_tombstone(self.erased_terms, scope.tenant, term_tokens)
-            self._persist_tombstone("erased", scope.tenant, term, term_tokens)
-            remove: List[str] = []
-            for record in self.backend.all_records():
-                if record.scope.tenant != scope.tenant:
-                    continue
-                if self._term_hits(term_tokens, record):
-                    remove.append(record.id)
-            removed = self.backend.delete_ids(remove)
-            self.audit.erasure_certificate(term, remove, scope.tenant, removed)
-            return removed
+            if self._hold_revocation("erasure", term, scope, requester, source, request_text or term):
+                return 0
+            return self._execute_forget(term, scope, requester, source)
 
-    def restrict(self, term: str, scope: Scope) -> None:
+    def _execute_forget(self, term: str, scope: Scope, requester: str = "", source: str = "user") -> int:
+        term_tokens = tokenize(term)
+        self._add_tombstone(self.erased_terms, scope.tenant, term_tokens)
+        self._persist_tombstone("erased", scope.tenant, term, term_tokens)
+        remove: List[str] = []
+        for record in self.backend.all_records():
+            if record.scope.tenant != scope.tenant:
+                continue
+            if self._term_hits(term_tokens, record):
+                remove.append(record.id)
+        removed = self.backend.delete_ids(remove)
+        self.audit.erasure_certificate(
+            term, remove, scope.tenant, removed,
+            requester=requester, requester_source=source if requester else "",
+        )
+        return removed
+
+    def restrict(self, term: str, scope: Scope, *, requester: str = "",
+                 source: str = "user", request_text: str = "") -> None:
         with self._lock:
-            term_tokens = tokenize(term)
-            self._add_tombstone(self.restricted_terms, scope.tenant, term_tokens)
-            self._persist_tombstone("restricted", scope.tenant, term, term_tokens)
+            if self._hold_revocation("constraint", term, scope, requester, source, request_text or term):
+                return
+            self._execute_restrict(term, scope, requester)
+
+    def _execute_restrict(self, term: str, scope: Scope, requester: str = "") -> None:
+        term_tokens = tokenize(term)
+        self._add_tombstone(self.restricted_terms, scope.tenant, term_tokens)
+        self._persist_tombstone("restricted", scope.tenant, term, term_tokens)
+        if requester:
+            self.audit.record("restrict", term=term, tenant=scope.tenant, requester=requester)
+        else:
             self.audit.record("restrict", term=term, tenant=scope.tenant)
+
+    # -- revocation authority (strict mode) ---------------------------------
+
+    def _revocation_hold_reason(self, scope: Scope, requester: str, source: str, text: str) -> str:
+        if not self.policy.strict_revocation:
+            return ""
+        # A revocation carrying instruction-risk content is suspicious even
+        # with a valid requester (erasure turns used to bypass this scan).
+        if self.policy.detect_injection and text:
+            reason = instruction_risk_reason(text, self.policy.extra_injection_patterns)
+            if reason:
+                return reason
+        if not requester:
+            return "missing_requester"
+        if requester == scope.subject or requester in self.policy.revocation_operators:
+            return ""
+        return "unauthorized_requester"
+
+    def _hold_revocation(self, kind: str, term: str, scope: Scope,
+                         requester: str, source: str, text: str) -> bool:
+        reason = self._revocation_hold_reason(scope, requester, source, text)
+        if not reason:
+            return False
+        self._revocation_counter += 1
+        pending = PendingRevocation(
+            id="rev%d" % self._revocation_counter,
+            kind=kind, term=term, tenant=scope.tenant, subject=scope.subject,
+            requester=requester, source=source, reason=reason,
+            created_at=self._now_fn().isoformat(),
+        )
+        self.pending_revocations.append(pending)
+        self.audit.record(
+            "revocation_held", pending_id=pending.id, kind=kind, term=term,
+            tenant=scope.tenant, requester=requester, reason=reason,
+        )
+        return True
+
+    def list_pending_revocations(self, tenant: Optional[str] = None) -> List[PendingRevocation]:
+        return [
+            p for p in self.pending_revocations
+            if p.status == "pending" and (tenant is None or p.tenant == tenant)
+        ]
+
+    def _pending_by_id(self, pending_id: str) -> Optional[PendingRevocation]:
+        for pending in self.pending_revocations:
+            if pending.id == pending_id:
+                return pending
+        return None
+
+    def approve_revocation(self, pending_id: str, reviewer: str) -> int:
+        """Execute a held revocation after human review. Returns backend-confirmed
+        deletes (0 for a constraint). The certificate keeps the original
+        requester; the approval entry records the reviewer."""
+        with self._lock:
+            pending = self._pending_by_id(pending_id)
+            if pending is None or pending.status != "pending":
+                return 0
+            pending.status = "approved"
+            pending.reviewer = reviewer
+            self.audit.record(
+                "revocation_approved", pending_id=pending.id, reviewer=reviewer,
+                term=pending.term, tenant=pending.tenant,
+            )
+            scope = Scope(tenant=pending.tenant, subject=pending.subject)
+            if pending.kind == "erasure":
+                return self._execute_forget(pending.term, scope, pending.requester, pending.source)
+            self._execute_restrict(pending.term, scope, pending.requester)
+            return 0
+
+    def reject_revocation(self, pending_id: str, reviewer: str, reason: str = "") -> bool:
+        with self._lock:
+            pending = self._pending_by_id(pending_id)
+            if pending is None or pending.status != "pending":
+                return False
+            pending.status = "rejected"
+            pending.reviewer = reviewer
+            self.audit.record(
+                "revocation_rejected", pending_id=pending.id, reviewer=reviewer,
+                term=pending.term, tenant=pending.tenant, reason=reason,
+            )
+            return True
 
     def _add_tombstone(self, registry: Dict[str, List[set]], tenant: str, term_tokens: set) -> None:
         if not term_tokens:
