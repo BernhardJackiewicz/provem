@@ -155,6 +155,39 @@ class Mem0ReliabilityBackend:
                 continue
         return removed
 
+    def verify_erasure(self, records: Sequence[MemoryRecord], tenant: str) -> Dict[str, int]:
+        """Post-delete verification sweep for the best-effort backend.
+
+        delete_ids tolerates a refusing or lagging backend (read-side erasure
+        holds regardless), which means copies can silently persist. This
+        re-searches each erased record's text, re-deletes surviving copies and
+        reports what could not be removed, so the erasure certificate carries
+        the honest residual count instead of implying the store is clean.
+        """
+        user_id = self._user_id(tenant)
+        wanted_ids = {record.id for record in records if record.id}
+        wanted_texts = {record.text for record in records if record.text}
+        seen: set = set()
+        resweep_deleted = 0
+        residual = 0
+        for record in records:
+            if not record.text:
+                continue
+            for raw in self._search(record.text, user_id):
+                meta = self._meta_of(raw)
+                mem0_id = (raw or {}).get("id")
+                if not mem0_id or mem0_id in seen:
+                    continue
+                if meta.get("engram_id") not in wanted_ids and meta.get("engram_text") not in wanted_texts:
+                    continue
+                seen.add(mem0_id)
+                try:
+                    self.client.delete(memory_id=mem0_id)
+                    resweep_deleted += 1
+                except Exception:
+                    residual += 1
+        return {"resweep_deleted": resweep_deleted, "residual": residual}
+
     def all_records(self) -> List[MemoryRecord]:
         records: List[MemoryRecord] = []
         for user_id in sorted(self._user_ids):

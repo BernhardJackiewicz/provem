@@ -15,9 +15,12 @@ class FakeMem0Client:
     """Minimal Mem0-shaped client. Rewrites memory text (as real Mem0 does) but
     preserves metadata, so the adapter must reconstruct from metadata."""
 
-    def __init__(self, rewrite=True, refuse_delete=False):
+    def __init__(self, rewrite=True, refuse_delete=False, drop_first_delete=False):
         self.rewrite = rewrite
         self.refuse_delete = refuse_delete
+        # a lagging backend: acks the first delete but does not remove
+        self.drop_first_delete = drop_first_delete
+        self._deletes_seen = 0
         self.memories = []
         self._n = 0
 
@@ -55,6 +58,9 @@ class FakeMem0Client:
     def delete(self, memory_id=None):
         if self.refuse_delete:
             raise RuntimeError("backend refuses delete")
+        self._deletes_seen += 1
+        if self.drop_first_delete and self._deletes_seen == 1:
+            return  # silent ack, nothing removed
         self.memories = [m for m in self.memories if m["id"] != memory_id]
 
     def delete_all(self, user_id=None, filters=None):
@@ -157,6 +163,42 @@ class Mem0AdapterTests(unittest.TestCase):
         backend.write(MemoryRecord("b", "r", "2", Scope(tenant="t1"), text="b r 2"))
         got = backend.get_by_ids([rid, "missing_id"])
         self.assertEqual([r.id for r in got], [rid])
+
+    def test_verify_erasure_resweeps_lagging_backend(self):
+        client = FakeMem0Client(drop_first_delete=True)
+        backend = Mem0ReliabilityBackend(client=client)
+        rid = backend.write(MemoryRecord("bob", "note", "secret99", Scope(tenant="t"),
+                                         text="bob secret99 note"))
+        records = backend.get_by_ids([rid])
+        backend.delete_ids([rid])  # silently dropped by the lagging backend
+        out = backend.verify_erasure(records, "t")
+        self.assertEqual(out["resweep_deleted"], 1)
+        self.assertEqual(out["residual"], 0)
+        self.assertEqual(client.memories, [], "resweep must actually remove the copy")
+
+    def test_residuals_reported_when_backend_refuses(self):
+        client = FakeMem0Client(refuse_delete=True)
+        backend = Mem0ReliabilityBackend(client=client)
+        rid = backend.write(MemoryRecord("bob", "note", "secret99", Scope(tenant="t"),
+                                         text="bob secret99 note"))
+        records = backend.get_by_ids([rid])
+        backend.delete_ids([rid])
+        out = backend.verify_erasure(records, "t")
+        self.assertEqual(out["resweep_deleted"], 0)
+        self.assertGreater(out["residual"], 0, "an unremovable copy must be reported, not hidden")
+
+    def test_governed_forget_surfaces_backend_verification_in_certificate(self):
+        client = FakeMem0Client(refuse_delete=True)
+        backend = Mem0ReliabilityBackend(client=client)
+        mem = GovernedMemory(backend=backend)
+        mem.remember("bob secret99 note", subject="bob", relation="note",
+                     object="secret99", tenant="t", entity="bob")
+        mem.forget("secret99", Scope(tenant="t", subject="bob"))
+        cert = mem.audit.filter("erasure")[-1]
+        self.assertIn("backend_verification", cert.details)
+        self.assertGreater(cert.details["backend_verification"]["residual"], 0)
+        # read-side erasure still holds regardless of the residual copy
+        self.assertTrue(mem.recall_value("bob note secret99", tenant="t", entity="bob").abstained)
 
     def test_purge_clears_run_tenants(self):
         client = FakeMem0Client()

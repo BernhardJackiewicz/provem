@@ -621,10 +621,20 @@ class GovernedMemory:
         remove = [record.id for record in matched]
         removed = self.backend.delete_ids(remove)
         derivatives = self._purge_derivatives(matched)
+        # Feature-detected backend verification sweep (mem0: best-effort
+        # deletes can silently leave copies; the certificate carries the
+        # honest residual count).
+        backend_verification = None
+        verify = getattr(self.backend, "verify_erasure", None)
+        if callable(verify) and matched:
+            try:
+                backend_verification = verify(matched, scope.tenant)
+            except Exception:
+                backend_verification = None
         self.audit.erasure_certificate(
             term, remove, scope.tenant, removed,
             requester=requester, requester_source=source if requester else "",
-            derivatives=derivatives,
+            derivatives=derivatives, backend_verification=backend_verification,
         )
         return removed
 
