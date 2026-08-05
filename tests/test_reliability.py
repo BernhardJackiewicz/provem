@@ -133,6 +133,71 @@ class ErasureTests(unittest.TestCase):
         self.assertIn("do_not_use", {reason for _, reason in res.excluded})
 
 
+class VerifyRecordTests(unittest.TestCase):
+    """A tool layer must be able to ask, at execution time, whether a
+    previously served answer is still authorized."""
+
+    def _served_id(self, mem):
+        result = mem.recall_value("alice salary", tenant="t", entity="alice")
+        self.assertFalse(result.abstained)
+        return result.selected[0].id
+
+    def test_served_record_verifies_true(self):
+        mem = GovernedMemory()
+        mem.remember("alice salary 120k", subject="alice", relation="salary",
+                     object="120k", tenant="t", entity="alice")
+        record_id = self._served_id(mem)
+        out = mem.verify_record(record_id, tenant="t")
+        self.assertTrue(out["still_valid"])
+        self.assertEqual(out["reason"], "")
+
+    def test_after_forget_verify_reports_not_found(self):
+        mem = GovernedMemory()
+        mem.remember("alice salary 120k", subject="alice", relation="salary",
+                     object="120k", tenant="t", entity="alice")
+        record_id = self._served_id(mem)
+        mem.forget("120k", Scope(tenant="t", subject="alice"))
+        out = mem.verify_record(record_id, tenant="t")
+        self.assertFalse(out["still_valid"])
+        self.assertEqual(out["reason"], "record_not_found")
+
+    def test_after_restrict_verify_false(self):
+        mem = GovernedMemory()
+        mem.remember("alice salary 120k", subject="alice", relation="salary",
+                     object="120k", tenant="t", entity="alice")
+        record_id = self._served_id(mem)
+        mem.restrict("120k", Scope(tenant="t"))
+        out = mem.verify_record(record_id, tenant="t")
+        self.assertFalse(out["still_valid"])
+        self.assertEqual(out["reason"], "do_not_use")
+
+    def test_retention_expired_verify_false(self):
+        from datetime import datetime, timedelta, timezone
+
+        base = datetime(2026, 1, 1, tzinfo=timezone.utc)
+        mem = GovernedMemory(policy={"name": "r", "retention_days": {"high": 30}},
+                             now_fn=lambda: base)
+        mem.remember("alice salary 120k", subject="alice", relation="salary",
+                     object="120k", tenant="t", entity="alice")
+        record_id = self._served_id(mem)
+        mem._now_fn = lambda: base + timedelta(days=40)
+        out = mem.verify_record(record_id, tenant="t")
+        self.assertFalse(out["still_valid"])
+        self.assertEqual(out["reason"], "retention_expired")
+
+    def test_verify_is_audited(self):
+        mem = GovernedMemory()
+        mem.remember("alice salary 120k", subject="alice", relation="salary",
+                     object="120k", tenant="t", entity="alice")
+        record_id = self._served_id(mem)
+        mem.verify_record(record_id, tenant="t")
+        entries = mem.audit.filter("verify")
+        self.assertEqual(len(entries), 1)
+        self.assertEqual(entries[0].details["record_id"], record_id)
+        self.assertTrue(entries[0].details["still_valid"])
+        self.assertTrue(mem.verify_audit())
+
+
 class ScopeTests(unittest.TestCase):
     def test_governed_isolates_cross_entity(self):
         scope_a = Scope("t", "alex_a")

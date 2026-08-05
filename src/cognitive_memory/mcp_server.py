@@ -194,6 +194,7 @@ class GovernedMemoryService:
             "abstained": result.abstained,
             "reason": result.reason,
             "provenance": list(result.provenance),
+            "record_ids": [r.id for r in result.selected],
         }
 
     def forget(self, args: Dict[str, Any]) -> Dict[str, Any]:
@@ -219,6 +220,19 @@ class GovernedMemoryService:
         certs = mem.audit.filter("erasure")
         cert = certs[-1].to_dict() if len(certs) > certs_before else {}
         return {"term": term, "tenant": tenant, "backend_confirmed_deletes": removed, "certificate": cert}
+
+    def verify(self, args: Dict[str, Any]) -> Dict[str, Any]:
+        tenant = self._require_tenant(args)
+        record_id = str(args.get("record_id") or "")
+        if not record_id:
+            raise ValueError("verify requires non-empty 'record_id'")
+        mem = self.memory_for(tenant)
+        out = mem.verify_record(
+            record_id, tenant=tenant,
+            entity=str(args.get("entity", "")), query=str(args.get("query", "")),
+        )
+        return {"tenant": tenant, "record_id": record_id,
+                "still_valid": out["still_valid"], "reason": out["reason"]}
 
     def list_profiles(self, args: Dict[str, Any]) -> Dict[str, Any]:
         return {
@@ -290,6 +304,20 @@ _TOOLS: List[Dict[str, Any]] = [
         },
     },
     {
+        "name": "verify",
+        "description": "Re-check whether a previously served record is still authorized (erasure, restriction, scope, retention). The execution-time hook for a tool layer.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "record_id": {"type": "string"},
+                "tenant": {"type": "string"},
+                "entity": {"type": "string"},
+                "query": {"type": "string"},
+            },
+            "required": ["record_id", "tenant"],
+        },
+    },
+    {
         "name": "list_profiles",
         "description": "List available compliance profiles and the tenant->profile mapping.",
         "inputSchema": {"type": "object", "properties": {}},
@@ -325,6 +353,7 @@ class MCPServer:
             "remember": self.service.remember,
             "recall": self.service.recall,
             "forget": self.service.forget,
+            "verify": self.service.verify,
             "list_profiles": self.service.list_profiles,
             "audit_export": self.service.audit_export,
             "cleanup": self.service.cleanup,

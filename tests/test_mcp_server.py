@@ -39,7 +39,7 @@ class HandshakeTests(unittest.TestCase):
         server = MCPServer()
         tools = server.handle(_req("tools/list"))["result"]["tools"]
         names = {t["name"] for t in tools}
-        self.assertEqual(names, {"remember", "recall", "forget", "list_profiles", "audit_export", "cleanup"})
+        self.assertEqual(names, {"remember", "recall", "forget", "list_profiles", "audit_export", "cleanup", "verify"})
         for t in tools:
             self.assertIn("inputSchema", t)
 
@@ -88,6 +88,24 @@ class ToolFlowTests(unittest.TestCase):
                                               "relation": "note", "object": "secret99", "tenant": "t", "entity": "bob"})
         self.assertTrue(out["quarantined"])
         self.assertEqual(out["quarantine_reason"], "erased_term_reingest")
+
+    def test_recall_returns_record_ids(self):
+        _call(self.server, "remember", {"text": "alice salary 120k", "subject": "alice",
+                                        "relation": "salary", "object": "120k", "tenant": "t", "entity": "alice"})
+        out = _call(self.server, "recall", {"query": "alice salary", "tenant": "t", "entity": "alice"})
+        self.assertEqual(len(out["record_ids"]), 1)
+        self.assertTrue(out["record_ids"][0])
+
+    def test_verify_roundtrip(self):
+        _call(self.server, "remember", {"text": "alice salary 120k", "subject": "alice",
+                                        "relation": "salary", "object": "120k", "tenant": "t", "entity": "alice"})
+        rec = _call(self.server, "recall", {"query": "alice salary", "tenant": "t", "entity": "alice"})
+        record_id = rec["record_ids"][0]
+        ok = _call(self.server, "verify", {"record_id": record_id, "tenant": "t"})
+        self.assertTrue(ok["still_valid"])
+        _call(self.server, "forget", {"term": "120k", "tenant": "t", "subject": "alice"})
+        gone = _call(self.server, "verify", {"record_id": record_id, "tenant": "t"})
+        self.assertFalse(gone["still_valid"])
 
     def test_recall_served_appears_in_audit_export(self):
         _call(self.server, "remember", {"text": "alice salary 120k", "subject": "alice",

@@ -52,7 +52,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 import random
-from typing import Callable, Dict, List, Optional, Protocol, Sequence, Tuple, runtime_checkable
+from typing import Any, Callable, Dict, List, Optional, Protocol, Sequence, Tuple, runtime_checkable
 
 from .models import lexical_score, tokenize
 from .safety import instruction_risk_reason, sensitive_risk_reason
@@ -707,6 +707,38 @@ class GovernedMemory:
     def verify_audit(self) -> bool:
         """True if the audit chain is intact (no entry altered/reordered)."""
         return self.audit.verify()
+
+    def verify_record(self, record_id: str = "", *, tenant: str = "default",
+                      entity: str = "", query: str = "") -> Dict[str, Any]:
+        """Re-check whether a previously served record is still authorized.
+
+        The execution-time re-authorization hook for a tool layer: recall
+        returned an answer earlier; before acting on it, ask whether erasure,
+        restriction, scope or retention has invalidated it since. Erased
+        records are physically deleted, so record_not_found is the erased
+        outcome. Retention is checked unconditionally here: a compliance
+        re-check must be at least as strict as recall.
+        """
+        with self._lock:
+            record = None
+            for candidate in self.backend.all_records():
+                if candidate.id == record_id and candidate.scope.tenant == tenant:
+                    record = candidate
+                    break
+            if record is None:
+                out: Dict[str, Any] = {"still_valid": False, "reason": "record_not_found"}
+            else:
+                # Defaulting entity to the record's own subject avoids a
+                # wrong_scope false negative while an explicit entity still
+                # asks the scoped question.
+                turn = QueryTurn(query or record.text, Scope(tenant, entity or record.scope.subject), None)
+                reason = self._exclusion_reason(record, turn)
+                if not reason and self._is_expired(record, self._now_fn()):
+                    reason = "retention_expired"
+                out = {"still_valid": not reason, "reason": reason}
+            self.audit.record("verify", record_id=record_id, tenant=tenant,
+                              still_valid=out["still_valid"], reason=out["reason"])
+            return out
 
     # -- retention ----------------------------------------------------------
 
