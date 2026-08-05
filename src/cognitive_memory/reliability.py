@@ -627,6 +627,41 @@ class GovernedMemory:
         else:
             self.audit.record("restrict", term=term, tenant=scope.tenant)
 
+    def release_quarantined(self, record_ids: Sequence[str], scope: Scope, *,
+                            override_injection: bool = False) -> int:
+        """Release quarantined records after review (explicit release).
+
+        The counterpart of quarantine-by-default: a held record stays dead
+        until someone with authority releases it. Injection quarantine needs
+        an explicit override. Implemented as delete+write over the minimal
+        backend contract (every backend preserves the record id; in-memory
+        backends re-append at the end, ranking is unaffected because
+        valid_at is preserved).
+        """
+        with self._lock:
+            wanted = set(record_ids)
+            released_ids: List[str] = []
+            prior_reasons: List[str] = []
+            for record in self.backend.all_records():
+                if record.id not in wanted or record.scope.tenant != scope.tenant:
+                    continue
+                if not record.quarantined:
+                    continue
+                if record.quarantine_reason == "possible_prompt_injection" and not override_injection:
+                    continue
+                prior_reasons.append(record.quarantine_reason or "quarantined")
+                self.backend.delete_ids([record.id])
+                record.quarantined = False
+                record.quarantine_reason = ""
+                self.backend.write(record)
+                released_ids.append(record.id)
+            if released_ids:
+                self.audit.record(
+                    "release", record_ids=released_ids, tenant=scope.tenant,
+                    prior_reasons=prior_reasons, override=override_injection,
+                )
+            return len(released_ids)
+
     def revoke_consent(self, term: str, scope: Scope, purpose: str = "", *,
                        requester: str = "", source: str = "user",
                        request_text: str = "") -> None:
