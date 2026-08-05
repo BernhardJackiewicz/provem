@@ -62,6 +62,30 @@ class DiskVectorCache:
                 with open(self.path, "a") as handle:
                     handle.write(json.dumps({"k": key, "v": rounded}) + "\n")
 
+    def delete_keys(self, keys: Sequence[str]) -> int:
+        """Delete cached vectors and compact the on-disk file atomically.
+
+        The erasure-derivative path: an erased text's vector must not persist
+        on disk forever just because the cache format is append-only.
+        """
+        with self._lock:
+            removed = 0
+            for key in keys:
+                if self._data.pop(key, None) is not None:
+                    removed += 1
+            if removed and self.path:
+                tmp_path = self.path + ".tmp"
+                with open(tmp_path, "w") as handle:
+                    for key, vector in self._data.items():
+                        handle.write(json.dumps({"k": key, "v": vector}) + "\n")
+                os.replace(tmp_path, self.path)
+            return removed
+
+    def delete_texts(self, model: str, texts: Sequence[str]) -> int:
+        # Keys are content hashes; recompute from text instead of keeping a
+        # separate record-id map (no new state to migrate or leak).
+        return self.delete_keys([_key(model, text) for text in texts])
+
 
 class OpenAIEmbeddingProvider:
     """Minimal stdlib client for the OpenAI embeddings endpoint."""
@@ -125,6 +149,10 @@ class CachedEmbedder:
             for (index, _), vector in zip(missing, fresh):
                 self.cache.put(keys[index], vector)
         return [list(self.cache.get(key)) for key in keys]
+
+    def purge_texts(self, texts: Sequence[str]) -> int:
+        """Delete these texts' cached vectors (erasure derivative sweep)."""
+        return self.cache.delete_texts(self.model, texts)
 
 
 def cosine(a: Sequence[float], b: Sequence[float]) -> float:
