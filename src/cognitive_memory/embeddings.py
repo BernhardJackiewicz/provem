@@ -155,6 +155,20 @@ class CachedEmbedder:
         return self.cache.delete_texts(self.model, texts)
 
 
+class VectorCacheDerivativeStore:
+    """DerivativeStore over a CachedEmbedder: purges erased records' text
+    vectors from the cache during forget()/cleanup_expired() sweeps."""
+
+    name = "vector_cache"
+
+    def __init__(self, embedder: CachedEmbedder):
+        self.embedder = embedder
+
+    def purge_records(self, records: Sequence[object]) -> int:
+        texts = [getattr(record, "text", "") for record in records]
+        return self.embedder.purge_texts([text for text in texts if text])
+
+
 def cosine(a: Sequence[float], b: Sequence[float]) -> float:
     dot = sum(x * y for x, y in zip(a, b))
     norm = math.sqrt(sum(x * x for x in a)) * math.sqrt(sum(y * y for y in b))

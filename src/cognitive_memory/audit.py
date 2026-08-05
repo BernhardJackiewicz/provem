@@ -123,6 +123,7 @@ class AuditLog:
         backend_confirmed: int,
         requester: str = "",
         requester_source: str = "",
+        derivatives: Optional[Dict[str, int]] = None,
     ) -> AuditEntry:
         details: Dict[str, Any] = dict(
             term=term,
@@ -137,6 +138,8 @@ class AuditLog:
             details["requester"] = requester
         if requester_source:
             details["requester_source"] = requester_source
+        if derivatives is not None:
+            details["derivatives"] = dict(derivatives)
         return self.record("erasure", **details)
 
     def entries(self) -> List[AuditEntry]:

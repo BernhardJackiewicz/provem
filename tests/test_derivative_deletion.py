@@ -65,5 +65,70 @@ class VectorCacheDeletionTests(unittest.TestCase):
         self.assertEqual(len(cache), 0)
 
 
+class DerivativeSweepTests(unittest.TestCase):
+    def _mem_with_vector_store(self, **kwargs):
+        from cognitive_memory.embeddings import VectorCacheDerivativeStore
+        from cognitive_memory.reliability import GovernedMemory
+
+        cache = DiskVectorCache(None)
+        embedder = CachedEmbedder(_MockProvider(), cache)
+        mem = GovernedMemory(**kwargs)
+        mem.register_derivative_store(VectorCacheDerivativeStore(embedder))
+        return mem, embedder, cache
+
+    def test_forget_purges_registered_vector_cache(self):
+        from cognitive_memory.reliability import Scope
+
+        mem, embedder, cache = self._mem_with_vector_store()
+        mem.remember("bob secret99 note", subject="bob", relation="note",
+                     object="secret99", tenant="t", entity="bob")
+        embedder.embed(["bob secret99 note"])  # the dense channel embedded the record text
+        self.assertEqual(len(cache), 1)
+        mem.forget("secret99", Scope(tenant="t", subject="bob"))
+        self.assertEqual(len(cache), 0, "erased record's vector survived in the derivative store")
+
+    def test_erasure_certificate_reports_per_derivative_counts(self):
+        from cognitive_memory.reliability import Scope
+
+        mem, embedder, _ = self._mem_with_vector_store()
+        mem.remember("bob secret99 note", subject="bob", relation="note",
+                     object="secret99", tenant="t", entity="bob")
+        embedder.embed(["bob secret99 note"])
+        mem.forget("secret99", Scope(tenant="t", subject="bob"))
+        cert = mem.audit.filter("erasure")[-1]
+        self.assertEqual(cert.details["derivatives"], {"vector_cache": 1})
+
+    def test_certificate_shape_unchanged_without_stores(self):
+        from cognitive_memory.reliability import GovernedMemory, Scope
+
+        mem = GovernedMemory()
+        mem.remember("bob secret99 note", subject="bob", relation="note",
+                     object="secret99", tenant="t", entity="bob")
+        mem.forget("secret99", Scope(tenant="t", subject="bob"))
+        cert = mem.audit.filter("erasure")[-1]
+        self.assertNotIn("derivatives", cert.details,
+                         "legacy certificate shape must stay byte-identical")
+
+    def test_cleanup_expired_sweeps_derivatives(self):
+        from datetime import datetime, timedelta, timezone
+
+        base = datetime(2026, 1, 1, tzinfo=timezone.utc)
+        mem, embedder, cache = self._mem_with_vector_store(
+            policy={"name": "r", "retention_days": {"high": 30}}, now_fn=lambda: base)
+        mem.remember("old fact here", subject="a", relation="note", object="x",
+                     tenant="t", entity="a")
+        embedder.embed(["old fact here"])
+        removed = mem.cleanup_expired(now=base + timedelta(days=40))
+        self.assertEqual(removed, 1)
+        self.assertEqual(len(cache), 0, "expired record's vector survived retention cleanup")
+
+    def test_protocol_runtime_checkable(self):
+        from cognitive_memory.embeddings import VectorCacheDerivativeStore
+        from cognitive_memory.reliability import DerivativeStore
+
+        store = VectorCacheDerivativeStore(CachedEmbedder(_MockProvider(), DiskVectorCache(None)))
+        self.assertIsInstance(store, DerivativeStore)
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -146,6 +146,18 @@ class RecallResult:
 
 
 @runtime_checkable
+class DerivativeStore(Protocol):
+    """A store of derived copies (embeddings, summaries, caches) that erasure
+    and retention sweeps must reach. Registered on GovernedMemory; forget()
+    and cleanup_expired() call purge_records for every physically deleted
+    record and the erasure certificate reports per-store confirmed counts."""
+
+    name: str
+
+    def purge_records(self, records: Sequence["MemoryRecord"]) -> int: ...
+
+
+@runtime_checkable
 class MemoryBackend(Protocol):
     """The minimal contract a store must satisfy to be wrapped by governance.
 
@@ -429,6 +441,9 @@ class GovernedMemory:
         # governance epoch per tenant ("*" = policy-wide): any bump revokes
         # outstanding views for that tenant (fail-safe over-invalidation)
         self._governance_epoch: Dict[str, int] = {}
+        # derivative stores (embeddings, summaries, caches) swept on erasure
+        # and retention cleanup
+        self._derivative_stores: List[DerivativeStore] = []
         from .audit import AuditLog
 
         self.audit = AuditLog(persist_path=audit_path)
@@ -597,18 +612,34 @@ class GovernedMemory:
         term_tokens = tokenize(term)
         self._add_tombstone(self.erased_terms, scope.tenant, term_tokens)
         self._persist_tombstone("erased", scope.tenant, term, term_tokens)
-        remove: List[str] = []
+        matched: List[MemoryRecord] = []
         for record in self.backend.all_records():
             if record.scope.tenant != scope.tenant:
                 continue
             if self._term_hits(term_tokens, record):
-                remove.append(record.id)
+                matched.append(record)
+        remove = [record.id for record in matched]
         removed = self.backend.delete_ids(remove)
+        derivatives = self._purge_derivatives(matched)
         self.audit.erasure_certificate(
             term, remove, scope.tenant, removed,
             requester=requester, requester_source=source if requester else "",
+            derivatives=derivatives,
         )
         return removed
+
+    def register_derivative_store(self, store: DerivativeStore) -> None:
+        """Register a derivative store (embeddings, summaries, caches) so
+        erasure and retention sweeps reach the derived copies too."""
+        with self._lock:
+            self._derivative_stores.append(store)
+
+    def _purge_derivatives(self, records: List[MemoryRecord]) -> Optional[Dict[str, int]]:
+        # None (not an empty dict) when nothing is registered, so legacy
+        # certificates keep their exact shape.
+        if not self._derivative_stores or not records:
+            return None if not self._derivative_stores else {s.name: 0 for s in self._derivative_stores}
+        return {store.name: store.purge_records(records) for store in self._derivative_stores}
 
     def restrict(self, term: str, scope: Scope, *, requester: str = "",
                  source: str = "user", request_text: str = "") -> None:
@@ -1053,14 +1084,22 @@ class GovernedMemory:
         """
         with self._lock:
             now = now or self._now_fn()
-            remove = [
-                r.id
+            expired = [
+                r
                 for r in self.backend.all_records()
                 if (tenant is None or r.scope.tenant == tenant) and self._is_expired(r, now)
             ]
+            remove = [r.id for r in expired]
             removed = self.backend.delete_ids(remove) if remove else 0
             if removed:
-                self.audit.record("retention_cleanup", removed=removed, targeted=len(remove), tenant=tenant or "")
+                derivatives = self._purge_derivatives(expired)
+                if derivatives is None:
+                    self.audit.record("retention_cleanup", removed=removed,
+                                      targeted=len(remove), tenant=tenant or "")
+                else:
+                    self.audit.record("retention_cleanup", removed=removed,
+                                      targeted=len(remove), tenant=tenant or "",
+                                      derivatives=derivatives)
             return removed
 
     def _erasure_tokens(self, record: MemoryRecord) -> set:
