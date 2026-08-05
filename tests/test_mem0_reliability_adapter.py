@@ -125,6 +125,32 @@ class Mem0AdapterTests(unittest.TestCase):
         a = mem.recall_value("shared detail", tenant="tA", entity="x")
         self.assertEqual(a.answer, "alpha")  # tenant tA never sees tB's value
 
+    def test_purpose_metadata_round_trip(self):
+        client = FakeMem0Client(rewrite=True)
+        backend = Mem0ReliabilityBackend(client=client)
+        rec = MemoryRecord(subject="alice", relation="salary", object="120k",
+                           scope=Scope(tenant="t1", subject="alice"), text="alice salary 120k",
+                           source="user", trust=0.95, valid_at=1,
+                           allowed_purposes=("scheduling",), consented_purposes=("research",))
+        backend.write(rec)
+        _, got = backend.candidates("alice salary", "t1")[0]
+        self.assertEqual(got.allowed_purposes, ("scheduling",))
+        self.assertEqual(got.consented_purposes, ("research",))
+
+    def test_missing_metadata_keys_default_empty(self):
+        from cognitive_memory.adapters.mem0_reliability import (
+            _metadata_to_record,
+            _record_to_metadata,
+        )
+
+        rec = MemoryRecord("a", "r", "v", Scope(tenant="t"), text="a r v")
+        meta = _record_to_metadata(rec)
+        meta.pop("allowed_purposes", None)
+        meta.pop("consented_purposes", None)
+        restored = _metadata_to_record(meta, "t")
+        self.assertEqual(restored.allowed_purposes, ())
+        self.assertEqual(restored.consented_purposes, ())
+
     def test_purge_clears_run_tenants(self):
         client = FakeMem0Client()
         backend = Mem0ReliabilityBackend(client=client)

@@ -55,6 +55,37 @@ class SqliteBackendTests(unittest.TestCase):
             self.assertTrue(mem2.recall_value("bob note secret99", tenant="t", entity="bob").abstained)
 
 
+class SqlitePurposeTests(unittest.TestCase):
+    def test_purpose_metadata_survives_restart(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            db = str(Path(tmp) / "mem.db")
+            mem = GovernedMemory(backend=SqliteBackend(db))
+            mem.remember("alice salary 120k", subject="alice", relation="salary",
+                         object="120k", tenant="t", entity="alice",
+                         allowed_purposes=("scheduling",))
+            mem2 = GovernedMemory(backend=SqliteBackend(db))  # restart
+            blocked = mem2.recall_value("alice salary", tenant="t", entity="alice", purpose="hiring")
+            self.assertTrue(blocked.abstained, "purpose allowlist lost across restart")
+            self.assertIn("purpose_mismatch", {reason for _, reason in blocked.excluded})
+            served = mem2.recall_value("alice salary", tenant="t", entity="alice", purpose="scheduling")
+            self.assertFalse(served.abstained)
+
+    def test_legacy_db_defaults_unrestricted(self):
+        backend = SqliteBackend(":memory:")
+        backend.write(MemoryRecord("a", "r", "v", Scope(tenant="t"), text="alpha value"))
+        record = backend.all_records()[0]
+        self.assertEqual(record.allowed_purposes, ())
+        self.assertEqual(record.consented_purposes, ())
+
+    def test_delete_ids_removes_purpose_rows(self):
+        backend = SqliteBackend(":memory:")
+        rid = backend.write(MemoryRecord("a", "r", "v", Scope(tenant="t"), text="alpha value",
+                                         allowed_purposes=("scheduling",)))
+        backend.delete_ids([rid])
+        rows = backend._conn.execute("SELECT COUNT(*) AS n FROM record_purposes").fetchone()
+        self.assertEqual(rows["n"], 0, "orphan purpose row left after delete")
+
+
 class PersistentAuditTests(unittest.TestCase):
     def _clock(self):
         n = {"i": 0}

@@ -43,6 +43,8 @@ def _record_to_metadata(record: MemoryRecord) -> Dict[str, Any]:
         "quarantined": bool(record.quarantined),
         "quarantine_reason": record.quarantine_reason,
         "valid_at": record.valid_at,
+        "allowed_purposes": list(record.allowed_purposes),
+        "consented_purposes": list(record.consented_purposes),
     }
 
 
@@ -66,6 +68,8 @@ def _metadata_to_record(meta: Dict[str, Any], tenant: str) -> Optional[MemoryRec
         quarantine_reason=str(meta.get("quarantine_reason", "")),
         valid_at=int(meta.get("valid_at", 0)),
         id=str(meta.get("engram_id", "")),
+        allowed_purposes=tuple(str(v) for v in (meta.get("allowed_purposes") or ())),
+        consented_purposes=tuple(str(v) for v in (meta.get("consented_purposes") or ())),
     )
 
 

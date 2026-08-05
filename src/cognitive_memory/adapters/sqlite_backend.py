@@ -12,6 +12,7 @@ backend safely serves many tenants.
 
 from __future__ import annotations
 
+import json
 import sqlite3
 from typing import List, Sequence, Tuple
 
@@ -46,7 +47,17 @@ CREATE TABLE IF NOT EXISTS tombstones (
     UNIQUE(kind, tenant, term)
 );
 CREATE INDEX IF NOT EXISTS idx_tombstones_tenant ON tombstones(tenant);
+CREATE TABLE IF NOT EXISTS record_purposes (
+    record_id TEXT PRIMARY KEY,
+    allowed TEXT NOT NULL DEFAULT '[]',
+    consented TEXT NOT NULL DEFAULT '[]'
+);
 """
+
+_SELECT_WITH_PURPOSES = (
+    "SELECT r.*, p.allowed AS p_allowed, p.consented AS p_consented "
+    "FROM records r LEFT JOIN record_purposes p ON p.record_id = r.id"
+)
 
 
 class SqliteBackend:
@@ -88,6 +99,16 @@ class SqliteBackend:
                 record.quarantine_reason, int(record.valid_at), getattr(record, "created_at", "") or "",
             ),
         )
+        # Purpose metadata lives in an additive side table so legacy DB files
+        # keep working untouched (missing row = unrestricted).
+        if record.allowed_purposes or record.consented_purposes:
+            self._conn.execute(
+                "INSERT OR REPLACE INTO record_purposes (record_id, allowed, consented) VALUES (?,?,?)",
+                (record.id, json.dumps(list(record.allowed_purposes)),
+                 json.dumps(list(record.consented_purposes))),
+            )
+        else:
+            self._conn.execute("DELETE FROM record_purposes WHERE record_id = ?", (record.id,))
         self._conn.commit()
         return record.id
 
@@ -97,6 +118,7 @@ class SqliteBackend:
             return 0
         placeholders = ",".join("?" for _ in ids)
         cur = self._conn.execute("DELETE FROM records WHERE id IN (%s)" % placeholders, ids)
+        self._conn.execute("DELETE FROM record_purposes WHERE record_id IN (%s)" % placeholders, ids)
         self._conn.commit()
         return cur.rowcount
 
@@ -114,6 +136,19 @@ class SqliteBackend:
         cur = self._conn.execute("SELECT kind, tenant, term FROM tombstones")
         return [(row["kind"], row["tenant"], row["term"]) for row in cur.fetchall()]
 
+    @staticmethod
+    def _purposes_from(row: sqlite3.Row, key: str) -> Tuple[str, ...]:
+        try:
+            raw = row[key]
+        except (IndexError, KeyError):
+            return ()
+        if not raw:
+            return ()
+        try:
+            return tuple(str(v) for v in json.loads(raw))
+        except (ValueError, TypeError):
+            return ()
+
     def _row_to_record(self, row: sqlite3.Row) -> MemoryRecord:
         record = MemoryRecord(
             subject=row["subject"], relation=row["relation"], object=row["object"],
@@ -121,6 +156,8 @@ class SqliteBackend:
             text=row["text"], source=row["source"], trust=row["trust"],
             provenance=row["provenance"], quarantined=bool(row["quarantined"]),
             quarantine_reason=row["quarantine_reason"], valid_at=int(row["valid_at"]), id=row["id"],
+            allowed_purposes=self._purposes_from(row, "p_allowed"),
+            consented_purposes=self._purposes_from(row, "p_consented"),
         )
         # created_at exists once F4 adds it to MemoryRecord; set if attribute present
         if hasattr(record, "created_at"):
@@ -131,11 +168,11 @@ class SqliteBackend:
         return record
 
     def all_records(self) -> List[MemoryRecord]:
-        cur = self._conn.execute("SELECT * FROM records")
+        cur = self._conn.execute(_SELECT_WITH_PURPOSES)
         return [self._row_to_record(r) for r in cur.fetchall()]
 
     def candidates(self, query: str, tenant: str) -> List[Tuple[float, MemoryRecord]]:
-        cur = self._conn.execute("SELECT * FROM records WHERE tenant = ?", (tenant,))
+        cur = self._conn.execute(_SELECT_WITH_PURPOSES + " WHERE r.tenant = ?", (tenant,))
         records = [self._row_to_record(r) for r in cur.fetchall()]
         return blended_bm25_candidates(records, query, k1=self.k1, b=self.b, norm_k=self.norm_k)
 
