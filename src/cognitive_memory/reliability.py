@@ -366,6 +366,10 @@ class GovernedMemory:
         from .audit import AuditLog
 
         self.audit = AuditLog(persist_path=audit_path)
+        # Erasure state must survive the process: rebuild the read-side
+        # registries from the backend's durable tombstones and the persisted
+        # audit trail before the first recall can run.
+        self._load_tombstone_state()
 
     # -- ergonomic product API ---------------------------------------------
     # Embed the layer in an agent or app with a few lines; the benchmark drives
@@ -482,8 +486,8 @@ class GovernedMemory:
     def forget(self, term: str, scope: Scope) -> int:
         with self._lock:
             term_tokens = tokenize(term)
-            if term_tokens:
-                self.erased_terms.setdefault(scope.tenant, []).append(term_tokens)
+            self._add_tombstone(self.erased_terms, scope.tenant, term_tokens)
+            self._persist_tombstone("erased", scope.tenant, term, term_tokens)
             remove: List[str] = []
             for record in self.backend.all_records():
                 if record.scope.tenant != scope.tenant:
@@ -497,9 +501,71 @@ class GovernedMemory:
     def restrict(self, term: str, scope: Scope) -> None:
         with self._lock:
             term_tokens = tokenize(term)
-            if term_tokens:
-                self.restricted_terms.setdefault(scope.tenant, []).append(term_tokens)
+            self._add_tombstone(self.restricted_terms, scope.tenant, term_tokens)
+            self._persist_tombstone("restricted", scope.tenant, term, term_tokens)
             self.audit.record("restrict", term=term, tenant=scope.tenant)
+
+    def _add_tombstone(self, registry: Dict[str, List[set]], tenant: str, term_tokens: set) -> None:
+        if not term_tokens:
+            return
+        entries = registry.setdefault(tenant, [])
+        if term_tokens not in entries:
+            entries.append(term_tokens)
+
+    def _persist_tombstone(self, kind: str, tenant: str, term: str, term_tokens: set) -> None:
+        # Feature-detected: only durable backends (sqlite) carry a tombstones
+        # table; in-memory backends rely on the persisted audit trail instead.
+        recorder = getattr(self.backend, "record_tombstone", None)
+        if term_tokens and callable(recorder):
+            recorder(kind, tenant, term, self._now_fn().isoformat())
+
+    def _load_tombstone_state(self) -> None:
+        """Rebuild erased/restricted registries after a restart.
+
+        Two sources, union with dedupe: the backend's durable tombstones table
+        (when it has one) and the persisted audit log's erasure/restrict
+        entries. Either alone suffices: a store restored from a pre-erasure
+        backup is covered by the audit log, a lost audit file by the store's
+        own table.
+        """
+        lister = getattr(self.backend, "list_tombstones", None)
+        if callable(lister):
+            for kind, tenant, term in lister():
+                registry = self.erased_terms if kind == "erased" else self.restricted_terms
+                self._add_tombstone(registry, tenant, tokenize(term))
+        for entry in self.audit.entries():
+            if entry.action == "erasure":
+                tenant = str(entry.details.get("tenant", ""))
+                self._add_tombstone(self.erased_terms, tenant, tokenize(str(entry.details.get("term", ""))))
+            elif entry.action == "restrict":
+                tenant = str(entry.details.get("tenant", ""))
+                self._add_tombstone(self.restricted_terms, tenant, tokenize(str(entry.details.get("term", ""))))
+
+    def reconcile_tombstones(self, tenant: Optional[str] = None) -> int:
+        """Re-apply erasure tombstones to the current store contents.
+
+        The explicit repair step after a store restore: any record matching an
+        erased term (which read-side blocking already withholds) is physically
+        deleted again. Deliberately not run from the constructor; destructive
+        deletes belong in an explicit ops call. Returns how many records the
+        backend confirmed deleted.
+        """
+        with self._lock:
+            removed_total = 0
+            for reg_tenant, term_sets in self.erased_terms.items():
+                if tenant is not None and reg_tenant != tenant:
+                    continue
+                remove = [
+                    record.id
+                    for record in self.backend.all_records()
+                    if record.scope.tenant == reg_tenant
+                    and any(self._term_hits(tokens, record) for tokens in term_sets)
+                ]
+                if remove:
+                    removed = self.backend.delete_ids(remove)
+                    removed_total += removed
+                    self.audit.record("tombstone_reconcile", tenant=reg_tenant, removed=removed, targeted=len(remove))
+            return removed_total
 
     def export_audit(self, as_json: bool = False):
         """Return the tamper-evident governance audit trail."""

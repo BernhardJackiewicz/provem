@@ -38,6 +38,14 @@ CREATE TABLE IF NOT EXISTS records (
     created_at TEXT NOT NULL DEFAULT ''
 );
 CREATE INDEX IF NOT EXISTS idx_records_tenant ON records(tenant);
+CREATE TABLE IF NOT EXISTS tombstones (
+    kind TEXT NOT NULL,
+    tenant TEXT NOT NULL,
+    term TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT '',
+    UNIQUE(kind, tenant, term)
+);
+CREATE INDEX IF NOT EXISTS idx_tombstones_tenant ON tombstones(tenant);
 """
 
 
@@ -91,6 +99,20 @@ class SqliteBackend:
         cur = self._conn.execute("DELETE FROM records WHERE id IN (%s)" % placeholders, ids)
         self._conn.commit()
         return cur.rowcount
+
+    def record_tombstone(self, kind: str, tenant: str, term: str, created_at: str = "") -> None:
+        """Persist an erasure/restriction tombstone in the same DB file, so a
+        backup of the store carries its own deletion state (a restore cannot
+        silently roll back erasures)."""
+        self._conn.execute(
+            "INSERT OR IGNORE INTO tombstones (kind, tenant, term, created_at) VALUES (?,?,?,?)",
+            (kind, tenant, term, created_at),
+        )
+        self._conn.commit()
+
+    def list_tombstones(self) -> List[Tuple[str, str, str]]:
+        cur = self._conn.execute("SELECT kind, tenant, term FROM tombstones")
+        return [(row["kind"], row["tenant"], row["term"]) for row in cur.fetchall()]
 
     def _row_to_record(self, row: sqlite3.Row) -> MemoryRecord:
         record = MemoryRecord(
