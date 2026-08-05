@@ -50,7 +50,7 @@ put in front of any memory store (see ``docs/agentic_reliability_benchmark.md``)
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 import random
 from typing import Any, Callable, Dict, List, Optional, Protocol, Sequence, Tuple, runtime_checkable
 
@@ -397,6 +397,12 @@ class GovernedMemory:
         self.revoked_consent: Dict[str, List[Tuple[set, str]]] = {}
         self.pending_revocations: List[PendingRevocation] = []
         self._revocation_counter = 0
+        # short-lived scoped views (capabilities): handle -> binding
+        self._views: Dict[str, Dict[str, Any]] = {}
+        self._view_counter = 0
+        # governance epoch per tenant ("*" = policy-wide): any bump revokes
+        # outstanding views for that tenant (fail-safe over-invalidation)
+        self._governance_epoch: Dict[str, int] = {}
         from .audit import AuditLog
 
         self.audit = AuditLog(persist_path=audit_path)
@@ -443,13 +449,15 @@ class GovernedMemory:
         )
 
     def recall_value(self, query: str, *, tenant: str = "default", entity: str = "",
-                     purpose: Optional[str] = None) -> RecallResult:
+                     purpose: Optional[str] = None, session: str = "") -> RecallResult:
         """Governed recall for an entity: returns a value or a safe abstention.
 
         ``purpose`` is the declared, untrusted purpose of use; policy decides
-        what it may be served. None means no purpose gating.
+        what it may be served. None means no purpose gating. ``session`` may
+        carry a view handle from issue_view; the view's binding then gates
+        the read.
         """
-        return self.recall(QueryTurn(query, Scope(tenant, entity), None, purpose=purpose))
+        return self.recall(QueryTurn(query, Scope(tenant, entity, session), None, purpose=purpose))
 
     # -- write side ---------------------------------------------------------
 
@@ -553,6 +561,7 @@ class GovernedMemory:
             return self._execute_forget(term, scope, requester, source)
 
     def _execute_forget(self, term: str, scope: Scope, requester: str = "", source: str = "user") -> int:
+        self._bump_epoch(scope.tenant)
         term_tokens = tokenize(term)
         self._add_tombstone(self.erased_terms, scope.tenant, term_tokens)
         self._persist_tombstone("erased", scope.tenant, term, term_tokens)
@@ -577,6 +586,7 @@ class GovernedMemory:
             self._execute_restrict(term, scope, requester)
 
     def _execute_restrict(self, term: str, scope: Scope, requester: str = "") -> None:
+        self._bump_epoch(scope.tenant)
         term_tokens = tokenize(term)
         self._add_tombstone(self.restricted_terms, scope.tenant, term_tokens)
         self._persist_tombstone("restricted", scope.tenant, term, term_tokens)
@@ -601,6 +611,7 @@ class GovernedMemory:
                 return
             term_tokens = tokenize(term)
             self._add_consent_revocation(scope.tenant, term_tokens, purpose)
+            self._bump_epoch(scope.tenant)
             self.audit.record("consent_revocation", term=term, tenant=scope.tenant, purpose=purpose)
 
     def _add_consent_revocation(self, tenant: str, term_tokens: set, purpose: str) -> None:
@@ -623,7 +634,61 @@ class GovernedMemory:
             self.policy = resolve_policy(policy)
             self.relevance_floor = self.policy.relevance_floor
             self.trust_margin = self.policy.trust_margin
+            self._bump_epoch("*")
             self.audit.record("policy_update", name=self.policy.name)
+
+    # -- scoped views (capabilities) -----------------------------------------
+
+    def _bump_epoch(self, tenant: str) -> None:
+        self._governance_epoch[tenant] = self._governance_epoch.get(tenant, 0) + 1
+
+    def _current_epoch(self, tenant: str) -> int:
+        return self._governance_epoch.get(tenant, 0) + self._governance_epoch.get("*", 0)
+
+    def _view_status(self, view: Dict[str, Any]) -> str:
+        if self._now_fn() >= view["expires_at"]:
+            return "expired"
+        if self._current_epoch(view["tenant"]) != view["epoch"]:
+            return "revoked"
+        return "valid"
+
+    def issue_view(self, *, tenant: str, subject: str = "", purpose: str = "",
+                   ttl_seconds: int = 600) -> str:
+        """Mint a short-lived, scoped memory view (a capability).
+
+        The handle binds (tenant, subject, purpose) with a TTL. Any later
+        governance change in the tenant (forget, restrict, consent
+        withdrawal, policy swap) revokes it: tenant-coarse re-validation,
+        deliberately fail-safe over-invalidation instead of per-key
+        precision. recall presents the handle via Scope.session; a tool
+        layer re-checks it with validate_view before acting.
+        """
+        with self._lock:
+            self._view_counter += 1
+            handle = "vw%d" % self._view_counter
+            self._views[handle] = {
+                "tenant": tenant, "subject": subject, "purpose": purpose,
+                "expires_at": self._now_fn() + timedelta(seconds=ttl_seconds),
+                "epoch": self._current_epoch(tenant),
+            }
+            self.audit.record("view_issued", handle=handle, tenant=tenant,
+                              subject=subject, purpose=purpose, ttl_seconds=ttl_seconds)
+            return handle
+
+    def validate_view(self, handle: str) -> Dict[str, str]:
+        """Re-check a view handle: valid | expired | revoked | unknown."""
+        with self._lock:
+            view = self._views.get(handle)
+            if view is None:
+                self.audit.record("view_denied", handle=handle, status="unknown")
+                return {"status": "unknown"}
+            status = self._view_status(view)
+            if status == "valid":
+                self.audit.record("view_validated", handle=handle, tenant=view["tenant"])
+            else:
+                self.audit.record("view_denied", handle=handle, status=status, tenant=view["tenant"])
+            return {"status": status, "tenant": view["tenant"],
+                    "subject": view["subject"], "purpose": view["purpose"]}
 
     # -- revocation authority (strict mode) ---------------------------------
 
@@ -889,6 +954,30 @@ class GovernedMemory:
             return self._recall_locked(turn)
 
     def _recall_locked(self, turn: QueryTurn) -> RecallResult:
+        # View-bound recall: a session naming a known view handle must present
+        # a valid, matching capability. Unknown session strings keep their
+        # historical no-op behaviour (both adapters persist Scope.session).
+        session = turn.scope.session
+        if session and session in self._views:
+            view = self._views[session]
+            status = self._view_status(view)
+            if status != "valid":
+                self.audit.record("view_denied", handle=session, status=status,
+                                  tenant=turn.scope.tenant)
+                return RecallResult(answer=None, abstained=True, reason="view_%s" % status)
+            scope_mismatch = (
+                view["tenant"] != turn.scope.tenant
+                or (view["subject"] and turn.scope.subject and view["subject"] != turn.scope.subject)
+                or (turn.purpose is not None and view["purpose"] and turn.purpose != view["purpose"])
+            )
+            if scope_mismatch:
+                self.audit.record("view_denied", handle=session, status="scope_mismatch",
+                                  tenant=turn.scope.tenant)
+                return RecallResult(answer=None, abstained=True, reason="view_scope_mismatch")
+            if turn.purpose is None and view["purpose"]:
+                # the view's purpose binds the read
+                turn = QueryTurn(turn.query, turn.scope, turn.expected,
+                                 turn.failure_class, turn.trigger, view["purpose"])
         scored = self.backend.candidates(turn.query, turn.scope.tenant)
         ops = len(scored)
         excluded: List[Tuple[str, str]] = []
