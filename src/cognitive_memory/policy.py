@@ -28,6 +28,7 @@ class PolicyStore:
         self.deleted_episode_ids: Set[str] = set()
         self.do_not_use_memory_ids: Set[str] = set()
         self.do_not_use_terms: Set[str] = set()
+        self.do_not_use_term_texts: List[str] = []
         self.legal_hold_memory_ids: Set[str] = set()
         # consent withdrawals: (normalized term, purpose); "" = all purposes
         self.revoked_consent_terms: Set[Tuple[str, str]] = set()
@@ -55,6 +56,10 @@ class PolicyStore:
         normalized = " ".join(sorted(tokenize(term))) if tokenize(term) else term.lower().strip()
         if normalized:
             self.do_not_use_terms.add(normalized)
+            # keep the raw surface form too: normalization destroys it, and a
+            # semantic matcher has nothing to compare against sorted tokens
+            if term not in self.do_not_use_term_texts:
+                self.do_not_use_term_texts.append(term)
             self.audit_log.append("do_not_use_term:%s" % normalized)
 
     def mark_memory_do_not_use(self, memory_id: str) -> None:
@@ -231,6 +236,7 @@ class PolicyStore:
             "deleted_episode_ids": sorted(self.deleted_episode_ids),
             "do_not_use_memory_ids": sorted(self.do_not_use_memory_ids),
             "do_not_use_terms": sorted(self.do_not_use_terms),
+            "do_not_use_term_texts": list(self.do_not_use_term_texts),
             "legal_hold_memory_ids": sorted(self.legal_hold_memory_ids),
             "revoked_consent_terms": sorted(list(pair) for pair in self.revoked_consent_terms),
             "enforce_channel_sensitivity": self.enforce_channel_sensitivity,
@@ -243,6 +249,7 @@ class PolicyStore:
         policy.deleted_episode_ids = set(data.get("deleted_episode_ids", []))
         policy.do_not_use_memory_ids = set(data.get("do_not_use_memory_ids", []))
         policy.do_not_use_terms = set(data.get("do_not_use_terms", []))
+        policy.do_not_use_term_texts = list(data.get("do_not_use_term_texts", []))
         policy.legal_hold_memory_ids = set(data.get("legal_hold_memory_ids", []))
         policy.revoked_consent_terms = {
             (str(pair[0]), str(pair[1])) for pair in data.get("revoked_consent_terms", [])

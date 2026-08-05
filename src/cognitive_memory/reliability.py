@@ -431,6 +431,9 @@ class GovernedMemory:
         # GovernedMemory instance is shared across tenants.
         self.erased_terms: Dict[str, List[set]] = {}
         self.restricted_terms: Dict[str, List[set]] = {}
+        # raw erased term strings, kept where enforcement reads (a semantic
+        # matcher has nothing to compare against token sets)
+        self.erased_term_texts: Dict[str, List[str]] = {}
         # consent withdrawals: (term token-set, purpose); "" = all purposes
         self.revoked_consent: Dict[str, List[Tuple[set, str]]] = {}
         self.pending_revocations: List[PendingRevocation] = []
@@ -611,6 +614,7 @@ class GovernedMemory:
         self._bump_epoch(scope.tenant)
         term_tokens = tokenize(term)
         self._add_tombstone(self.erased_terms, scope.tenant, term_tokens)
+        self._add_erased_text(scope.tenant, term, term_tokens)
         self._persist_tombstone("erased", scope.tenant, term, term_tokens)
         matched: List[MemoryRecord] = []
         for record in self.backend.all_records():
@@ -956,6 +960,13 @@ class GovernedMemory:
         if term_tokens not in entries:
             entries.append(term_tokens)
 
+    def _add_erased_text(self, tenant: str, term: str, term_tokens: set) -> None:
+        if not term_tokens or not term:
+            return
+        texts = self.erased_term_texts.setdefault(tenant, [])
+        if term not in texts:
+            texts.append(term)
+
     def _persist_tombstone(self, kind: str, tenant: str, term: str, term_tokens: set) -> None:
         # Feature-detected: only durable backends (sqlite) carry a tombstones
         # table; in-memory backends rely on the persisted audit trail instead.
@@ -977,10 +988,14 @@ class GovernedMemory:
             for kind, tenant, term in lister():
                 registry = self.erased_terms if kind == "erased" else self.restricted_terms
                 self._add_tombstone(registry, tenant, tokenize(term))
+                if kind == "erased":
+                    self._add_erased_text(tenant, term, tokenize(term))
         for entry in self.audit.entries():
             if entry.action == "erasure":
                 tenant = str(entry.details.get("tenant", ""))
-                self._add_tombstone(self.erased_terms, tenant, tokenize(str(entry.details.get("term", ""))))
+                term = str(entry.details.get("term", ""))
+                self._add_tombstone(self.erased_terms, tenant, tokenize(term))
+                self._add_erased_text(tenant, term, tokenize(term))
             elif entry.action == "restrict":
                 tenant = str(entry.details.get("tenant", ""))
                 self._add_tombstone(self.restricted_terms, tenant, tokenize(str(entry.details.get("term", ""))))
