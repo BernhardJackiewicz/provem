@@ -64,6 +64,27 @@ class PolicyStore:
         for episode_id in evidence_ids:
             self.mark_episode_deleted(episode_id)
 
+    def merge_from(self, other: "PolicyStore") -> int:
+        """Union another policy's tombstone state into this one.
+
+        Restore semantics: loading an older snapshot silently rolls back
+        tombstones created after it was taken. The supported repair is to
+        load the snapshot, then merge_from(current_policy) so no erasure or
+        do-not-use state is lost. Idempotent. Returns how many entries were
+        newly added.
+        """
+        added = 0
+        for attr in ("deleted_episode_ids", "do_not_use_memory_ids",
+                     "do_not_use_terms", "legal_hold_memory_ids"):
+            mine: Set[str] = getattr(self, attr)
+            theirs: Set[str] = getattr(other, attr)
+            new = theirs - mine
+            mine |= new
+            added += len(new)
+        if added:
+            self.audit_log.append("merged_tombstones:%d" % added)
+        return added
+
     def exclusion_reason(self, item: object, request: RetrievalRequest) -> Optional[str]:
         if isinstance(item, TemporalFact):
             return self._fact_exclusion_reason(item, request)

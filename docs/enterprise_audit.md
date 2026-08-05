@@ -601,3 +601,23 @@ test-driven (commits C1–C6, `tests/test_bugfixes.py`), 475 tests green, headli
 - **Impact:** If an error occurs, PII in memory values may be leaked in error messages logged by clients or stored in error-tracking systems (Sentry, DataDog). Compliance violations (GDPR, HIPAA). A password accidentally stored as a memory object name could appear in exception messages.
 - **Verify / falsify:** Call remember() with text containing 'SSN 123-45-6789'. Trigger an error (e.g., invalid trust value). Observe the error message returned; verify it may contain the SSN. Check tool result serialization; observe that text and subject fields are not masked.
 
+
+## Restore semantics (tombstones vs. backups)
+
+Restoring a store from a backup taken before an erasure is the classic quiet
+rollback of deletion state. The supported patterns, by pipeline:
+
+- **Governed stack (GovernedMemory + SqliteBackend):** erasure/restriction
+  tombstones are persisted in a `tombstones` table inside the same DB file, so
+  a backup of the store carries its own deletion state. Independently, the
+  persisted audit log's erasure certificates and restrict entries are replayed
+  into the read-side registries at startup. After restoring a DB from a
+  pre-erasure backup, read-side blocking holds immediately (via audit replay);
+  run `GovernedMemory.reconcile_tombstones()` as an explicit, audited ops step
+  to physically re-delete resurrected rows.
+- **Prototype stack (MemoryController + JSONL snapshots):** `PolicyStore`
+  tombstones are serialized inside the snapshot. Restoring an older snapshot
+  rolls back tombstones created after it was taken. The supported repair is
+  load-then-merge: `loaded.policy.merge_from(current_policy)` unions the
+  deletion/do-not-use/legal-hold state (idempotent, audited). There is
+  deliberately no automatic migration.

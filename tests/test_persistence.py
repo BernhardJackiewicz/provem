@@ -91,6 +91,41 @@ class PersistenceTests(unittest.TestCase):
         self.assertEqual(salary_result.answer_text(), "ABSTAIN")
         self.assertEqual(salary_result.abstain_reason, "forbidden_memory")
 
+    def test_policy_merge_preserves_tombstones_on_older_snapshot_restore(self):
+        # Restoring an older snapshot silently rolls back later tombstones;
+        # the supported repair is load-then-merge with the live policy state.
+        from cognitive_memory.policy import PolicyStore
+
+        older = PolicyStore()
+        older.apply_deletion_term("term_a")
+        older.mark_memory_do_not_use("m1")
+        live = PolicyStore()
+        live.apply_deletion_term("term_b")
+        live.mark_episode_deleted("ep9")
+        live.legal_hold_memory_ids.add("m7")
+
+        older.merge_from(live)
+        self.assertTrue(older.matches_do_not_use_term("term_a"))
+        self.assertTrue(older.matches_do_not_use_term("term_b"))
+        self.assertIn("m1", older.do_not_use_memory_ids)
+        self.assertIn("ep9", older.deleted_episode_ids)
+        self.assertIn("m7", older.legal_hold_memory_ids)
+
+    def test_merge_from_is_idempotent(self):
+        from cognitive_memory.policy import PolicyStore
+
+        older = PolicyStore()
+        older.apply_deletion_term("term_a")
+        live = PolicyStore()
+        live.apply_deletion_term("term_b")
+        older.merge_from(live)
+        snapshot = (set(older.do_not_use_terms), set(older.do_not_use_memory_ids),
+                    set(older.deleted_episode_ids), set(older.legal_hold_memory_ids))
+        older.merge_from(live)
+        again = (set(older.do_not_use_terms), set(older.do_not_use_memory_ids),
+                 set(older.deleted_episode_ids), set(older.legal_hold_memory_ids))
+        self.assertEqual(snapshot, again)
+
     def test_source_trust_and_source_conflict_survive_reload(self):
         controller = MemoryController()
         controller.ingest_episode(Episode("FACT client_nova|budget|130k", source="tool", timestamp=dt(1)))
