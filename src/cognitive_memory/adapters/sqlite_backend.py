@@ -171,6 +171,14 @@ class SqliteBackend:
         cur = self._conn.execute(_SELECT_WITH_PURPOSES)
         return [self._row_to_record(r) for r in cur.fetchall()]
 
+    def get_by_ids(self, ids: Sequence[str]) -> List[MemoryRecord]:
+        ids = list(ids)
+        if not ids:
+            return []
+        placeholders = ",".join("?" for _ in ids)
+        cur = self._conn.execute(_SELECT_WITH_PURPOSES + " WHERE r.id IN (%s)" % placeholders, ids)
+        return [self._row_to_record(r) for r in cur.fetchall()]
+
     def candidates(self, query: str, tenant: str) -> List[Tuple[float, MemoryRecord]]:
         cur = self._conn.execute(_SELECT_WITH_PURPOSES + " WHERE r.tenant = ?", (tenant,))
         records = [self._row_to_record(r) for r in cur.fetchall()]

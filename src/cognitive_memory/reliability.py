@@ -113,6 +113,22 @@ class MemoryRecord:
             self.text = "%s %s %s" % (self.subject, self.relation, self.object)
 
 
+@dataclass(frozen=True)
+class CandidateInfo:
+    """Phase-1 view of a retrieval candidate: policy metadata, no content."""
+
+    id: str
+    score: float
+    eligible: bool
+    reason: str                  # exclusion reason when not eligible, else ""
+    source: str
+    trust: float
+    provenance: str
+    tenant: str
+    subject: str
+    quarantined: bool
+
+
 @dataclass
 class RecallResult:
     answer: Optional[str]                       # object value, or None if abstained
@@ -148,6 +164,8 @@ class MemoryBackend(Protocol):
 
     def candidates(self, query: str, tenant: str) -> List[Tuple[float, "MemoryRecord"]]: ...
 
+    def get_by_ids(self, ids: Sequence[str]) -> List["MemoryRecord"]: ...
+
 
 class NaiveBackend:
     """A plain similarity memory: store everything, return best lexical matches.
@@ -176,6 +194,10 @@ class NaiveBackend:
 
     def all_records(self) -> List[MemoryRecord]:
         return list(self._records)
+
+    def get_by_ids(self, ids: Sequence[str]) -> List[MemoryRecord]:
+        idset = set(ids)
+        return [r for r in self._records if r.id in idset]
 
     def candidates(self, query: str, tenant: str) -> List[Tuple[float, MemoryRecord]]:
         scored: List[Tuple[float, MemoryRecord]] = []
@@ -222,6 +244,10 @@ class Bm25Backend:
 
     def all_records(self) -> List[MemoryRecord]:
         return list(self._records)
+
+    def get_by_ids(self, ids: Sequence[str]) -> List[MemoryRecord]:
+        idset = set(ids)
+        return [r for r in self._records if r.id in idset]
 
     def candidates(self, query: str, tenant: str) -> List[Tuple[float, MemoryRecord]]:
         from .ranking import blended_bm25_candidates
@@ -636,6 +662,76 @@ class GovernedMemory:
             self.trust_margin = self.policy.trust_margin
             self._bump_epoch("*")
             self.audit.record("policy_update", name=self.policy.name)
+
+    # -- two-phase retrieval -------------------------------------------------
+
+    def recall_candidates(self, query: str, *, tenant: str = "default", entity: str = "",
+                          purpose: Optional[str] = None) -> List[CandidateInfo]:
+        """Phase 1: candidate ids plus policy metadata, no content.
+
+        The caller sees which records exist, how they score and why any are
+        blocked, without any text/object reaching the model (least-privilege
+        preview). Content is only handed out by release(), which re-evaluates
+        governance at that moment.
+        """
+        with self._lock:
+            turn = QueryTurn(query, Scope(tenant, entity), None, purpose=purpose)
+            retention_now = self._now_fn() if self.policy.enforce_retention_on_recall else None
+            out: List[CandidateInfo] = []
+            for score, record in self.backend.candidates(query, tenant):
+                reason = self._exclusion_reason(record, turn)
+                if not reason and retention_now is not None and self._is_expired(record, retention_now):
+                    reason = "retention_expired"
+                out.append(CandidateInfo(
+                    id=record.id, score=score, eligible=not reason, reason=reason,
+                    source=record.source, trust=record.trust, provenance=record.provenance,
+                    tenant=record.scope.tenant, subject=record.scope.subject or record.subject,
+                    quarantined=record.quarantined,
+                ))
+            return out
+
+    def release(self, ids: Sequence[str], *, tenant: str = "default", entity: str = "",
+                purpose: Optional[str] = None) -> List[Dict[str, Any]]:
+        """Phase 2: hand out content for candidate ids, re-evaluating
+        governance NOW under the declared purpose.
+
+        A consent withdrawal, erasure or restriction between the phases gates
+        the release; a stale phase-1 eligibility is worthless by design.
+        """
+        with self._lock:
+            fetch = getattr(self.backend, "get_by_ids", None)
+            if callable(fetch):
+                found = {record.id: record for record in fetch(list(ids))}
+            else:
+                # legacy external backend without get_by_ids
+                wanted = set(ids)
+                found = {r.id: r for r in self.backend.all_records() if r.id in wanted}
+            turn = QueryTurn("", Scope(tenant, entity), None, purpose=purpose)
+            retention_now = self._now_fn()
+            results: List[Dict[str, Any]] = []
+            for record_id in ids:
+                record = found.get(record_id)
+                if record is None or record.scope.tenant != tenant:
+                    results.append({"id": record_id, "served": False, "reason": "unknown_id"})
+                    continue
+                reason = self._exclusion_reason(record, turn)
+                if not reason and self._is_expired(record, retention_now):
+                    reason = "retention_expired"
+                if reason:
+                    results.append({"id": record_id, "served": False, "reason": reason})
+                    continue
+                results.append({
+                    "id": record_id, "served": True, "reason": "",
+                    "subject": record.subject, "relation": record.relation,
+                    "object": record.object, "text": record.text,
+                    "provenance": record.provenance,
+                })
+            self.audit.record(
+                "release_content", tenant=tenant, purpose=purpose or "",
+                served_ids=[r["id"] for r in results if r["served"]],
+                refused_ids=[r["id"] for r in results if not r["served"]],
+            )
+            return results
 
     # -- scoped views (capabilities) -----------------------------------------
 

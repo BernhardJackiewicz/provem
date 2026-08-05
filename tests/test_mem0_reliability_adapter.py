@@ -151,6 +151,13 @@ class Mem0AdapterTests(unittest.TestCase):
         self.assertEqual(restored.allowed_purposes, ())
         self.assertEqual(restored.consented_purposes, ())
 
+    def test_get_by_ids_fetches_live_records(self):
+        backend = Mem0ReliabilityBackend(client=FakeMem0Client())
+        rid = backend.write(MemoryRecord("a", "r", "1", Scope(tenant="t1"), text="a r 1"))
+        backend.write(MemoryRecord("b", "r", "2", Scope(tenant="t1"), text="b r 2"))
+        got = backend.get_by_ids([rid, "missing_id"])
+        self.assertEqual([r.id for r in got], [rid])
+
     def test_purge_clears_run_tenants(self):
         client = FakeMem0Client()
         backend = Mem0ReliabilityBackend(client=client)

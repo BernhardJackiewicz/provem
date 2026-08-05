@@ -35,6 +35,34 @@ class RetrievalPlanner:
         self.store = store
         self.policy = policy
 
+    def retrieve_candidates(self, request: RetrievalRequest) -> RetrievalResult:
+        """Phase-1 projection: ids, scores and exclusion reasons, no claims.
+
+        The full retrieve() runs (policy first, content never bypasses it);
+        the returned copy redacts claim text so a caller can triage
+        candidates without content reaching the model.
+        """
+        full = self.retrieve(request)
+        redacted = RetrievalResult(
+            selected_memories=[
+                SelectedMemory(id=m.id, memory_type=m.memory_type, claim="",
+                               score=m.score, confidence=m.confidence,
+                               evidence=list(m.evidence))
+                for m in full.selected_memories
+            ],
+            excluded_memories=[
+                ExcludedMemory(id=m.id, reason=m.reason, memory_type=m.memory_type, claim="")
+                for m in full.excluded_memories
+            ],
+            provenance=list(full.provenance),
+            confidence=full.confidence,
+            abstain_recommended=full.abstain_recommended,
+            abstain_reason=full.abstain_reason,
+            retrieval_trace=full.retrieval_trace,
+            metadata=dict(full.metadata, phase="candidates"),
+        )
+        return redacted
+
     def retrieve(self, request: RetrievalRequest) -> RetrievalResult:
         selected: List[Tuple[float, SelectedMemory, object]] = []
         eligible_facts: List[TemporalFact] = []

@@ -165,6 +165,11 @@ class Mem0ReliabilityBackend:
                     records.append(record)
         return records
 
+    def get_by_ids(self, ids: Sequence[str]) -> List[MemoryRecord]:
+        # No efficient multi-get in the shim; reconstruct from metadata.
+        idset = set(ids)
+        return [r for r in self.all_records() if r.id in idset]
+
     def candidates(self, query: str, tenant: str) -> List[Tuple[float, MemoryRecord]]:
         user_id = self._user_id(tenant)
         raws = self._search(query, user_id)
