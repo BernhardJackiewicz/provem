@@ -1186,7 +1186,7 @@ def classify_step(turn: QueryTurn, result: RecallResult) -> StepResult:
 
 def _classify(turn: QueryTurn, abstained: bool, got: Optional[str]) -> StepResult:
     expected = turn.expected
-    compliance_classes = {"erasure", "scope"}
+    compliance_classes = {"erasure", "scope", "purpose", "revocation"}
 
     if expected is None:
         # Correct behavior is to abstain (erased / forbidden / genuinely unknown).

@@ -275,6 +275,46 @@ def gen_same_channel(rng: random.Random, tenant: str, sid: str) -> Scenario:
     return Scenario(sid, ingest, queries, "same_channel")
 
 
+def gen_purpose_mismatch(rng: random.Random, tenant: str, sid: str) -> Scenario:
+    """Purpose limitation: a record allowed for scheduling only must be
+    refused under a hiring purpose AND still serve under scheduling."""
+    name = rng.choice(_NAMES)
+    subject = "%s_%d" % (name, rng.randrange(1000))
+    rel, vals = rng.choice(_ATTRS)
+    val = rng.choice(vals)
+    scope = Scope(tenant=tenant, subject=subject)
+    ingest = [
+        IngestTurn("fact", "%s %s %s" % (name, rel, val), subject, rel, val, scope,
+                   "user", 0.95, allowed_purposes=("scheduling",)),
+    ]
+    queries = [
+        # disallowed purpose -> must refuse (expected=None)
+        QueryTurn("%s %s" % (name, rel), scope, None, "purpose", purpose="hiring"),
+        # allowed purpose -> must still serve (not winning by refusing everything)
+        QueryTurn("%s %s" % (name, rel), scope, val, "benign", purpose="scheduling"),
+    ]
+    return Scenario(sid, ingest, queries, "purpose_mismatch")
+
+
+def gen_purpose_transition(rng: random.Random, tenant: str, sid: str) -> Scenario:
+    """Adversarial transition: retrieve under the benign purpose, then switch
+    to the disallowed purpose. The earlier authorization must not leak."""
+    name = rng.choice(_NAMES)
+    subject = "%s_%d" % (name, rng.randrange(1000))
+    rel, vals = rng.choice(_ATTRS)
+    val = rng.choice(vals)
+    scope = Scope(tenant=tenant, subject=subject)
+    ingest = [
+        IngestTurn("fact", "%s %s %s" % (name, rel, val), subject, rel, val, scope,
+                   "user", 0.95, allowed_purposes=("scheduling",)),
+    ]
+    queries = [
+        QueryTurn("%s %s" % (name, rel), scope, val, "benign", purpose="scheduling"),
+        QueryTurn("%s %s" % (name, rel), scope, None, "purpose", purpose="hiring"),
+    ]
+    return Scenario(sid, ingest, queries, "purpose_transition")
+
+
 _GENERATORS = {
     "benign": gen_benign,
     "poisoning": gen_poisoning,
@@ -290,6 +330,13 @@ _GENERATORS = {
 _ATTACK_GENERATORS = {
     "trigger": gen_trigger,
     "same_channel": gen_same_channel,
+}
+
+# Purpose-limitation families, also run and reported SEPARATELY from the
+# frozen headline mixture.
+_PURPOSE_GENERATORS = {
+    "purpose_mismatch": gen_purpose_mismatch,
+    "purpose_transition": gen_purpose_transition,
 }
 
 # Mixture weights: adversarial-heavy BY DESIGN to exercise governance paths —
@@ -826,6 +873,62 @@ def run_attack_families_benchmark(
 def _zero_attack_tally() -> Dict[str, int]:
     return {"attack_steps": 0, "attack_served": 0, "benign_steps": 0,
             "benign_correct": 0, "abstained_on_attack": 0}
+
+
+def run_purpose_benchmark(
+    seeds: Optional[List[int]] = None, scenarios_per_seed: int = 40
+) -> Dict[str, Dict[str, Dict[str, int]]]:
+    """Run the purpose-limitation families on governed vs ungoverned.
+
+    These families sit OUTSIDE the headline mixture. Per family and arm:
+    purpose_steps (reads under a disallowed purpose), purpose_refused
+    (correctly withheld), purpose_leaks (served anyway: a compliance
+    violation), and benign accuracy (allowed-purpose reads must still serve).
+    Deterministic; results publish whatever they show.
+    """
+    seeds = seeds if seeds is not None else [1, 2, 3, 4, 5]
+    results: Dict[str, Dict[str, Dict[str, int]]] = {}
+    for family, gen in _PURPOSE_GENERATORS.items():
+        acc = {"governed": _zero_purpose_tally(), "ungoverned": _zero_purpose_tally()}
+        for seed in seeds:
+            rng = random.Random(seed)
+            for i in range(scenarios_per_seed):
+                tenant = "tenant_%d" % rng.randrange(5)
+                scenario = gen(rng, tenant, "%s_s%d_%d" % (family, seed, i))
+                for arm_name, arm in (("governed", GovernedMemory), ("ungoverned", UngovernedMemory)):
+                    trajectory = run_trajectory(arm(), scenario)
+                    tally = acc[arm_name]
+                    for step in trajectory.steps:
+                        if step.failure_class == "purpose":
+                            tally["purpose_steps"] += 1
+                            if step.outcome == CORRECT:
+                                tally["purpose_refused"] += 1
+                            elif step.compliance_violation:
+                                tally["purpose_leaks"] += 1
+                        else:
+                            tally["benign_steps"] += 1
+                            if step.outcome == CORRECT:
+                                tally["benign_correct"] += 1
+        results[family] = acc
+    return results
+
+
+def _zero_purpose_tally() -> Dict[str, int]:
+    return {"purpose_steps": 0, "purpose_refused": 0, "purpose_leaks": 0,
+            "benign_steps": 0, "benign_correct": 0}
+
+
+def render_purpose_report(results: Dict[str, Dict[str, Dict[str, int]]]) -> str:
+    lines = ["## Purpose-limitation families (outside the headline mixture)", ""]
+    lines.append("| family | arm | purpose leaks | refused | benign accuracy |")
+    lines.append("|---|---|---|---|---|")
+    for family, arms in results.items():
+        for arm_name, tally in arms.items():
+            benign_acc = (tally["benign_correct"] / tally["benign_steps"]) if tally["benign_steps"] else 0.0
+            lines.append("| %s | %s | %d/%d | %d | %.3f |" % (
+                family, arm_name, tally["purpose_leaks"], tally["purpose_steps"],
+                tally["purpose_refused"], benign_acc))
+    return "\n".join(lines)
 
 
 def _poison_value(scenario: Scenario) -> Optional[str]:

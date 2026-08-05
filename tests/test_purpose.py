@@ -117,6 +117,77 @@ class PurposeGateTests(unittest.TestCase):
         self.assertEqual(step.outcome, CORRECT)
 
 
+class PurposeClassTests(unittest.TestCase):
+    def test_purpose_leak_is_compliance_violation(self):
+        from cognitive_memory.reliability import RecallResult, classify_step
+
+        step = classify_step(QueryTurn("q", Scope(), None, "purpose"),
+                             RecallResult(answer="x", abstained=False))
+        self.assertTrue(step.compliance_violation)
+        self.assertFalse(step.poisoning_success)
+
+    def test_revocation_leak_is_compliance_violation(self):
+        from cognitive_memory.reliability import RecallResult, classify_step
+
+        step = classify_step(QueryTurn("q", Scope(), None, "revocation"),
+                             RecallResult(answer="x", abstained=False))
+        self.assertTrue(step.compliance_violation)
+        self.assertFalse(step.poisoning_success)
+
+
+class PurposeSuiteTests(unittest.TestCase):
+    def test_purpose_generators_outside_headline(self):
+        from cognitive_memory.reliability_suite import _GENERATORS, _MIXTURE, _PURPOSE_GENERATORS
+
+        self.assertEqual(set(_MIXTURE), {"benign", "poisoning", "injection", "erasure", "scope"})
+        self.assertTrue(set(_PURPOSE_GENERATORS).isdisjoint(set(_GENERATORS)))
+
+    def test_governed_refuses_mismatched_purpose_scenario(self):
+        import random
+
+        from cognitive_memory.reliability_suite import gen_purpose_mismatch
+
+        scenario = gen_purpose_mismatch(random.Random(7), "t", "pm1")
+        trajectory = run_trajectory(GovernedMemory(), scenario)
+        self.assertEqual([s.outcome for s in trajectory.steps], [CORRECT, CORRECT],
+                         "governed must refuse the mismatch AND serve the benign twin")
+
+    def test_ungoverned_leaks_mismatched_purpose(self):
+        import random
+
+        from cognitive_memory.reliability import SILENT_ERROR, UngovernedMemory
+        from cognitive_memory.reliability_suite import gen_purpose_mismatch
+
+        scenario = gen_purpose_mismatch(random.Random(7), "t", "pm1")
+        trajectory = run_trajectory(UngovernedMemory(), scenario)
+        purpose_steps = [s for s in trajectory.steps if s.failure_class == "purpose"]
+        self.assertTrue(
+            any(s.outcome == SILENT_ERROR and s.compliance_violation for s in purpose_steps),
+            "the scenario must actually measure something: ungoverned has to leak",
+        )
+
+    def test_transition_no_authorization_leak(self):
+        import random
+
+        from cognitive_memory.reliability_suite import gen_purpose_transition
+
+        scenario = gen_purpose_transition(random.Random(3), "t", "pt1")
+        trajectory = run_trajectory(GovernedMemory(), scenario)
+        self.assertEqual([s.outcome for s in trajectory.steps], [CORRECT, CORRECT])
+        self.assertIsNotNone(trajectory.steps[0].got, "first read under the benign purpose must serve")
+        self.assertIsNone(trajectory.steps[1].got, "authorization must not leak into the switched purpose")
+
+    def test_run_purpose_benchmark_deterministic(self):
+        from cognitive_memory.reliability_suite import run_purpose_benchmark
+
+        first = run_purpose_benchmark(seeds=[1, 2], scenarios_per_seed=6)
+        second = run_purpose_benchmark(seeds=[1, 2], scenarios_per_seed=6)
+        self.assertEqual(first, second)
+        governed = first["purpose_mismatch"]["governed"]
+        self.assertEqual(governed["purpose_leaks"], 0)
+        self.assertGreater(first["purpose_mismatch"]["ungoverned"]["purpose_leaks"], 0)
+
+
 class PrototypePurposeTests(unittest.TestCase):
     def setUp(self):
         from cognitive_memory.controller import MemoryController
