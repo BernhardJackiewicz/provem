@@ -339,6 +339,44 @@ _PURPOSE_GENERATORS = {
     "purpose_transition": gen_purpose_transition,
 }
 
+
+def gen_policy_drift(rng: random.Random, tenant: str, sid: str) -> Scenario:
+    """Policy drift: consent is withdrawn AFTER compliant writes and reads.
+
+    Uses ordered steps (state changes mid-trajectory): a pre-flip read is
+    served, the data subject withdraws consent, the same read must now be
+    refused while unrelated benign recall stays correct.
+    """
+    name = rng.choice(_NAMES)
+    subject = "%s_%d" % (name, rng.randrange(1000))
+    value = "code%d" % rng.randrange(100000)
+    other_rel, other_vals = rng.choice(_ATTRS)
+    other_val = rng.choice(other_vals)
+    scope = Scope(tenant=tenant, subject=subject)
+    steps = [
+        IngestTurn("fact", "%s study_code %s" % (name, value), subject, "study_code",
+                   value, scope, "user", 0.95),
+        IngestTurn("fact", "%s %s %s" % (name, other_rel, other_val), subject, other_rel,
+                   other_val, scope, "user", 0.95),
+        # pre-flip: the consented read serves
+        QueryTurn("%s study_code %s" % (name, value), scope, value, "benign"),
+        # mid-stream withdrawal through the same channel
+        IngestTurn("revocation", "please stop using %s" % value, subject, "study_code",
+                   value, scope, "user", 1.0, term=value),
+        # post-flip: the same read must now be refused
+        QueryTurn("%s study_code %s" % (name, value), scope, None, "revocation"),
+        # unrelated benign recall must survive the flip
+        QueryTurn("%s %s" % (name, other_rel), scope, other_val, "benign"),
+    ]
+    return Scenario(sid, [], [], "policy_drift", steps=steps)
+
+
+# Policy-drift families: consent/retention flips mid-stream, reported
+# SEPARATELY from the frozen headline mixture.
+_DRIFT_GENERATORS = {
+    "policy_drift": gen_policy_drift,
+}
+
 # Mixture weights: adversarial-heavy BY DESIGN to exercise governance paths —
 # 3/8 benign = 37.5% of scenarios (62.5% adversarial); a production workload
 # would be mostly benign, so the aggregate deltas overstate it (see the docs).
@@ -916,6 +954,61 @@ def run_purpose_benchmark(
 def _zero_purpose_tally() -> Dict[str, int]:
     return {"purpose_steps": 0, "purpose_refused": 0, "purpose_leaks": 0,
             "benign_steps": 0, "benign_correct": 0}
+
+
+def run_policy_drift_benchmark(
+    seeds: Optional[List[int]] = None, scenarios_per_seed: int = 40
+) -> Dict[str, Dict[str, Dict[str, int]]]:
+    """Run the policy-drift families on governed vs ungoverned.
+
+    Measures both halves of the drift question: are newly disallowed paths
+    revoked after the flip (post_flip_leaks must be zero), and is benign
+    utility preserved (pre-flip serves and unrelated reads stay correct).
+    Deterministic; outside the headline mixture.
+    """
+    seeds = seeds if seeds is not None else [1, 2, 3, 4, 5]
+    results: Dict[str, Dict[str, Dict[str, int]]] = {}
+    for family, gen in _DRIFT_GENERATORS.items():
+        acc = {"governed": _zero_drift_tally(), "ungoverned": _zero_drift_tally()}
+        for seed in seeds:
+            rng = random.Random(seed)
+            for i in range(scenarios_per_seed):
+                tenant = "tenant_%d" % rng.randrange(5)
+                scenario = gen(rng, tenant, "%s_s%d_%d" % (family, seed, i))
+                for arm_name, arm in (("governed", GovernedMemory), ("ungoverned", UngovernedMemory)):
+                    trajectory = run_trajectory(arm(), scenario)
+                    tally = acc[arm_name]
+                    for step in trajectory.steps:
+                        if step.failure_class == "revocation":
+                            tally["post_flip_steps"] += 1
+                            if step.outcome == CORRECT:
+                                tally["post_flip_revoked"] += 1
+                            elif step.compliance_violation:
+                                tally["post_flip_leaks"] += 1
+                        else:
+                            tally["benign_steps"] += 1
+                            if step.outcome == CORRECT:
+                                tally["benign_correct"] += 1
+        results[family] = acc
+    return results
+
+
+def _zero_drift_tally() -> Dict[str, int]:
+    return {"post_flip_steps": 0, "post_flip_revoked": 0, "post_flip_leaks": 0,
+            "benign_steps": 0, "benign_correct": 0}
+
+
+def render_policy_drift_report(results: Dict[str, Dict[str, Dict[str, int]]]) -> str:
+    lines = ["## Policy-drift families (outside the headline mixture)", ""]
+    lines.append("| family | arm | post-flip leaks | revoked | benign accuracy |")
+    lines.append("|---|---|---|---|---|")
+    for family, arms in results.items():
+        for arm_name, tally in arms.items():
+            benign_acc = (tally["benign_correct"] / tally["benign_steps"]) if tally["benign_steps"] else 0.0
+            lines.append("| %s | %s | %d/%d | %d | %.3f |" % (
+                family, arm_name, tally["post_flip_leaks"], tally["post_flip_steps"],
+                tally["post_flip_revoked"], benign_acc))
+    return "\n".join(lines)
 
 
 def render_purpose_report(results: Dict[str, Dict[str, Dict[str, int]]]) -> str:

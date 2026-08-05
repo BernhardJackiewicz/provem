@@ -175,6 +175,77 @@ class ConsentRevocationTests(unittest.TestCase):
         self.assertTrue(mem.audit.filter("policy_update"))
 
 
+class PolicyDriftBenchmarkTests(unittest.TestCase):
+    def test_drift_generator_outside_headline(self):
+        from cognitive_memory.reliability_suite import _DRIFT_GENERATORS, _GENERATORS, _MIXTURE
+
+        self.assertIn("policy_drift", _DRIFT_GENERATORS)
+        self.assertNotIn("policy_drift", _GENERATORS)
+        self.assertNotIn("policy_drift", _MIXTURE)
+
+    def test_gen_policy_drift_uses_steps(self):
+        import random
+
+        from cognitive_memory.reliability_suite import gen_policy_drift
+
+        scenario = gen_policy_drift(random.Random(5), "t", "pd1")
+        self.assertIsNotNone(scenario.steps)
+        kinds = [getattr(step, "kind", "query") for step in scenario.steps]
+        self.assertIn("revocation", kinds)
+        revocation_at = kinds.index("revocation")
+        queries_before = [i for i, k in enumerate(kinds) if k == "query" and i < revocation_at]
+        queries_after = [i for i, k in enumerate(kinds) if k == "query" and i > revocation_at]
+        self.assertTrue(queries_before, "drift needs a pre-flip read")
+        self.assertTrue(queries_after, "drift needs a post-flip read")
+
+    def test_governed_enforces_post_flip_revocation(self):
+        import random
+
+        from cognitive_memory.reliability_suite import gen_policy_drift
+
+        scenario = gen_policy_drift(random.Random(5), "t", "pd1")
+        trajectory = run_trajectory(GovernedMemory(), scenario)
+        outcomes = [s.outcome for s in trajectory.steps]
+        self.assertEqual(outcomes, [CORRECT] * len(outcomes))
+        revocation_steps = [s for s in trajectory.steps if s.failure_class == "revocation"]
+        self.assertTrue(revocation_steps)
+        self.assertTrue(all(s.got is None for s in revocation_steps))
+
+    def test_ungoverned_leaks_after_flip(self):
+        import random
+
+        from cognitive_memory.reliability import SILENT_ERROR, UngovernedMemory
+        from cognitive_memory.reliability_suite import gen_policy_drift
+
+        scenario = gen_policy_drift(random.Random(5), "t", "pd1")
+        trajectory = run_trajectory(UngovernedMemory(), scenario)
+        revocation_steps = [s for s in trajectory.steps if s.failure_class == "revocation"]
+        self.assertTrue(any(s.outcome == SILENT_ERROR and s.compliance_violation
+                            for s in revocation_steps))
+
+    def test_drift_preserves_benign_accuracy(self):
+        import random
+
+        from cognitive_memory.reliability_suite import gen_policy_drift
+
+        scenario = gen_policy_drift(random.Random(5), "t", "pd1")
+        trajectory = run_trajectory(GovernedMemory(), scenario)
+        benign_steps = [s for s in trajectory.steps if s.failure_class == "benign"]
+        self.assertTrue(benign_steps)
+        self.assertTrue(all(s.outcome == CORRECT for s in benign_steps),
+                        "revocation must be targeted, not a blanket suppression")
+
+    def test_run_policy_drift_benchmark_deterministic(self):
+        from cognitive_memory.reliability_suite import run_policy_drift_benchmark
+
+        first = run_policy_drift_benchmark(seeds=[1, 2], scenarios_per_seed=6)
+        second = run_policy_drift_benchmark(seeds=[1, 2], scenarios_per_seed=6)
+        self.assertEqual(first, second)
+        governed = first["policy_drift"]["governed"]
+        self.assertEqual(governed["post_flip_leaks"], 0)
+        self.assertGreater(first["policy_drift"]["ungoverned"]["post_flip_leaks"], 0)
+
+
 class PrototypeRevocationTests(unittest.TestCase):
     def test_policy_store_revoke_consent_excludes_fact(self):
         from datetime import datetime, timezone
