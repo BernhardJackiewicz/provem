@@ -30,6 +30,32 @@ class ComplianceConfigError(ValueError):
 _REDOS_SIGNATURE = re.compile(r"\([^()]*[+*][^()]*\)\s*[+*]")
 
 
+def _validate_purpose_rules(rules: Mapping[str, Any]) -> None:
+    for purpose, rule in rules.items():
+        if not isinstance(purpose, str) or not purpose:
+            raise ComplianceConfigError("purpose_rules keys must be non-empty strings")
+        if not isinstance(rule, Mapping):
+            raise ComplianceConfigError("purpose_rules[%r] must be a mapping" % purpose)
+        unknown = set(rule) - {"allowed_relations", "require_consent"}
+        if unknown:
+            raise ComplianceConfigError(
+                "unknown purpose rule keys for %r: %s" % (purpose, sorted(unknown))
+            )
+        allowed = rule.get("allowed_relations")
+        if allowed is not None:
+            if isinstance(allowed, str) or not hasattr(allowed, "__iter__"):
+                raise ComplianceConfigError(
+                    "allowed_relations for %r must be a list of strings" % purpose
+                )
+            for relation in allowed:
+                if not isinstance(relation, str):
+                    raise ComplianceConfigError(
+                        "allowed_relations for %r must be a list of strings" % purpose
+                    )
+        if "require_consent" in rule and not isinstance(rule["require_consent"], bool):
+            raise ComplianceConfigError("require_consent for %r must be a bool" % purpose)
+
+
 def _validate_patterns(patterns: Tuple[str, ...], kind: str) -> None:
     for pattern in patterns:
         try:
@@ -102,6 +128,13 @@ class CompliancePolicy:
     # only via an explicit cleanup pass). Off by default.
     enforce_retention_on_recall: bool = False
 
+    # -- purpose limitation ------------------------------------------------
+    # per-purpose rules for the declared (untrusted) purpose on the read
+    # path: {"hiring": {"allowed_relations": ("seniority",), "require_consent": True}}
+    # An empty mapping (default) means no policy-level purpose rules; records
+    # can still carry their own allowed_purposes allowlist.
+    purpose_rules: Mapping[str, Mapping[str, Any]] = field(default_factory=dict)
+
     # -- audit ------------------------------------------------------------
     # audit successful serves, not only blocks. On by default: an audit
     # trail that only records refusals cannot answer "who saw this value
@@ -129,6 +162,7 @@ class CompliancePolicy:
         # Validate user-supplied deny-list regex now (fail fast, block ReDoS)
         _validate_patterns(self.extra_injection_patterns, "injection")
         _validate_patterns(self.extra_sensitive_patterns, "sensitive")
+        _validate_purpose_rules(self.purpose_rules)
 
     # -- serialization ----------------------------------------------------
 
@@ -139,6 +173,13 @@ class CompliancePolicy:
         data["extra_injection_patterns"] = list(self.extra_injection_patterns)
         data["extra_sensitive_patterns"] = list(self.extra_sensitive_patterns)
         data["revocation_operators"] = list(self.revocation_operators)
+        data["purpose_rules"] = {
+            purpose: {
+                key: (list(value) if isinstance(value, (list, tuple)) else value)
+                for key, value in rule.items()
+            }
+            for purpose, rule in self.purpose_rules.items()
+        }
         return data
 
     @classmethod
@@ -154,6 +195,14 @@ class CompliancePolicy:
             kwargs["extra_sensitive_patterns"] = tuple(kwargs["extra_sensitive_patterns"])
         if "revocation_operators" in kwargs:
             kwargs["revocation_operators"] = tuple(str(v) for v in kwargs["revocation_operators"])
+        if "purpose_rules" in kwargs:
+            rules: Dict[str, Any] = {}
+            for purpose, rule in dict(kwargs["purpose_rules"]).items():
+                rule = dict(rule)
+                if rule.get("allowed_relations") is not None:
+                    rule["allowed_relations"] = tuple(str(r) for r in rule["allowed_relations"])
+                rules[str(purpose)] = rule
+            kwargs["purpose_rules"] = rules
         if "source_trust" in kwargs:
             kwargs["source_trust"] = {str(k): float(v) for k, v in dict(kwargs["source_trust"]).items()}
         if "retention_days" in kwargs:

@@ -19,6 +19,23 @@ class PolicySerializationTests(unittest.TestCase):
         restored = CompliancePolicy.from_json(p.to_json())
         self.assertEqual(restored, p)
 
+    def test_purpose_rules_round_trip_json(self):
+        p = CompliancePolicy(
+            name="p",
+            purpose_rules={"hiring": {"allowed_relations": ("seniority",), "require_consent": True},
+                           "scheduling": {}},
+        )
+        restored = CompliancePolicy.from_json(p.to_json())
+        self.assertEqual(restored, p)
+
+    def test_malformed_purpose_rules_rejected(self):
+        with self.assertRaises(ComplianceConfigError):
+            CompliancePolicy(purpose_rules={"x": {"allowed_relations": 5}})
+        with self.assertRaises(ComplianceConfigError):
+            CompliancePolicy(purpose_rules={"x": {"require_consent": "yes"}})
+        with self.assertRaises(ComplianceConfigError):
+            CompliancePolicy(purpose_rules={"x": {"unknown_key": True}})
+
     def test_unknown_field_rejected(self):
         with self.assertRaises(ComplianceConfigError):
             CompliancePolicy.from_dict({"name": "x", "bogus_field": 1})

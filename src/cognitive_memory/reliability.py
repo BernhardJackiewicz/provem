@@ -104,6 +104,9 @@ class MemoryRecord:
     valid_at: int = 0            # logical clock (turn index); latest wins
     id: str = ""
     created_at: str = ""         # wall-clock ISO timestamp for retention enforcement
+    # Purpose limitation: empty tuples mean unrestricted (backward compatible).
+    allowed_purposes: Tuple[str, ...] = ()    # use-side allowlist for this record
+    consented_purposes: Tuple[str, ...] = ()  # purposes the data subject consented to
 
     def __post_init__(self) -> None:
         if not self.text:
@@ -245,6 +248,9 @@ class IngestTurn:
     term: str = ""                # for erasure / constraint
     consent: bool = False         # explicit consent to store sensitive content
     requester: str = ""           # who asked (erasure/constraint authority)
+    allowed_purposes: Tuple[str, ...] = ()    # use-side allowlist for the stored record
+    consented_purposes: Tuple[str, ...] = ()  # purposes the data subject consented to
+    purpose: str = ""             # for revocation turns: which purpose is withdrawn
 
 
 @dataclass
@@ -252,8 +258,9 @@ class QueryTurn:
     query: str
     scope: Scope
     expected: Optional[str]       # correct object, or None => correct behavior is to abstain
-    failure_class: str = "benign" # benign | poisoning | erasure | scope | trigger
+    failure_class: str = "benign" # benign | poisoning | erasure | scope | trigger | purpose
     trigger: str = ""             # for trigger scenarios
+    purpose: Optional[str] = None # declared, untrusted purpose of use; None = no purpose gating
 
 
 @dataclass
@@ -412,23 +419,35 @@ class GovernedMemory:
         source: str = "user",
         trust: float = 0.9,
         consent: bool = False,
+        allowed_purposes: Sequence[str] = (),
+        consented_purposes: Sequence[str] = (),
     ) -> None:
         """Store a fact (governance is applied: quarantine, provenance, scope).
 
         Pass ``consent=True`` to store content the policy considers sensitive
         under an explicit lawful basis (otherwise it is quarantined).
+        ``allowed_purposes`` restricts which declared purposes may be served
+        this record; ``consented_purposes`` records what the data subject
+        agreed to. Empty means unrestricted.
         """
         entity = entity or subject
         self.ingest(
             IngestTurn(
                 "fact", text, subject or entity, relation, object,
                 Scope(tenant, entity), source, trust, consent=consent,
+                allowed_purposes=tuple(allowed_purposes),
+                consented_purposes=tuple(consented_purposes),
             )
         )
 
-    def recall_value(self, query: str, *, tenant: str = "default", entity: str = "") -> RecallResult:
-        """Governed recall for an entity: returns a value or a safe abstention."""
-        return self.recall(QueryTurn(query, Scope(tenant, entity), None))
+    def recall_value(self, query: str, *, tenant: str = "default", entity: str = "",
+                     purpose: Optional[str] = None) -> RecallResult:
+        """Governed recall for an entity: returns a value or a safe abstention.
+
+        ``purpose`` is the declared, untrusted purpose of use; policy decides
+        what it may be served. None means no purpose gating.
+        """
+        return self.recall(QueryTurn(query, Scope(tenant, entity), None, purpose=purpose))
 
     # -- write side ---------------------------------------------------------
 
@@ -499,6 +518,8 @@ class GovernedMemory:
             quarantine_reason=reason,
             valid_at=self.clock,
             created_at=self._now_fn().isoformat(),
+            allowed_purposes=tuple(turn.allowed_purposes),
+            consented_purposes=tuple(turn.consented_purposes),
         )
         self.backend.write(record)
 
@@ -842,6 +863,7 @@ class GovernedMemory:
                 "wrong_scope",
                 "wrong_tenant",
                 "possible_prompt_injection",
+                "purpose_mismatch",
                 "quarantined",
             }
         )
@@ -942,11 +964,34 @@ class GovernedMemory:
         if self.policy.scope_isolation and record.scope.subject:
             if not turn.scope.subject or record.scope.subject != turn.scope.subject:
                 return "wrong_scope"
+        # Purpose limitation: the same fact can be fine for one declared
+        # purpose and off-limits for another. No declared purpose means no
+        # purpose gating (backward compatible).
+        purpose_reason = self._purpose_block_reason(record, turn)
+        if purpose_reason:
+            return purpose_reason
         # Instruction-like content that slipped in is never served -- scan every
         # field, not just free text (payload may hide in subject/relation/object).
         record_scan = " ".join(part for part in (record.text, record.subject, record.relation, record.object) if part)
         if self.policy.detect_injection and instruction_risk_reason(record_scan, self.policy.extra_injection_patterns):
             return "possible_prompt_injection"
+        return ""
+
+    def _purpose_block_reason(self, record: MemoryRecord, turn: QueryTurn) -> str:
+        purpose = turn.purpose
+        if not purpose:
+            return ""
+        # Record-level allowlist ("allowed to use for this decision").
+        if record.allowed_purposes and purpose not in record.allowed_purposes:
+            return "purpose_mismatch"
+        # Policy-level rules for the declared purpose.
+        rule = self.policy.purpose_rules.get(purpose)
+        if rule:
+            allowed_relations = rule.get("allowed_relations") or ()
+            if allowed_relations and record.relation not in allowed_relations:
+                return "purpose_mismatch"
+            if rule.get("require_consent") and purpose not in record.consented_purposes:
+                return "purpose_mismatch"
         return ""
 
     def _resolve_group(
@@ -1144,7 +1189,8 @@ def run_trajectory(memory, scenario: Scenario, agent: Optional[Agent] = None) ->
         # attacker plants it in the prompt), so a scrubbed view still models the
         # attack faithfully. recall() reads only .query/.scope, so this is
         # behaviour-preserving for the existing arms.
-        recall_view = QueryTurn(query=query.query, scope=query.scope, expected=None)
+        recall_view = QueryTurn(query=query.query, scope=query.scope, expected=None,
+                                purpose=query.purpose)
         result = memory.recall(recall_view)
         ops += result.ops
         action = agent.act(query, result)
