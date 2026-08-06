@@ -63,7 +63,10 @@ class MemoryController:
 
     def apply_candidate(self, candidate: MemoryCandidate, episode: Optional[Episode] = None) -> Optional[TemporalFact]:
         self.temporal_backend.add_candidate(candidate)
-        quarantine_reason = self._candidate_quarantine_reason(candidate, episode=episode)
+        # An explicit human release (release_candidate) authorized this content;
+        # skip the quarantine re-scan that would otherwise re-hold it.
+        released = candidate.metadata.pop("released_override", False)
+        quarantine_reason = "" if released else self._candidate_quarantine_reason(candidate, episode=episode)
         if quarantine_reason:
             candidate.metadata["quarantine_reason"] = quarantine_reason
             candidate.metadata["untrusted_instruction_content"] = quarantine_reason == "possible_prompt_injection"
@@ -154,6 +157,10 @@ class MemoryController:
         candidate.metadata.pop("quarantine_reason", None)
         candidate.metadata.pop("untrusted_instruction_content", None)
         candidate.recommended_action = "store"
+        # An injection release is the reviewer overriding the content scan;
+        # mark it so apply_candidate does not simply re-quarantine it.
+        if reason == "possible_prompt_injection":
+            candidate.metadata["released_override"] = True
         self.temporal_backend.audit("candidate_released", candidate_id)
         return self.apply_candidate(candidate)
 

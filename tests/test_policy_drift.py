@@ -137,6 +137,14 @@ class ConsentRevocationTests(unittest.TestCase):
         other = mem.recall_value("alice condition cd77", tenant="u", entity="alice")
         self.assertFalse(other.abstained)
 
+    def test_revocation_block_is_audited_as_recall_blocked(self):
+        mem = self._mem_with_fact()
+        mem.revoke_consent("cd77", Scope(tenant="t"))
+        mem.recall_value("alice condition cd77", tenant="t", entity="alice")
+        blocked = mem.audit.filter("recall_blocked")
+        self.assertTrue(blocked)
+        self.assertIn("consent_revoked", blocked[-1].details["reasons"])
+
     def test_revocation_certificate_chains(self):
         mem = self._mem_with_fact()
         mem.revoke_consent("cd77", Scope(tenant="t"), purpose="research")

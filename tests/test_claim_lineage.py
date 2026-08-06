@@ -241,6 +241,29 @@ class PrototypeLineageRetrievalTests(unittest.TestCase):
                          "1-vs-1 stays with write-side review; lineage claims no solution here")
 
 
+class LineageCliAndReportTests(unittest.TestCase):
+    def test_cli_lineage_flag_parses(self):
+        from cognitive_memory.cli import build_parser
+
+        args = build_parser().parse_args(["reliability", "--attack-families", "--lineage"])
+        self.assertTrue(args.attack_families)
+        self.assertTrue(args.lineage)
+        default = build_parser().parse_args(["reliability", "--attack-families"])
+        self.assertFalse(default.lineage)
+
+    def test_render_includes_extra_arm_rows(self):
+        from cognitive_memory.reliability_suite import (
+            render_attack_families_report,
+            run_attack_families_benchmark,
+        )
+
+        results = run_attack_families_benchmark(seeds=[1], scenarios_per_seed=2,
+                                                include_lineage_arm=True)
+        report = render_attack_families_report(results)
+        self.assertIn("governed_lineage", report)
+        self.assertIn("same_channel_corroborated", report)
+
+
 class LineageAttackArmTests(unittest.TestCase):
     def test_attack_families_default_output_unchanged(self):
         from cognitive_memory.reliability_suite import run_attack_families_benchmark

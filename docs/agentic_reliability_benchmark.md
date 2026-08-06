@@ -252,6 +252,30 @@ PYTHONPATH=src python3 -m unittest tests.test_reliability tests.test_stats
 Same seeds → identical numbers. See `docs/reliability_results.md` for the current
 canonical run.
 
+## Purpose and policy-drift evals (separate families, library API)
+
+Two further evaluation suites live outside the headline mixture and outside the
+attack-family CLI, exposed as deterministic library functions
+(`reliability_suite.run_purpose_benchmark`, `run_policy_drift_benchmark`) with
+matching renderers. They exercise the purpose-limitation and consent-revocation
+governance the headline does not touch:
+
+- **Purpose-limitation families** (`gen_purpose_mismatch`, `gen_purpose_transition`):
+  a record consented for one purpose must be refused under another
+  (`purpose_mismatch`) while still serving under the allowed purpose, and an
+  authorization obtained under a benign purpose must not leak when the purpose
+  is switched mid-trajectory. Governed refuses and still serves the benign
+  twin; ungoverned leaks (a compliance violation), which is what proves the
+  scenario measures something.
+- **Policy-drift family** (`gen_policy_drift`): consent is withdrawn *after*
+  compliant writes and a served read; the same read must then be refused
+  (`consent_revoked`, counted as a compliance violation on leak) while
+  unrelated benign recall stays correct. This is the "change the rules after
+  the fact and measure both revocation and preserved utility" eval.
+
+Both are deterministic (same seeds, identical tallies) and reported on their
+own so the frozen headline numbers stay comparable.
+
 ## Honest limitations
 
 - **Semantic erasure is opt-in and bounded.** By default, erasure matching is

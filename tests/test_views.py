@@ -68,6 +68,20 @@ class ViewTests(unittest.TestCase):
         mem.revoke_consent("anything", Scope(tenant="t"))
         self.assertEqual(mem.validate_view(handle)["status"], "revoked")
 
+    def test_restrict_invalidates_tenant_views(self):
+        mem, _ = _mem()
+        handle = mem.issue_view(tenant="t", subject="alice", purpose="scheduling", ttl_seconds=600)
+        mem.restrict("anything", Scope(tenant="t"))
+        self.assertEqual(mem.validate_view(handle)["status"], "revoked")
+
+    def test_set_policy_invalidates_all_views(self):
+        # a policy swap changes the rules every outstanding approval was
+        # minted under; the policy-wide epoch revokes them all
+        mem, _ = _mem()
+        handle = mem.issue_view(tenant="t", subject="alice", purpose="scheduling", ttl_seconds=600)
+        mem.set_policy({"name": "swapped"})
+        self.assertEqual(mem.validate_view(handle)["status"], "revoked")
+
     def test_other_tenant_governance_does_not_invalidate(self):
         mem, _ = _mem()
         handle = mem.issue_view(tenant="t", subject="alice", purpose="scheduling", ttl_seconds=600)

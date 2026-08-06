@@ -156,6 +156,22 @@ class PrototypePurgeTests(unittest.TestCase):
         self.assertFalse(remaining_episode_ids & controller.policy.deleted_episode_ids,
                          "deleted episode raw text still physically present")
 
+    def test_purge_deleted_removes_invalidated_reflections(self):
+        from cognitive_memory.models import Reflection
+
+        controller = self._controller_with_deleted_fact()
+        controller.store.add_reflection(
+            Reflection(claim="tom example com is the contact", confidence=0.8,
+                       supporting_evidence=["ep1", "ep2"])
+        )
+        controller.request_forget("tom@example.com", user_id="user", project_id="default")
+        invalidated = [r for r in controller.store.reflections.values()
+                       if r.status == "invalidated"]
+        self.assertTrue(invalidated, "precondition: the reflection must be invalidated")
+        counts = controller.store.purge_deleted(controller.policy)
+        self.assertGreaterEqual(counts["reflections"], 1)
+        self.assertNotIn(invalidated[0].id, controller.store.reflections)
+
     def test_purge_respects_legal_hold(self):
         controller = self._controller_with_deleted_fact()
         held = [f for f in controller.store.facts.values() if f.privacy_policy == "deleted"][0]

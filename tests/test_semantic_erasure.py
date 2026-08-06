@@ -127,6 +127,14 @@ class SemanticErasureTests(unittest.TestCase):
         self.assertTrue(mem.audit.filter("semantic_erasure_error"),
                         "the degradation must be visible in the audit trail")
 
+    def test_semantic_block_is_audited_as_recall_blocked(self):
+        embedder = FakeSemanticEmbedder(groups=[("wants kids", PARAPHRASE)])
+        mem = self._mem(embedder=embedder)
+        mem.recall_value("alice planning family", tenant="t", entity="alice")
+        blocked = mem.audit.filter("recall_blocked")
+        self.assertTrue(blocked)
+        self.assertIn("erased_semantic", blocked[-1].details["reasons"])
+
     def test_policy_threshold_serialization_and_bounds(self):
         from cognitive_memory.compliance import CompliancePolicy, ComplianceConfigError
 
@@ -161,6 +169,27 @@ class PrototypeSemanticErasureTests(unittest.TestCase):
     def test_off_by_default(self):
         policy = self._policy_with_term()
         self.assertFalse(policy.matches_do_not_use_term(PARAPHRASE))
+
+    def test_matcher_failure_fails_open_with_audit(self):
+        policy = self._policy_with_term()
+
+        def broken(text, term):
+            raise RuntimeError("matcher down")
+
+        policy.set_semantic_matcher(broken, threshold=0.8)
+        self.assertFalse(policy.matches_do_not_use_term(PARAPHRASE),
+                         "a broken matcher must fall back to the token baseline")
+        self.assertIn("semantic_matcher_error", policy.audit_log)
+
+    def test_matcher_is_not_serialized(self):
+        from cognitive_memory.policy import PolicyStore
+
+        policy = self._policy_with_term()
+        policy.set_semantic_matcher(lambda text, term: 1.0, threshold=0.8)
+        restored = PolicyStore.from_dict(policy.to_dict())
+        self.assertIsNone(restored.semantic_matcher,
+                          "a function cannot survive a snapshot; re-inject after load")
+        self.assertFalse(restored.matches_do_not_use_term(PARAPHRASE))
 
 
 if __name__ == "__main__":

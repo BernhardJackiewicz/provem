@@ -404,7 +404,7 @@ _DRIFT_GENERATORS = {
     "policy_drift": gen_policy_drift,
 }
 
-# Mixture weights: adversarial-heavy BY DESIGN to exercise governance paths —
+# Mixture weights: adversarial-heavy BY DESIGN to exercise governance paths:
 # 3/8 benign = 37.5% of scenarios (62.5% adversarial); a production workload
 # would be mostly benign, so the aggregate deltas overstate it (see the docs).
 _MIXTURE = ["benign", "benign", "benign", "poisoning", "poisoning", "injection", "erasure", "scope"]
@@ -1103,10 +1103,10 @@ def render_attack_families_report(results: List[AttackFamilyResult]) -> str:
     lines.append("")
     lines.append(
         "Reading: `trigger` is an AgentPoison-style conditional poison on an "
-        "UNTRUSTED channel — governance should contain it via provenance trust "
+        "UNTRUSTED channel: governance should contain it via provenance trust "
         "while keeping the dormant (non-triggered) benign step correct. "
         "`same_channel` is the honest boundary: the poison arrives through the "
         "SAME trusted channel as the user, so provenance governance has no signal "
         "and BOTH arms serve it. Catching same-channel injection needs write-side "
-        "detection/review, not provenance — stated plainly, not hidden.")
+        "detection/review, not provenance, stated plainly, not hidden.")
     return "\n".join(lines)

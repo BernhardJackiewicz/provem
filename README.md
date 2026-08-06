@@ -3,7 +3,7 @@
 [![PyPI](https://img.shields.io/pypi/v/provem.svg)](https://pypi.org/project/provem/)
 [![Python](https://img.shields.io/badge/python-3.9%2B-blue.svg)](https://www.python.org/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-493%20passing-brightgreen.svg)](tests/)
+[![Tests](https://img.shields.io/badge/tests-695%20passing-brightgreen.svg)](tests/)
 
 **Governed, GDPR-native memory for AI agents.** A governance layer (right-to-erasure, tenant isolation, injection defense, tamper-evident audit) that runs on top of *any* memory store (or as its own). On recall it holds its own: a clear win over Zep and roughly a tie with Mem0 on LoCoMo. Its real job is compliance: it drives violations to zero in a reproducible, self-authored closed-loop benchmark. Every number below is replayable from frozen artifacts at zero cost.
 
@@ -410,7 +410,7 @@ MCP server (JSON-RPC/stdio, per-tenant profiles)   or   direct library embedding
 
 ## Status
 
-Research-grade core with enterprise-ready foundations: 683 tests, deterministic
+Research-grade core with enterprise-ready foundations: 695 tests, deterministic
 quality gates, tamper-evident audit, tenant isolation, configurable compliance
 profiles. **Not** externally security-audited, no managed hosting, no SLA: the
 enterprise wrapper (gateway auth/SSO, hosting, certifications) is deliberately

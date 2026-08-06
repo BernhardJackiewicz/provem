@@ -176,6 +176,22 @@ class Mem0AdapterTests(unittest.TestCase):
         got = backend.get_by_ids([rid, "missing_id"])
         self.assertEqual([r.id for r in got], [rid])
 
+    def test_release_quarantined_flips_metadata_over_mem0(self):
+        client = FakeMem0Client(rewrite=True)
+        backend = Mem0ReliabilityBackend(client=client)
+        mem = GovernedMemory(backend=backend,
+                             policy={"name": "p", "sensitive_sources": ["notes"]})
+        mem.remember("alice prefers a hybrid schedule", subject="alice", relation="note",
+                     object="hybrid", tenant="t", entity="alice", source="notes")
+        record = [r for r in backend.all_records() if r.quarantined][0]
+        released = mem.release_quarantined([record.id], Scope(tenant="t"))
+        self.assertEqual(released, 1)
+        # the flip must survive the metadata round trip, not just the object
+        got = [r for r in backend.all_records() if r.id == record.id][0]
+        self.assertFalse(got.quarantined)
+        result = mem.recall_value("alice hybrid schedule", tenant="t", entity="alice")
+        self.assertFalse(result.abstained)
+
     def test_verify_erasure_resweeps_lagging_backend(self):
         client = FakeMem0Client(drop_first_delete=True)
         backend = Mem0ReliabilityBackend(client=client)

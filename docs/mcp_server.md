@@ -128,3 +128,9 @@ Full field reference: see `CompliancePolicy` in `src/cognitive_memory/compliance
 - Keyless answer synthesis cannot match an LLM answerer on free-form
   conversational QA; wire `LLMAnswerer` for that (see `docs/locomo_results.md`).
 - Retention windows are recorded but enforcement (auto-expiry) is not yet wired.
+- Two-phase retrieval (`recall_candidates` then `release`) and the record
+  `release` operation exist in the library but are deliberately **not** exposed
+  as MCP tools yet: candidate ids from the in-memory backends are only stable
+  within a single process, so an external client could hold ids that silently
+  become invalid after a restart. Use a durable backend and the library API for
+  the two-phase flow until durable, restart-safe handles are added.
