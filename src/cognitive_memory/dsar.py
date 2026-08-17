@@ -12,14 +12,20 @@ The dataclass is frozen and validates the values it is given. Normalization
 :meth:`DSARRequest.from_dict`, which is the entry point for untrusted
 channel payloads.
 
+:class:`DSARService` sits on top of it and plans a validated request against
+a governed memory service: a strictly read-only report of what the request
+would touch, audited by counts only.
+
 Pure stdlib.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass, fields
-from typing import Any, Dict
+from typing import Any, Dict, List
 import uuid
+
+from .reliability import MemoryRecord, Scope, tokenize
 
 KINDS = ("erasure", "consent_withdrawal", "access")
 
@@ -97,3 +103,96 @@ class DSARRequest:
         """Return the request as a plain JSON-serializable dict."""
 
         return {spec.name: getattr(self, spec.name) for spec in fields(self)}
+
+
+class DSARService:
+    """Plans data subject requests against a governed memory service.
+
+    :meth:`plan` is the dry-run half of the DSAR pipeline: it answers what a
+    request would touch (which records, which sources, which derivative
+    stores, whether a strict profile would hold it) without changing a single
+    byte of state. No tombstone is written, no pending revocation is queued,
+    the backend is never mutated, so an operator can show the plan to a data
+    protection officer before anything is executed.
+
+    The matching mirrors ``GovernedMemory._execute_forget`` exactly (same
+    tokenization, same tenant filter, same token-subset test) rather than the
+    retrieval path, because the plan has to predict erasure, not recall.
+    """
+
+    def __init__(self, service: Any = None) -> None:
+        if service is None:
+            # Imported lazily: mcp_server imports this module, so a module
+            # level import would close the cycle.
+            from .mcp_server import GovernedMemoryService
+
+            service = GovernedMemoryService()
+        self.service = service
+
+    def plan(self, request: DSARRequest) -> Dict[str, Any]:
+        """Return the read-only effect report for ``request``.
+
+        Term kinds (erasure, consent withdrawal) report the matched records,
+        their sources, the registered derivative stores and the hold reason a
+        strict revocation profile would raise. Access requests report counts
+        only, split into active and quarantined records.
+        """
+
+        if request.kind == "access":
+            return self._plan_access(request)
+        return self._plan_term(request)
+
+    # -- kind handlers ------------------------------------------------------
+
+    def _plan_term(self, request: DSARRequest) -> Dict[str, Any]:
+        mem = self.service.memory_for(request.tenant)
+        matched = self._matches(mem, request.tenant, request.term)
+        would_hold = mem._revocation_hold_reason(
+            Scope(tenant=request.tenant, subject=request.subject),
+            request.requester, request.source, request.term,
+        )
+        mem.audit.record(
+            "dsar_plan", request=request.to_dict(),
+            matched_count=len(matched), would_hold=would_hold,
+        )
+        return {
+            "request_id": request.request_id,
+            "kind": request.kind,
+            "tenant": request.tenant,
+            "term": request.term,
+            "matched_count": len(matched),
+            "matched_ids": sorted(record.id for record in matched),
+            "sources": sorted({record.source for record in matched}),
+            "derivative_stores": [store.name for store in mem._derivative_stores],
+            "would_hold": would_hold,
+        }
+
+    def _plan_access(self, request: DSARRequest) -> Dict[str, Any]:
+        mem = self.service.memory_for(request.tenant)
+        matched = self._matches(mem, request.tenant, request.subject)
+        active = [record for record in matched if not record.quarantined]
+        quarantined = [record for record in matched if record.quarantined]
+        mem.audit.record(
+            "dsar_plan", request=request.to_dict(),
+            record_count=len(active), quarantined_count=len(quarantined),
+        )
+        return {
+            "request_id": request.request_id,
+            "kind": request.kind,
+            "tenant": request.tenant,
+            "subject": request.subject,
+            "record_count": len(active),
+            "quarantined_count": len(quarantined),
+        }
+
+    # -- matching -----------------------------------------------------------
+
+    @staticmethod
+    def _matches(mem: Any, tenant: str, term: str) -> List[MemoryRecord]:
+        # Same token view as GovernedMemory._execute_forget: an empty token
+        # set (a term like "---") deliberately matches nothing.
+        term_tokens = tokenize(term)
+        return [
+            record for record in mem.backend.all_records()
+            if record.scope.tenant == tenant and mem._term_hits(term_tokens, record)
+        ]

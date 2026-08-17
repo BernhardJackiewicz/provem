@@ -9,7 +9,10 @@ requester, so requester is mandatory for every kind.
 import json
 import unittest
 
-from cognitive_memory.dsar import KINDS, DSARRequest
+from cognitive_memory.dsar import KINDS, DSARRequest, DSARService
+from cognitive_memory.mcp_server import GovernedMemoryService, ServerConfig
+from cognitive_memory.reliability import MemoryRecord, Scope
+from cognitive_memory.signing import canonical_json
 
 
 def _valid(**overrides):
@@ -95,6 +98,149 @@ class FromDictTests(unittest.TestCase):
         json.dumps(round_tripped)
         with self.assertRaises(ValueError):
             DSARRequest.from_dict(["not", "a", "dict"])
+
+
+def _seeded_service(tenant="acme"):
+    svc = GovernedMemoryService()
+    mem = svc.memory_for(tenant)
+    mem.remember("alice likes tea", subject="alice", relation="likes",
+                 object="tea", tenant=tenant, source="crm")
+    mem.remember("alice works at initech", subject="alice", relation="works_at",
+                 object="initech", tenant=tenant, source="hr")
+    mem.remember("bob likes coffee", subject="bob", relation="likes",
+                 object="coffee", tenant=tenant, source="crm")
+    return svc, mem
+
+
+def _strict_service(tenant="strict_co"):
+    config = ServerConfig.from_dict({
+        "tenant_profiles": {
+            tenant: {"name": "strict", "strict_revocation": True,
+                     "revocation_operators": ["dpo_admin"]},
+        },
+    })
+    svc = GovernedMemoryService(config)
+    mem = svc.memory_for(tenant)
+    mem.remember("alice likes tea", subject="alice", relation="likes",
+                 object="tea", tenant=tenant, source="crm")
+    return svc, mem
+
+
+class _NamedStore:
+    name = "embeddings"
+
+    def purge_records(self, records):
+        return len(list(records))
+
+
+class DSARPlanTests(unittest.TestCase):
+    def test_plan_erasure_reports_matches_sources_and_derivatives(self):
+        svc, mem = _seeded_service()
+        mem.register_derivative_store(_NamedStore())
+        alice_ids = sorted(
+            r.id for r in mem.backend.all_records() if r.subject == "alice"
+        )
+        report = DSARService(svc).plan(DSARRequest(
+            request_id="req-1", kind="erasure", tenant="acme",
+            requester="dpo@acme.example", term="alice",
+        ))
+        self.assertEqual(report["kind"], "erasure")
+        self.assertEqual(report["tenant"], "acme")
+        self.assertEqual(report["term"], "alice")
+        self.assertEqual(report["matched_count"], 2)
+        self.assertEqual(report["matched_ids"], alice_ids)
+        self.assertEqual(report["sources"], ["crm", "hr"])
+        self.assertEqual(report["derivative_stores"], ["embeddings"])
+        self.assertEqual(report["would_hold"], "")
+
+    def test_plan_is_read_only(self):
+        svc, mem = _strict_service()
+        before = sorted(r.id for r in mem.backend.all_records())
+        DSARService(svc).plan(DSARRequest(
+            request_id="req-2", kind="erasure", tenant="strict_co",
+            requester="mallory", term="alice",
+        ))
+        self.assertEqual(sorted(r.id for r in mem.backend.all_records()), before)
+        self.assertEqual(mem.erased_terms.get("strict_co", []), [])
+        self.assertEqual(mem.list_pending_revocations("strict_co"), [])
+
+    def test_plan_is_deterministic(self):
+        svc, _ = _seeded_service()
+        request = DSARRequest(
+            request_id="req-3", kind="erasure", tenant="acme",
+            requester="dpo@acme.example", term="alice",
+        )
+        dsar = DSARService(svc)
+        self.assertEqual(dsar.plan(request), dsar.plan(request))
+
+    def test_plan_reports_would_hold_under_strict_profile(self):
+        svc, _ = _strict_service()
+        dsar = DSARService(svc)
+        held = dsar.plan(DSARRequest(
+            request_id="req-4", kind="erasure", tenant="strict_co",
+            requester="mallory", term="alice",
+        ))
+        self.assertEqual(held["would_hold"], "unauthorized_requester")
+        cleared = dsar.plan(DSARRequest(
+            request_id="req-5", kind="erasure", tenant="strict_co",
+            requester="dpo_admin", term="alice",
+        ))
+        self.assertEqual(cleared["would_hold"], "")
+
+    def test_plan_with_empty_tokens_yields_zero_matches(self):
+        svc, _ = _seeded_service()
+        report = DSARService(svc).plan(DSARRequest(
+            request_id="req-6", kind="erasure", tenant="acme",
+            requester="dpo@acme.example", term="---",
+        ))
+        self.assertEqual(report["matched_count"], 0)
+        self.assertEqual(report["matched_ids"], [])
+
+    def test_plan_consent_withdrawal_matches_like_erasure(self):
+        svc, _ = _seeded_service()
+        dsar = DSARService(svc)
+        erasure = dsar.plan(DSARRequest(
+            request_id="req-7", kind="erasure", tenant="acme",
+            requester="dpo@acme.example", term="alice",
+        ))
+        consent = dsar.plan(DSARRequest(
+            request_id="req-8", kind="consent_withdrawal", tenant="acme",
+            requester="dpo@acme.example", term="alice", purpose="marketing",
+        ))
+        self.assertEqual(consent["kind"], "consent_withdrawal")
+        self.assertEqual(consent["matched_ids"], erasure["matched_ids"])
+
+    def test_plan_access_counts_active_and_quarantined(self):
+        svc, mem = _seeded_service()
+        mem.backend.write(MemoryRecord(
+            subject="alice", relation="ssn", object="123-45",
+            scope=Scope(tenant="acme", subject=""), quarantined=True,
+            quarantine_reason="low_trust", id="q1",
+        ))
+        report = DSARService(svc).plan(DSARRequest(
+            request_id="req-9", kind="access", tenant="acme",
+            requester="dpo@acme.example", subject="alice",
+        ))
+        self.assertEqual(report["kind"], "access")
+        self.assertEqual(report["subject"], "alice")
+        self.assertEqual(report["record_count"], 2)
+        self.assertEqual(report["quarantined_count"], 1)
+
+    def test_plan_audits_counts_but_never_record_content(self):
+        svc, mem = _seeded_service()
+        DSARService(svc).plan(DSARRequest(
+            request_id="req-10", kind="erasure", tenant="acme",
+            requester="dpo@acme.example", term="alice",
+        ))
+        entries = mem.audit.filter("dsar_plan")
+        self.assertEqual(len(entries), 1)
+        details = entries[0].details
+        self.assertEqual(details["request"]["request_id"], "req-10")
+        self.assertEqual(details["matched_count"], 2)
+        serialized = canonical_json(details)
+        self.assertNotIn("likes tea", serialized)
+        self.assertNotIn("initech", serialized)
+        self.assertTrue(mem.verify_audit())
 
 
 if __name__ == "__main__":
