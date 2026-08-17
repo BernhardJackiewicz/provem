@@ -243,5 +243,103 @@ class DSARPlanTests(unittest.TestCase):
         self.assertTrue(mem.verify_audit())
 
 
+class DSARExecuteTests(unittest.TestCase):
+    def _erasure_request(self, request_id="req-e1", **overrides):
+        data = {
+            "request_id": request_id, "kind": "erasure", "tenant": "acme",
+            "requester": "dpo@acme.example", "term": "alice",
+            "ticket": "RITM0010001",
+        }
+        data.update(overrides)
+        return DSARRequest(**data)
+
+    def test_execute_erasure_removes_and_returns_certificate(self):
+        svc, mem = _seeded_service()
+        result = DSARService(svc).execute(self._erasure_request())
+        self.assertEqual(result["status"], "executed")
+        self.assertFalse(result["replayed"])
+        self.assertEqual(result["removed"], 2)
+        cert = result["certificate"]
+        self.assertEqual(cert["details"]["targeted_count"], 2)
+        self.assertEqual(cert["details"]["requester"], "dpo@acme.example")
+        remaining = [r.subject for r in mem.backend.all_records()]
+        self.assertEqual(remaining, ["bob"])
+        entry = mem.audit.filter("dsar_execute")[-1]
+        self.assertEqual(entry.details["certificate_seq"], cert["seq"])
+
+    def test_execute_zero_match_erasure_is_still_executed(self):
+        svc, mem = _seeded_service()
+        result = DSARService(svc).execute(
+            self._erasure_request(request_id="req-e2", term="zzz")
+        )
+        self.assertEqual(result["status"], "executed")
+        self.assertEqual(result["removed"], 0)
+        self.assertEqual(result["certificate"]["details"]["targeted_count"], 0)
+        self.assertEqual(len(mem.backend.all_records()), 3)
+
+    def test_execute_consent_withdrawal_registers_revocation(self):
+        svc, mem = _seeded_service()
+        result = DSARService(svc).execute(DSARRequest(
+            request_id="req-c1", kind="consent_withdrawal", tenant="acme",
+            requester="dpo@acme.example", term="alice", purpose="marketing",
+        ))
+        self.assertEqual(result["status"], "executed")
+        self.assertNotIn("certificate", result)
+        purposes = [p for _, p in mem.revoked_consent.get("acme", [])]
+        self.assertIn("marketing", purposes)
+        entry = mem.audit.filter("dsar_execute")[-1]
+        self.assertEqual(entry.details["kind"], "consent_withdrawal")
+        self.assertNotIn("certificate_seq", entry.details)
+
+    def test_execute_held_under_strict_profile_deletes_nothing(self):
+        svc, mem = _strict_service()
+        result = DSARService(svc).execute(DSARRequest(
+            request_id="req-h1", kind="erasure", tenant="strict_co",
+            requester="mallory", term="alice",
+        ))
+        self.assertEqual(result["status"], "held")
+        self.assertEqual(result["reason"], "unauthorized_requester")
+        self.assertTrue(result["pending_id"])
+        self.assertEqual(len(mem.backend.all_records()), 1)
+        entry = mem.audit.filter("dsar_execute")[-1]
+        self.assertEqual(entry.details["status"], "held")
+
+    def test_execute_is_idempotent_within_one_instance(self):
+        svc, mem = _seeded_service()
+        dsar = DSARService(svc)
+        first = dsar.execute(self._erasure_request())
+        replay = dsar.execute(self._erasure_request())
+        self.assertTrue(replay["replayed"])
+        self.assertEqual(replay["status"], "executed")
+        self.assertEqual(len(mem.audit.filter("erasure")), 1)
+        self.assertEqual(len(mem.audit.filter("dsar_execute")), 1)
+        self.assertEqual(
+            replay["certificate"]["seq"], first["certificate"]["seq"]
+        )
+
+    def test_execute_registry_rebuilds_from_audit(self):
+        svc, mem = _seeded_service()
+        first = DSARService(svc).execute(self._erasure_request())
+        replay = DSARService(svc).execute(self._erasure_request())
+        self.assertTrue(replay["replayed"])
+        self.assertEqual(
+            replay["certificate"]["details"]["targeted_count"], 2
+        )
+        self.assertEqual(replay["certificate"]["seq"], first["certificate"]["seq"])
+        self.assertEqual(len(mem.audit.filter("erasure")), 1)
+        self.assertEqual(len(mem.audit.filter("dsar_execute")), 1)
+
+    def test_execute_audit_details_carry_ticket_and_chain_verifies(self):
+        svc, mem = _seeded_service()
+        DSARService(svc).execute(self._erasure_request())
+        details = mem.audit.filter("dsar_execute")[-1].details
+        self.assertEqual(details["request_id"], "req-e1")
+        self.assertEqual(details["kind"], "erasure")
+        self.assertEqual(details["status"], "executed")
+        self.assertEqual(details["ticket"], "RITM0010001")
+        self.assertIsInstance(details["certificate_seq"], int)
+        self.assertTrue(mem.verify_audit())
+
+
 if __name__ == "__main__":
     unittest.main()
