@@ -447,5 +447,172 @@ class DSARAccessExportTests(unittest.TestCase):
         self.assertEqual(result["records"], [])
 
 
+class DSARVerifyReviewTests(unittest.TestCase):
+    def _erasure(self, request_id="req-v1", **overrides):
+        data = {
+            "request_id": request_id, "kind": "erasure", "tenant": "acme",
+            "requester": "dpo@acme.example", "term": "alice",
+            "ticket": "RITM0010003",
+        }
+        data.update(overrides)
+        return DSARRequest(**data)
+
+    def test_verify_unknown_request_id_is_structured(self):
+        svc, _ = _seeded_service()
+        report = DSARService(svc).verify("no-such-request", "acme")
+        self.assertFalse(report["passed"])
+        self.assertTrue(report["unknown_request_id"])
+        self.assertEqual(report["request_id"], "no-such-request")
+
+    def test_verify_executed_erasure_passes_all_probes(self):
+        svc, _ = _seeded_service()
+        dsar = DSARService(svc)
+        dsar.execute(self._erasure())
+        report = dsar.verify("req-v1", "acme")
+        self.assertTrue(report["passed"])
+        self.assertEqual(report["status"], "executed")
+        checks = report["checks"]
+        self.assertEqual(checks["residual_scan"]["residual_count"], 0)
+        self.assertTrue(checks["recall_probe"]["passed"])
+        self.assertTrue(checks["tombstone_present"]["passed"])
+        self.assertTrue(checks["audit_chain"]["passed"])
+        self.assertTrue(checks["backend_verification"]["skipped"])
+
+    def test_verify_detects_residual_after_restore(self):
+        svc, mem = _seeded_service()
+        dsar = DSARService(svc)
+        dsar.execute(self._erasure())
+        mem.backend.write(MemoryRecord(
+            subject="alice", relation="likes", object="tea",
+            scope=Scope(tenant="acme", subject=""), id="restored-1",
+        ))
+        report = dsar.verify("req-v1", "acme")
+        self.assertFalse(report["passed"])
+        self.assertFalse(report["checks"]["residual_scan"]["passed"])
+        self.assertGreaterEqual(
+            report["checks"]["residual_scan"]["residual_count"], 1
+        )
+
+    def test_reconcile_then_reverify_passes(self):
+        svc, mem = _seeded_service()
+        dsar = DSARService(svc)
+        dsar.execute(self._erasure())
+        mem.backend.write(MemoryRecord(
+            subject="alice", relation="likes", object="tea",
+            scope=Scope(tenant="acme", subject=""), id="restored-2",
+        ))
+        self.assertFalse(dsar.verify("req-v1", "acme")["passed"])
+        mem.reconcile_tombstones("acme")
+        report = dsar.verify("req-v1", "acme")
+        self.assertTrue(report["passed"])
+        self.assertEqual(report["checks"]["residual_scan"]["residual_count"], 0)
+
+    def test_verify_audits_each_call_and_chain_verifies(self):
+        svc, mem = _seeded_service()
+        dsar = DSARService(svc)
+        dsar.execute(self._erasure())
+        dsar.verify("req-v1", "acme")
+        dsar.verify("req-v1", "acme")
+        entries = mem.audit.filter("dsar_verify")
+        self.assertEqual(len(entries), 2)
+        self.assertEqual(entries[-1].details["request_id"], "req-v1")
+        self.assertIn("passed", entries[-1].details)
+        self.assertTrue(mem.verify_audit())
+
+    def test_held_then_approve_then_verify_flows_green(self):
+        svc, mem = _strict_service()
+        dsar = DSARService(svc)
+        held = dsar.execute(DSARRequest(
+            request_id="req-h2", kind="erasure", tenant="strict_co",
+            requester="mallory", term="alice",
+        ))
+        self.assertEqual(held["status"], "held")
+        probe = dsar.verify("req-h2", "strict_co")
+        self.assertFalse(probe["passed"])
+        self.assertTrue(probe["held_pending_review"])
+        approved = dsar.approve("req-h2", "strict_co", "dpo_admin")
+        self.assertEqual(approved["status"], "approved")
+        self.assertEqual(approved["reviewer"], "dpo_admin")
+        self.assertEqual(
+            approved["certificate"]["details"]["targeted_count"], 1
+        )
+        self.assertEqual(len(mem.backend.all_records()), 0)
+        fresh = DSARService(svc)
+        report = fresh.verify("req-h2", "strict_co")
+        self.assertTrue(report["passed"])
+        self.assertEqual(report["status"], "approved")
+
+    def test_reject_marks_rejected_and_leaves_data(self):
+        svc, mem = _strict_service()
+        dsar = DSARService(svc)
+        dsar.execute(DSARRequest(
+            request_id="req-h3", kind="erasure", tenant="strict_co",
+            requester="mallory", term="alice",
+        ))
+        rejected = dsar.reject("req-h3", "strict_co", "dpo_admin",
+                               reason="not verified")
+        self.assertEqual(rejected["status"], "rejected")
+        self.assertEqual(len(mem.backend.all_records()), 1)
+        report = dsar.verify("req-h3", "strict_co")
+        self.assertFalse(report["passed"])
+        self.assertEqual(report["status"], "rejected")
+
+    def test_approve_unknown_or_not_held_raises(self):
+        svc, _ = _seeded_service()
+        dsar = DSARService(svc)
+        with self.assertRaises(KeyError):
+            dsar.approve("no-such-request", "acme", "dpo_admin")
+        dsar.execute(self._erasure())
+        with self.assertRaises(ValueError):
+            dsar.approve("req-v1", "acme", "dpo_admin")
+        with self.assertRaises(KeyError):
+            dsar.reject("no-such-request", "acme", "dpo_admin")
+
+    def test_approved_consent_withdrawal_quirk_refuses_reads(self):
+        svc, mem = _strict_service()
+        dsar = DSARService(svc)
+        held = dsar.execute(DSARRequest(
+            request_id="req-c2", kind="consent_withdrawal",
+            tenant="strict_co", requester="mallory", term="alice",
+            purpose="marketing",
+        ))
+        self.assertEqual(held["status"], "held")
+        dsar.approve("req-c2", "strict_co", "dpo_admin")
+        report = dsar.verify("req-c2", "strict_co")
+        self.assertTrue(report["passed"])
+        self.assertIn("do_not_use", report["checks"]["refusal"]["reasons"])
+
+    def test_verify_executed_consent_checks_refusal(self):
+        svc, _ = _seeded_service()
+        dsar = DSARService(svc)
+        dsar.execute(DSARRequest(
+            request_id="req-c3", kind="consent_withdrawal", tenant="acme",
+            requester="dpo@acme.example", term="alice", purpose="marketing",
+        ))
+        report = dsar.verify("req-c3", "acme")
+        self.assertTrue(report["passed"])
+        self.assertIn(
+            "consent_revoked", report["checks"]["refusal"]["reasons"]
+        )
+
+    def test_verify_access_reports_hash_status(self):
+        svc, mem = _seeded_service()
+        dsar = DSARService(svc)
+        first = dsar.execute(DSARRequest(
+            request_id="req-a5", kind="access", tenant="acme",
+            requester="dpo@acme.example", subject="alice",
+        ))
+        report = dsar.verify("req-a5", "acme")
+        self.assertTrue(report["passed"])
+        hash_check = report["checks"]["package_hash"]
+        self.assertEqual(hash_check["recorded"], first["package_sha256"])
+        self.assertFalse(hash_check["drift"])
+        mem.remember("alice hates mondays", subject="alice", relation="hates",
+                     object="mondays", tenant="acme", source="crm")
+        drifted = dsar.verify("req-a5", "acme")
+        self.assertTrue(drifted["checks"]["package_hash"]["drift"])
+        self.assertTrue(drifted["passed"])
+
+
 if __name__ == "__main__":
     unittest.main()

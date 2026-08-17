@@ -18,6 +18,11 @@ would touch, audited by counts only. :meth:`DSARService.execute` is the
 write half: it performs the erasure, the consent withdrawal or the access
 export exactly once per ``request_id``, so an ITSM channel that retries a
 delivery never erases twice and never issues a second certificate.
+:meth:`DSARService.verify` is the after-the-fact evidence half (did the
+deletion actually hold?), and :meth:`DSARService.approve` /
+:meth:`DSARService.reject` let a second operator close out a request that a
+strict revocation profile put on hold, addressed by the ``request_id`` the
+ITSM ticket knows rather than by an internal pending id.
 
 Pure stdlib.
 """
@@ -38,6 +43,12 @@ KINDS = ("erasure", "consent_withdrawal", "access")
 _TERM_KINDS = ("erasure", "consent_withdrawal")
 
 DEFAULT_SOURCE = "itsm"
+
+# Audit actions that carry a request summary the replay registry rebuilds from.
+_REGISTRY_ACTIONS = ("dsar_execute", "dsar_approve", "dsar_reject")
+
+# Read-side exclusion reasons that count as an honoured consent withdrawal.
+_REFUSAL_REASONS = frozenset({"consent_revoked", "do_not_use"})
 
 
 def _is_blank(value: str) -> bool:
@@ -195,6 +206,119 @@ class DSARService:
             return self._execute_erasure(mem, request)
         return self._execute_consent_withdrawal(mem, request)
 
+    def verify(self, request_id: str, tenant: str) -> Dict[str, Any]:
+        """Re-check a completed request against current state, on demand.
+
+        "The request was executed" is a claim about the past; this is the
+        evidence for it now. An erasure is probed from four independent
+        angles (a residual scan over the store, a governed recall that must
+        abstain, the tombstone registry, the audit chain) plus the backend's
+        own verification sweep when the backend offers one, so a restore from
+        backup that silently reinstates erased records shows up as a failed
+        check rather than as a green certificate. A consent withdrawal is
+        probed by the read gate that is supposed to refuse, an access export
+        by re-deriving the package and comparing hashes.
+
+        Read-only against memory and repeatable: every call appends one
+        ``dsar_verify`` entry (the probe itself is auditable evidence) and
+        never rewrites the request's registered outcome. An unknown
+        ``request_id`` is answered structurally instead of raising, because a
+        polling ITSM integration asks about ids this tenant may never have
+        seen, and there is no kind to audit a probe against.
+        """
+
+        mem = self.service.memory_for(tenant)
+        self._ensure_registry(mem, tenant)
+        summary = self._registry.get((tenant, request_id))
+        if summary is None:
+            return {
+                "request_id": request_id,
+                "tenant": tenant,
+                "passed": False,
+                "unknown_request_id": True,
+            }
+
+        report = self._verify_report(mem, tenant, request_id, summary)
+        mem.audit.record(
+            "dsar_verify",
+            request_id=request_id,
+            kind=str(summary.get("kind", "")),
+            status=str(summary.get("status", "")),
+            passed=bool(report["passed"]),
+        )
+        return report
+
+    def approve(self, request_id: str, tenant: str, reviewer: str) -> Dict[str, Any]:
+        """Execute a held request after a second operator signed off.
+
+        Addressed by ``request_id``, not by the internal pending id: the ITSM
+        ticket knows the request it raised, not the id the hold generated. An
+        erasure returns the certificate the approval produced, so the closing
+        ITSM comment carries the same evidence a direct execution would.
+
+        Only a held request can be approved. An unknown id is a caller error
+        (``KeyError``), an already settled one a state error (``ValueError``);
+        neither is silently absorbed, because both would otherwise read as
+        "approved" to the channel that asked.
+        """
+
+        mem = self.service.memory_for(tenant)
+        summary = self._held_summary(mem, tenant, request_id, "approve")
+        kind = str(summary.get("kind", ""))
+        pending_id = str(summary.get("pending_id", ""))
+
+        # Count-based capture like _execute_erasure: filter(...)[-1] alone
+        # could hand back a certificate from an unrelated earlier erasure.
+        certs_before = len(mem.audit.filter("erasure"))
+        removed = mem.approve_revocation(pending_id, reviewer)
+        certs = mem.audit.filter("erasure")
+        cert = certs[-1].to_dict() if len(certs) > certs_before else {}
+
+        details = self._review_details(summary, "approved", reviewer, pending_id)
+        if cert:
+            details["certificate_seq"] = int(cert["seq"])
+        self._register_review(mem, tenant, request_id, "dsar_approve", details)
+
+        result: Dict[str, Any] = {
+            "request_id": request_id,
+            "kind": kind,
+            "tenant": tenant,
+            "status": "approved",
+            "pending_id": pending_id,
+            "reviewer": reviewer,
+        }
+        if kind == "erasure":
+            result["removed"] = removed
+            result["certificate"] = cert
+        return result
+
+    def reject(self, request_id: str, tenant: str, reviewer: str,
+               reason: str = "") -> Dict[str, Any]:
+        """Close a held request without executing it.
+
+        The data stays untouched and the rejection is durable: the registry
+        and the audit both carry the outcome, so a later verify reports
+        ``rejected`` with ``passed`` False instead of probing an erasure that
+        was deliberately never performed.
+        """
+
+        mem = self.service.memory_for(tenant)
+        summary = self._held_summary(mem, tenant, request_id, "reject")
+        pending_id = str(summary.get("pending_id", ""))
+        mem.reject_revocation(pending_id, reviewer, reason)
+
+        details = self._review_details(summary, "rejected", reviewer, pending_id)
+        details["reject_reason"] = reason
+        self._register_review(mem, tenant, request_id, "dsar_reject", details)
+        return {
+            "request_id": request_id,
+            "kind": str(summary.get("kind", "")),
+            "tenant": tenant,
+            "status": "rejected",
+            "pending_id": pending_id,
+            "reviewer": reviewer,
+        }
+
     # -- kind handlers ------------------------------------------------------
 
     def _plan_term(self, request: DSARRequest) -> Dict[str, Any]:
@@ -261,6 +385,9 @@ class DSARService:
             "kind": request.kind,
             "status": "executed",
             "ticket": request.ticket,
+            # The term makes the summary self-supporting: verify re-probes the
+            # erasure from the registry alone, without the original request.
+            "term": request.term,
         }
         if cert:
             # The seq is the audit index, so a replay can re-read the exact
@@ -294,6 +421,10 @@ class DSARService:
             "kind": request.kind,
             "status": "executed",
             "ticket": request.ticket,
+            "term": request.term,
+            # The purpose decides which read the refusal probe has to make: a
+            # purpose-scoped withdrawal only blocks that declared purpose.
+            "purpose": request.purpose,
         }
         # No certificate: the records stay stored, only the read gate changes.
         self._record(mem, request, details)
@@ -317,13 +448,16 @@ class DSARService:
         the personal data the request is about.
         """
 
-        records, withheld = self._access_package(mem, request)
+        records, withheld = self._access_package(mem, request.tenant, request.subject)
         package_sha256 = self._package_hash(records, withheld)
         details: Dict[str, Any] = {
             "request_id": request.request_id,
             "kind": request.kind,
             "status": "executed",
             "ticket": request.ticket,
+            # The subject is an identifier, not content: it lets verify
+            # re-derive the package and compare hashes without the request.
+            "subject": request.subject,
             "record_count": len(records),
             "withheld_count": len(withheld),
             "package_sha256": package_sha256,
@@ -354,7 +488,7 @@ class DSARService:
 
     @staticmethod
     def _access_package(
-        mem: Any, request: DSARRequest
+        mem: Any, tenant: str, subject: str
     ) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
         """Return (records, withheld) for the subject, both sorted by id.
 
@@ -363,9 +497,13 @@ class DSARService:
         by id and reason instead of by content: the subject learns that data
         is held back and why, without the export handing out a value the
         governance layer has already flagged as untrusted.
+
+        Takes (tenant, subject) rather than the request, because verify has to
+        re-derive the package from the audited summary, where no request is
+        left to pass.
         """
 
-        matched = DSARService._matches(mem, request.tenant, request.subject)
+        matched = DSARService._matches(mem, tenant, subject)
         records = [
             {
                 "id": record.id,
@@ -409,9 +547,14 @@ class DSARService:
             "kind": request.kind,
             "status": "held",
             "ticket": request.ticket,
+            # Carried so a later approve/reject (and the verify after it) works
+            # from the registry alone; the request object is long gone by then.
+            "term": request.term,
             "pending_id": held.id,
             "reason": held.reason,
         }
+        if request.kind == "consent_withdrawal":
+            details["purpose"] = request.purpose
         self._record(mem, request, details)
         return {
             "request_id": request.request_id,
@@ -438,12 +581,21 @@ class DSARService:
         Done once per tenant and per service: the audit is append-only and
         every later execution is registered in the same step that audits it,
         so a second scan could only re-read what is already known.
+
+        Three actions carry a request summary: the execution and the two
+        review outcomes. They are replayed in sequence order, so a request
+        that was held and then approved rebuilds as approved, exactly as the
+        in-process registry would hold it. ``dsar_plan`` (a dry run),
+        ``dsar_verify`` (a probe) and ``access_export`` (a disclosure record)
+        carry no summary and are skipped.
         """
 
         if tenant in self._registry_tenants:
             return
         self._registry_tenants.add(tenant)
-        for entry in mem.audit.filter("dsar_execute"):
+        for entry in mem.audit.entries():
+            if entry.action not in _REGISTRY_ACTIONS:
+                continue
             details = dict(entry.details)
             request_id = str(details.get("request_id", ""))
             if request_id:
@@ -482,7 +634,7 @@ class DSARService:
         audit entry: the disclosure happened once, this is the same one.
         """
 
-        records, withheld = self._access_package(mem, request)
+        records, withheld = self._access_package(mem, request.tenant, request.subject)
         package_sha256 = self._package_hash(records, withheld)
         recorded_sha256 = str(summary.get("package_sha256", ""))
         return {
@@ -500,6 +652,185 @@ class DSARService:
             "recorded_package_sha256": recorded_sha256,
             "hash_drift": package_sha256 != recorded_sha256,
         }
+
+    # -- verification -------------------------------------------------------
+
+    def _verify_report(self, mem: Any, tenant: str, request_id: str,
+                       summary: Dict[str, Any]) -> Dict[str, Any]:
+        kind = str(summary.get("kind", ""))
+        status = str(summary.get("status", ""))
+        report: Dict[str, Any] = {
+            "request_id": request_id,
+            "tenant": tenant,
+            "kind": kind,
+            "status": status,
+        }
+        if status == "held":
+            # Nothing was done yet, so there is nothing to probe: the honest
+            # answer is that the request is waiting for a reviewer.
+            report["passed"] = False
+            report["held_pending_review"] = True
+            report["pending_id"] = str(summary.get("pending_id", ""))
+            report["reason"] = str(summary.get("reason", ""))
+            return report
+        if status == "rejected":
+            report["passed"] = False
+            return report
+
+        if kind == "access":
+            checks = self._access_checks(mem, tenant, summary)
+            # Drift is expected (the subject keeps living) and not a failure;
+            # what verify asserts for an export is the audit trail behind it.
+            report["passed"] = bool(checks["audit_chain"]["passed"])
+        else:
+            if kind == "consent_withdrawal":
+                checks = self._consent_checks(mem, tenant, summary)
+            else:
+                checks = self._erasure_checks(mem, tenant, summary)
+            report["passed"] = all(check["passed"] for check in checks.values())
+        report["checks"] = checks
+        return report
+
+    def _erasure_checks(self, mem: Any, tenant: str,
+                        summary: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
+        term = str(summary.get("term", ""))
+        residual = self._matches(mem, tenant, term)
+        probe = mem.recall_value(term, tenant=tenant)
+        tombstone = (
+            tokenize(term) in mem.erased_terms.get(tenant, [])
+            and term in mem.erased_term_texts.get(tenant, [])
+        )
+        return {
+            # Store-side: are matching records physically gone?
+            "residual_scan": {
+                "passed": len(residual) == 0,
+                "residual_count": len(residual),
+            },
+            # Read-side: even a residual copy must never be served.
+            "recall_probe": {"passed": bool(probe.abstained), "reason": probe.reason},
+            # Registry-side: the tombstone is what blocks a re-ingest.
+            "tombstone_present": {"passed": bool(tombstone)},
+            "audit_chain": {"passed": bool(mem.verify_audit())},
+            "backend_verification": self._backend_check(mem, summary),
+        }
+
+    def _consent_checks(self, mem: Any, tenant: str,
+                        summary: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
+        term = str(summary.get("term", ""))
+        purpose = str(summary.get("purpose", ""))
+        # None, not "": an empty declared purpose would switch purpose gating
+        # off entirely instead of asking for the withdrawn purpose.
+        result = mem.recall_value(term, tenant=tenant, purpose=purpose or None)
+        reasons = sorted({reason for _, reason in result.excluded})
+        # Deliberately generic about *which* refusal: an approved withdrawal
+        # goes through the shared revocation path and lands as a full
+        # restriction (do_not_use) rather than as consent_revoked. The
+        # subject's read is refused either way, which is what verify asserts;
+        # no_match covers the case where nothing is left to refuse.
+        return {
+            "refusal": {
+                "passed": bool(
+                    result.abstained
+                    and (
+                        bool(_REFUSAL_REASONS & set(reasons))
+                        or result.reason == "no_match"
+                    )
+                ),
+                "reasons": reasons,
+            },
+            "audit_chain": {"passed": bool(mem.verify_audit())},
+        }
+
+    def _access_checks(self, mem: Any, tenant: str,
+                       summary: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
+        recorded = str(summary.get("package_sha256", ""))
+        records, withheld = self._access_package(
+            mem, tenant, str(summary.get("subject", ""))
+        )
+        current = self._package_hash(records, withheld)
+        return {
+            "audit_chain": {"passed": bool(mem.verify_audit())},
+            "package_hash": {
+                "recorded": recorded,
+                "current": current,
+                "drift": current != recorded,
+            },
+        }
+
+    def _backend_check(self, mem: Any, summary: Dict[str, Any]) -> Dict[str, Any]:
+        """Report the backend's own post-delete sweep, when it has one.
+
+        Feature-detected like ``GovernedMemory._execute_forget``: a backend
+        without ``verify_erasure`` (and a certificate issued before the sweep
+        existed) cannot fail this check, and saying so as ``skipped`` is more
+        honest than reporting a pass nobody verified.
+        """
+
+        if not callable(getattr(mem.backend, "verify_erasure", None)):
+            return {"skipped": True, "passed": True}
+        certificate = self._certificate(mem, summary)
+        sweep = certificate.get("details", {}).get("backend_verification")
+        if not isinstance(sweep, dict):
+            return {"skipped": True, "passed": True}
+        residual = int(sweep.get("residual", 0))
+        return {"skipped": False, "passed": residual == 0, "residual": residual}
+
+    @staticmethod
+    def _certificate(mem: Any, summary: Dict[str, Any]) -> Dict[str, Any]:
+        """Re-read the erasure certificate the summary points at, if any."""
+
+        seq = summary.get("certificate_seq")
+        if not isinstance(seq, int):
+            return {}
+        entries = mem.audit.entries()
+        if 0 <= seq < len(entries):
+            return entries[seq].to_dict()
+        return {}
+
+    # -- review -------------------------------------------------------------
+
+    def _held_summary(self, mem: Any, tenant: str, request_id: str,
+                      action: str) -> Dict[str, Any]:
+        self._ensure_registry(mem, tenant)
+        summary = self._registry.get((tenant, request_id))
+        if summary is None:
+            raise KeyError(
+                "unknown DSAR request_id %r for tenant %r" % (request_id, tenant)
+            )
+        status = str(summary.get("status", ""))
+        if status != "held":
+            raise ValueError(
+                "cannot %s DSAR request %r: status is %r, not 'held'"
+                % (action, request_id, status)
+            )
+        return summary
+
+    @staticmethod
+    def _review_details(summary: Dict[str, Any], status: str, reviewer: str,
+                        pending_id: str) -> Dict[str, Any]:
+        """Build the review entry as a full successor summary.
+
+        It carries the identifying fields of the held entry forward, so the
+        registry rebuild can take the latest entry per request_id as the whole
+        truth instead of merging two partial ones.
+        """
+
+        details: Dict[str, Any] = {
+            "request_id": str(summary.get("request_id", "")),
+            "kind": str(summary.get("kind", "")),
+            "status": status,
+        }
+        for name in ("ticket", "term", "purpose"):
+            if name in summary:
+                details[name] = summary[name]
+        details["reviewer"] = reviewer
+        details["pending_id"] = pending_id
+        return details
+
+    def _register_review(self, mem: Any, tenant: str, request_id: str,
+                         action: str, details: Dict[str, Any]) -> None:
+        entry = mem.audit.record(action, **details)
+        self._registry[(tenant, request_id)] = dict(entry.details)
 
     # -- matching -----------------------------------------------------------
 
