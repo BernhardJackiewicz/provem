@@ -16,7 +16,7 @@ import unittest
 from cognitive_memory.dsar import KINDS, DSARRequest, DSARService
 from cognitive_memory.mcp_server import GovernedMemoryService, ServerConfig
 from cognitive_memory.reliability import MemoryRecord, Scope
-from cognitive_memory.signing import canonical_json
+from cognitive_memory.signing import HmacSigner, canonical_json, verify_signature
 
 
 def _valid(**overrides):
@@ -612,6 +612,153 @@ class DSARVerifyReviewTests(unittest.TestCase):
         drifted = dsar.verify("req-a5", "acme")
         self.assertTrue(drifted["checks"]["package_hash"]["drift"])
         self.assertTrue(drifted["passed"])
+
+
+class _FakeClock:
+    def __init__(self, now=100.0):
+        self.now = now
+
+    def __call__(self):
+        return self.now
+
+
+class DSARSignerMetricsTests(unittest.TestCase):
+    def _erasure(self, request_id="req-s1", **overrides):
+        data = {
+            "request_id": request_id, "kind": "erasure", "tenant": "acme",
+            "requester": "dpo@acme.example", "term": "alice",
+            "ticket": "RITM0010004",
+        }
+        data.update(overrides)
+        return DSARRequest(**data)
+
+    def test_without_signer_certificates_stay_byte_identical(self):
+        svc, mem = _seeded_service()
+        result = DSARService(svc).execute(self._erasure())
+        self.assertNotIn("signed_certificate", result)
+        self.assertEqual(
+            result["certificate"], mem.audit.filter("erasure")[-1].to_dict()
+        )
+
+    def test_signer_adds_verifiable_detached_signature(self):
+        svc, mem = _seeded_service()
+        dsar = DSARService(svc, signer=HmacSigner("shared-secret", "k1"))
+        result = dsar.execute(self._erasure())
+        signed = result["signed_certificate"]
+        self.assertEqual(signed["certificate"], result["certificate"])
+        self.assertEqual(
+            result["certificate"], mem.audit.filter("erasure")[-1].to_dict()
+        )
+        payload = canonical_json(result["certificate"]).encode("utf-8")
+        self.assertTrue(
+            verify_signature(payload, signed["signature"], "shared-secret")
+        )
+
+    def test_approve_and_replay_also_carry_signed_certificate(self):
+        svc, _ = _strict_service()
+        dsar = DSARService(svc, signer=HmacSigner("shared-secret", "k1"))
+        dsar.execute(DSARRequest(
+            request_id="req-s2", kind="erasure", tenant="strict_co",
+            requester="mallory", term="alice",
+        ))
+        approved = dsar.approve("req-s2", "strict_co", "dpo_admin")
+        self.assertIn("signed_certificate", approved)
+        replay = dsar.execute(DSARRequest(
+            request_id="req-s2", kind="erasure", tenant="strict_co",
+            requester="mallory", term="alice",
+        ))
+        self.assertTrue(replay["replayed"])
+        self.assertIn("signed_certificate", replay)
+
+    def test_status_reports_lifecycle_and_last_verify(self):
+        svc, _ = _seeded_service()
+        dsar = DSARService(svc)
+        dsar.execute(self._erasure())
+        status = dsar.status("req-s1", "acme")
+        self.assertEqual(status["status"], "executed")
+        self.assertEqual(status["kind"], "erasure")
+        self.assertEqual(status["ticket"], "RITM0010004")
+        self.assertIsNone(status["last_verify_passed"])
+        dsar.verify("req-s1", "acme")
+        self.assertTrue(dsar.status("req-s1", "acme")["last_verify_passed"])
+        with self.assertRaises(KeyError):
+            dsar.status("no-such-request", "acme")
+
+    def test_status_planned_when_only_planned(self):
+        svc, _ = _seeded_service()
+        dsar = DSARService(svc)
+        dsar.plan(self._erasure(request_id="req-p1"))
+        status = dsar.status("req-p1", "acme")
+        self.assertEqual(status["status"], "planned")
+        self.assertEqual(status["kind"], "erasure")
+
+    def test_metrics_count_requests_verify_and_residuals(self):
+        svc, mem = _seeded_service()
+        clock = _FakeClock(100.0)
+        dsar = DSARService(svc, monotonic=clock)
+        dsar.execute(self._erasure())
+        dsar.execute(self._erasure())
+        dsar.verify("req-s1", "acme")
+        mem.backend.write(MemoryRecord(
+            subject="alice", relation="likes", object="tea",
+            scope=Scope(tenant="acme", subject=""), id="restored-3",
+        ))
+        dsar.verify("req-s1", "acme")
+        clock.now = 142.5
+        metrics = dsar.metrics()
+        self.assertEqual(metrics["requests"], {"erasure": {"executed": 1}})
+        self.assertEqual(metrics["verify"], {"passed": 1, "failed": 1})
+        self.assertGreaterEqual(metrics["residuals_found"], 1)
+        self.assertEqual(metrics["uptime_seconds"], 42.5)
+
+    def test_metrics_are_json_serializable_nested_dicts(self):
+        svc, _ = _strict_service()
+        dsar = DSARService(svc)
+        dsar.execute(DSARRequest(
+            request_id="req-s3", kind="erasure", tenant="strict_co",
+            requester="mallory", term="alice",
+        ))
+        dsar.reject("req-s3", "strict_co", "dpo_admin", reason="no proof")
+        metrics = dsar.metrics()
+        json.dumps(metrics)
+        self.assertEqual(
+            metrics["requests"]["erasure"], {"held": 1, "rejected": 1}
+        )
+
+    def test_render_metrics_emits_prometheus_lines(self):
+        svc, _ = _seeded_service()
+        dsar = DSARService(svc)
+        dsar.execute(self._erasure())
+        dsar.verify("req-s1", "acme")
+        out = dsar.render_metrics()
+        self.assertIn(
+            'dsar_requests_total{kind="erasure",status="executed"} 1', out
+        )
+        self.assertIn('dsar_verify_total{result="passed"} 1', out)
+        self.assertIn("dsar_residuals_found_total 0", out)
+        self.assertIn("dsar_uptime_seconds ", out)
+
+    def test_ticket_payload_bundles_evidence(self):
+        svc, mem = _seeded_service()
+        dsar = DSARService(svc, signer=HmacSigner("shared-secret", "k1"))
+        dsar.execute(self._erasure())
+        payload = dsar.ticket_payload("req-s1", "acme")
+        self.assertEqual(payload["request"]["request_id"], "req-s1")
+        self.assertEqual(payload["request"]["requester"], "dpo@acme.example")
+        self.assertEqual(payload["request"]["term"], "alice")
+        self.assertEqual(payload["status"], "executed")
+        self.assertEqual(
+            payload["signed_certificate"]["certificate"], payload["certificate"]
+        )
+        self.assertTrue(payload["verify_report"]["passed"])
+        self.assertEqual(payload["audit"]["head_hash"], mem.audit.head_hash())
+        self.assertTrue(payload["audit"]["verified"])
+        json.dumps(payload)
+
+    def test_ticket_payload_unknown_request_raises_value_error(self):
+        svc, _ = _seeded_service()
+        with self.assertRaises(ValueError):
+            DSARService(svc).ticket_payload("no-such-request", "acme")
 
 
 if __name__ == "__main__":

@@ -24,6 +24,13 @@ deletion actually hold?), and :meth:`DSARService.approve` /
 strict revocation profile put on hold, addressed by the ``request_id`` the
 ITSM ticket knows rather than by an internal pending id.
 
+Around that core sit the operational surfaces an ITSM integration needs:
+an optional detached signer for every certificate it hands out,
+:meth:`DSARService.status` as the lifecycle view a polling channel asks for,
+:meth:`DSARService.metrics` / :meth:`DSARService.render_metrics` for the
+service's own health, and :meth:`DSARService.ticket_payload` as the single
+evidence bundle that gets attached to the ticket when it is closed.
+
 Pure stdlib.
 """
 
@@ -32,10 +39,11 @@ from __future__ import annotations
 from dataclasses import dataclass, fields
 from typing import Any, Dict, List, Optional, Set, Tuple
 import hashlib
+import time
 import uuid
 
 from .reliability import MemoryRecord, Scope, tokenize
-from .signing import canonical_json
+from .signing import canonical_json, sign_certificate
 
 KINDS = ("erasure", "consent_withdrawal", "access")
 
@@ -139,9 +147,17 @@ class DSARService:
     audit trail, not held in memory only, so idempotency survives a restart:
     the ``dsar_execute`` entry carries the full response summary and a fresh
     service rehydrates it on first use per tenant.
+
+    ``signer`` is optional and duck-typed (any object with
+    ``sign(bytes) -> dict``, for example :class:`signing.HmacSigner`). With a
+    signer configured, every response that carries a certificate carries a
+    detached ``signed_certificate`` next to it; without one, the responses are
+    byte-identical to the unsigned artifacts. ``monotonic`` is the clock the
+    uptime metric is measured against and exists so a test can pin it.
     """
 
-    def __init__(self, service: Any = None) -> None:
+    def __init__(self, service: Any = None, signer: Any = None,
+                 monotonic: Any = None) -> None:
         if service is None:
             # Imported lazily: mcp_server imports this module, so a module
             # level import would close the cycle.
@@ -149,10 +165,18 @@ class DSARService:
 
             service = GovernedMemoryService()
         self.service = service
+        self._signer = signer
+        self._monotonic = time.monotonic if monotonic is None else monotonic
+        self._started = self._monotonic()
         # (tenant, request_id) -> the audited summary of the first execution.
         self._registry: Dict[Tuple[str, str], Dict[str, Any]] = {}
         # Tenants whose registry has already been rehydrated from the audit.
         self._registry_tenants: Set[str] = set()
+        # Process-local counters, see metrics().
+        self._requests: Dict[str, Dict[str, int]] = {}
+        self._verify_passed = 0
+        self._verify_failed = 0
+        self._residuals_found = 0
 
     def plan(self, request: DSARRequest) -> Dict[str, Any]:
         """Return the read-only effect report for ``request``.
@@ -239,6 +263,7 @@ class DSARService:
             }
 
         report = self._verify_report(mem, tenant, request_id, summary)
+        self._count_verify(report)
         mem.audit.record(
             "dsar_verify",
             request_id=request_id,
@@ -290,7 +315,7 @@ class DSARService:
         if kind == "erasure":
             result["removed"] = removed
             result["certificate"] = cert
-        return result
+        return self._signed(result)
 
     def reject(self, request_id: str, tenant: str, reviewer: str,
                reason: str = "") -> Dict[str, Any]:
@@ -318,6 +343,237 @@ class DSARService:
             "pending_id": pending_id,
             "reviewer": reviewer,
         }
+
+    # -- lifecycle ----------------------------------------------------------
+
+    def status(self, request_id: str, tenant: str) -> Dict[str, Any]:
+        """Report where a request stands, for the channel that raised it.
+
+        The lifecycle an ITSM integration polls for: ``planned`` (a dry run
+        happened, nothing was executed), ``executed``, ``held``, ``approved``
+        or ``rejected``, with the ticket it belongs to and the outcome of the
+        most recent verify probe (``last_verify_passed``, ``None`` when the
+        request was never verified). A request that neither the replay
+        registry nor a plan entry knows raises ``KeyError``, so a gateway can
+        answer 404 instead of inventing a state.
+        """
+
+        mem = self.service.memory_for(tenant)
+        self._ensure_registry(mem, tenant)
+        summary = self._registry.get((tenant, request_id))
+        if summary is None:
+            planned = self._planned_request(mem, request_id)
+            if planned is None:
+                raise KeyError(
+                    "unknown DSAR request_id %r for tenant %r" % (request_id, tenant)
+                )
+            return {
+                "request_id": request_id,
+                "tenant": tenant,
+                "kind": str(planned.get("kind", "")),
+                "status": "planned",
+                "ticket": str(planned.get("ticket", "")),
+                "last_verify_passed": None,
+            }
+
+        state: Dict[str, Any] = {
+            "request_id": request_id,
+            "tenant": tenant,
+            "kind": str(summary.get("kind", "")),
+            "status": str(summary.get("status", "")),
+            "ticket": str(summary.get("ticket", "")),
+        }
+        # Only present for the states that have them: a held request has a
+        # pending id, an erasure has a certificate.
+        for name in ("pending_id", "certificate_seq"):
+            if name in summary:
+                state[name] = summary[name]
+        state["last_verify_passed"] = self._last_verify_passed(mem, request_id)
+        return state
+
+    # -- metrics ------------------------------------------------------------
+
+    def metrics(self) -> Dict[str, Any]:
+        """Return the service's own counters as nested, JSON-ready dicts.
+
+        Deliberately process-local: the counters describe what this service
+        instance handled since it started, not the tenant's full history. A
+        history figure would have to be rebuilt from every tenant's audit
+        trail on every scrape, and the audit trail is already the authority
+        for that question. ``uptime_seconds`` is measured against the
+        injected monotonic clock, so it cannot go backwards when the wall
+        clock is corrected.
+
+        ``requests`` counts first executions only (``executed`` / ``held``)
+        plus the review outcomes (``approved`` / ``rejected``); a replay is
+        not a new request and is not counted.
+        """
+
+        return {
+            "requests": {
+                kind: dict(statuses) for kind, statuses in self._requests.items()
+            },
+            "verify": {"passed": self._verify_passed, "failed": self._verify_failed},
+            "residuals_found": self._residuals_found,
+            "uptime_seconds": self._monotonic() - self._started,
+        }
+
+    def render_metrics(self) -> str:
+        """Render :meth:`metrics` as Prometheus-style text lines."""
+
+        snapshot = self.metrics()
+        requests = snapshot["requests"]
+        lines: List[str] = []
+        for kind in sorted(requests):
+            for status in sorted(requests[kind]):
+                lines.append(
+                    'dsar_requests_total{kind="%s",status="%s"} %d'
+                    % (kind, status, requests[kind][status])
+                )
+        # Always emitted, even at zero: a missing series and a zero series
+        # read very differently on a dashboard.
+        verify = snapshot["verify"]
+        lines.append('dsar_verify_total{result="passed"} %d' % verify["passed"])
+        lines.append('dsar_verify_total{result="failed"} %d' % verify["failed"])
+        lines.append("dsar_residuals_found_total %d" % snapshot["residuals_found"])
+        lines.append("dsar_uptime_seconds %.3f" % snapshot["uptime_seconds"])
+        return "".join(line + "\n" for line in lines)
+
+    # -- ticket artifact ----------------------------------------------------
+
+    def ticket_payload(self, request_id: str, tenant: str) -> Dict[str, Any]:
+        """Bundle the evidence for a request into one attachable artifact.
+
+        This is what gets attached to the ITSM ticket when it is closed: the
+        request as it was recorded, its status, the erasure certificate (with
+        its detached signature when a signer is configured), a freshly taken
+        verify report and the audit head the whole thing is anchored to.
+
+        Building the payload *is* a verification, so it runs the regular
+        :meth:`verify` and leaves its ``dsar_verify`` entry in the trail. The
+        head hash is read afterwards on purpose: the hash in the attachment
+        covers the probe that the attachment reports. A request that is only
+        planned is bundled honestly, with the unknown-request verify shape and
+        no certificate; an entirely unknown ``request_id`` raises
+        ``ValueError``, because a payload without a request is meaningless.
+        """
+
+        mem = self.service.memory_for(tenant)
+        self._ensure_registry(mem, tenant)
+        summary = self._registry.get((tenant, request_id))
+        recorded = summary
+        if recorded is None:
+            recorded = self._planned_request(mem, request_id)
+            if recorded is None:
+                raise ValueError(
+                    "unknown DSAR request_id %r for tenant %r" % (request_id, tenant)
+                )
+
+        verify_report = self.verify(request_id, tenant)
+        payload: Dict[str, Any] = {
+            "request": self._request_fields(tenant, recorded),
+            "status": str(summary.get("status", "")) if summary else "planned",
+        }
+        certificate = self._certificate(mem, summary) if summary else {}
+        if certificate:
+            payload["certificate"] = certificate
+        self._signed(payload)
+        payload["verify_report"] = verify_report
+        payload["audit"] = {
+            "head_hash": mem.audit.head_hash(),
+            "verified": bool(mem.verify_audit()),
+        }
+        return payload
+
+    # -- signing ------------------------------------------------------------
+
+    def _signed(self, result: Dict[str, Any]) -> Dict[str, Any]:
+        """Attach a detached signature to a result that carries a certificate.
+
+        Detached and additive: the ``certificate`` itself stays byte-identical
+        to the audit entry it came from, and without a signer no key is added
+        at all, so an unsigned deployment sees exactly the shapes it always
+        saw.
+        """
+
+        if self._signer is None:
+            return result
+        certificate = result.get("certificate")
+        if isinstance(certificate, dict) and certificate:
+            result["signed_certificate"] = sign_certificate(certificate, self._signer)
+        return result
+
+    # -- counters -----------------------------------------------------------
+
+    def _count_request(self, kind: Any, status: Any) -> None:
+        kind = str(kind or "")
+        status = str(status or "")
+        if not kind or not status:
+            return
+        by_status = self._requests.setdefault(kind, {})
+        by_status[status] = by_status.get(status, 0) + 1
+
+    def _count_verify(self, report: Dict[str, Any]) -> None:
+        """Fold one verify report into the counters.
+
+        The residual count is read off the finished report rather than raised
+        inside the checks, so :meth:`_erasure_checks` stays a pure probe with
+        no counter side effects.
+        """
+
+        if bool(report.get("passed")):
+            self._verify_passed += 1
+        else:
+            self._verify_failed += 1
+        if str(report.get("kind", "")) != "erasure":
+            return
+        checks = report.get("checks")
+        if not isinstance(checks, dict):
+            return
+        scan = checks.get("residual_scan")
+        if isinstance(scan, dict):
+            self._residuals_found += int(scan.get("residual_count", 0))
+
+    # -- summaries ----------------------------------------------------------
+
+    @staticmethod
+    def _planned_request(mem: Any, request_id: str) -> Optional[Dict[str, Any]]:
+        """Return the planned request behind ``request_id``, newest first."""
+
+        for entry in reversed(mem.audit.filter("dsar_plan")):
+            request = entry.details.get("request")
+            if not isinstance(request, dict):
+                continue
+            if str(request.get("request_id", "")) == request_id:
+                return dict(request)
+        return None
+
+    @staticmethod
+    def _last_verify_passed(mem: Any, request_id: str) -> Optional[bool]:
+        """Return the newest verify outcome for ``request_id``, if any."""
+
+        for entry in reversed(mem.audit.filter("dsar_verify")):
+            if str(entry.details.get("request_id", "")) == request_id:
+                return bool(entry.details.get("passed"))
+        return None
+
+    @staticmethod
+    def _request_fields(tenant: str, recorded: Dict[str, Any]) -> Dict[str, str]:
+        """Restate the request from a recorded summary or plan entry.
+
+        Summaries only carry the fields the request's kind needed (an access
+        export has no term, an erasure no purpose), so the missing ones come
+        back as empty strings rather than as absent keys: the attachment has
+        one shape whatever the kind.
+        """
+
+        request = {spec.name: "" for spec in fields(DSARRequest)}
+        for name in request:
+            value = recorded.get(name)
+            if value is not None:
+                request[name] = str(value)
+        request["tenant"] = tenant
+        return request
 
     # -- kind handlers ------------------------------------------------------
 
@@ -394,7 +650,7 @@ class DSARService:
             # certificate instead of storing a copy of it in two places.
             details["certificate_seq"] = int(cert["seq"])
         self._record(mem, request, details)
-        return {
+        return self._signed({
             "request_id": request.request_id,
             "kind": request.kind,
             "tenant": request.tenant,
@@ -402,7 +658,7 @@ class DSARService:
             "replayed": False,
             "removed": removed,
             "certificate": cert,
-        }
+        })
 
     def _execute_consent_withdrawal(self, mem: Any, request: DSARRequest) -> Dict[str, Any]:
         pending_before = len(mem.list_pending_revocations(request.tenant))
@@ -605,11 +861,18 @@ class DSARService:
         """Audit the first execution and register it for replay.
 
         The registered summary is the audit entry's own details dict, so a
-        rebuild from the trail is lossless by construction.
+        rebuild from the trail is lossless by construction. The acting
+        requester and the intake channel are carried along so
+        :meth:`ticket_payload` can restate the request from the summary alone,
+        long after the request object is gone.
         """
 
+        details = dict(details)
+        details["requester"] = request.requester
+        details["source"] = request.source
         entry = mem.audit.record("dsar_execute", **details)
         self._registry[(request.tenant, request.request_id)] = dict(entry.details)
+        self._count_request(details.get("kind"), details.get("status"))
 
     def _replay(self, mem: Any, tenant: str, summary: Dict[str, Any]) -> Dict[str, Any]:
         result = dict(summary)
@@ -620,7 +883,7 @@ class DSARService:
             entries = mem.audit.entries()
             if 0 <= seq < len(entries):
                 result["certificate"] = entries[seq].to_dict()
-        return result
+        return self._signed(result)
 
     def _replay_access(
         self, mem: Any, request: DSARRequest, summary: Dict[str, Any]
@@ -820,7 +1083,7 @@ class DSARService:
             "kind": str(summary.get("kind", "")),
             "status": status,
         }
-        for name in ("ticket", "term", "purpose"):
+        for name in ("ticket", "term", "purpose", "subject", "requester", "source"):
             if name in summary:
                 details[name] = summary[name]
         details["reviewer"] = reviewer
@@ -831,6 +1094,7 @@ class DSARService:
                          action: str, details: Dict[str, Any]) -> None:
         entry = mem.audit.record(action, **details)
         self._registry[(tenant, request_id)] = dict(entry.details)
+        self._count_request(details.get("kind"), details.get("status"))
 
     # -- matching -----------------------------------------------------------
 
