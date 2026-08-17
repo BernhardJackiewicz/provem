@@ -6,11 +6,22 @@ a port. The HTTP shell (a later commit) stays a thin adapter, so these
 tests are the behavioural truth of the gateway.
 """
 
+import argparse
+import contextlib
+import io
 import json
+import threading
 import unittest
+import urllib.error
+import urllib.request
 
+from cognitive_memory.cli import build_parser, run_dsar_serve
 from cognitive_memory.dsar import DSARRequest, DSARService
-from cognitive_memory.dsar_gateway import GatewayConfig, GatewayCore
+from cognitive_memory.dsar_gateway import (
+    DSARHTTPServer,
+    GatewayConfig,
+    GatewayCore,
+)
 from cognitive_memory.mcp_server import GovernedMemoryService, ServerConfig
 
 
@@ -301,6 +312,106 @@ class GatewayMetricsAndIntegrationTests(unittest.TestCase):
             {"request_id": "req-g1", "tenant": "acme"})
         self.assertEqual(status, 200)
         self.assertTrue(verified["passed"])
+
+
+def _seeded_dsar_service():
+    svc = GovernedMemoryService()
+    mem = svc.memory_for("acme")
+    mem.remember("alice likes tea", subject="alice", relation="likes",
+                 object="tea", tenant="acme", source="crm")
+    return DSARService(svc)
+
+
+class HTTPShellTests(unittest.TestCase):
+    def _serve(self, config=None, service=None):
+        server = DSARHTTPServer(
+            config or GatewayConfig(port=0),
+            service or _seeded_dsar_service(),
+        )
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        self.addCleanup(server.server_close)
+        self.addCleanup(server.shutdown)
+        return "http://127.0.0.1:%d" % server.server_address[1]
+
+    def _get(self, url, headers=None):
+        request = urllib.request.Request(url, headers=headers or {})
+        with urllib.request.urlopen(request, timeout=5) as response:
+            return response.status, json.loads(response.read().decode("utf-8"))
+
+    def _post(self, url, payload, headers=None):
+        body = payload if isinstance(payload, bytes) else json.dumps(payload).encode("utf-8")
+        request = urllib.request.Request(url, data=body, headers=headers or {})
+        with urllib.request.urlopen(request, timeout=5) as response:
+            return response.status, json.loads(response.read().decode("utf-8"))
+
+    def test_health_and_plan_over_real_socket(self):
+        base = self._serve()
+        status, payload = self._get(base + "/health")
+        self.assertEqual(status, 200)
+        self.assertEqual(payload, {"status": "ok"})
+        status, payload = self._post(base + "/dsar/plan", _plan_payload())
+        self.assertEqual(status, 200)
+        self.assertEqual(payload["matched_count"], 1)
+
+    def test_oversize_body_is_http_413(self):
+        base = self._serve(config=GatewayConfig(port=0, max_body_bytes=64))
+        with self.assertRaises(urllib.error.HTTPError) as caught:
+            self._post(base + "/dsar/plan", b"x" * 65)
+        self.assertEqual(caught.exception.code, 413)
+
+    def test_bad_json_is_400_with_json_content_type(self):
+        base = self._serve()
+        with self.assertRaises(urllib.error.HTTPError) as caught:
+            self._post(base + "/dsar/plan", b"{not json")
+        self.assertEqual(caught.exception.code, 400)
+        self.assertIn(
+            "application/json", caught.exception.headers.get("Content-Type", ""))
+        body = json.loads(caught.exception.read().decode("utf-8"))
+        self.assertEqual(body, {"error": "invalid_json"})
+        with self.assertRaises(urllib.error.HTTPError) as caught:
+            self._get(base + "/nope")
+        self.assertEqual(caught.exception.code, 404)
+
+    def test_token_auth_over_http(self):
+        base = self._serve(config=GatewayConfig(port=0, token="s3cret"))
+        with self.assertRaises(urllib.error.HTTPError) as caught:
+            self._post(base + "/dsar/plan", _plan_payload())
+        self.assertEqual(caught.exception.code, 401)
+        status, _ = self._post(base + "/dsar/plan", _plan_payload(),
+                               headers={"X-DSAR-Token": "s3cret"})
+        self.assertEqual(status, 200)
+
+
+class DsarServeCliTests(unittest.TestCase):
+    def test_bad_config_returns_2_without_serving(self):
+        called = []
+        args = argparse.Namespace(
+            config="/nonexistent/dsar-gateway.json", host="", port=None,
+            token="")
+        stderr = io.StringIO()
+        with contextlib.redirect_stderr(stderr):
+            code = run_dsar_serve(args, serve_fn=lambda cfg: called.append(cfg))
+        self.assertEqual(code, 2)
+        self.assertEqual(called, [])
+
+    def test_banner_hides_token_and_overrides_apply(self):
+        served = []
+        args = argparse.Namespace(
+            config="", host="", port=9999, token="s3cret")
+        stderr = io.StringIO()
+        with contextlib.redirect_stderr(stderr):
+            code = run_dsar_serve(args, serve_fn=lambda cfg: served.append(cfg))
+        self.assertEqual(code, 0)
+        self.assertEqual(len(served), 1)
+        self.assertEqual(served[0].port, 9999)
+        self.assertEqual(served[0].token, "s3cret")
+        banner = stderr.getvalue()
+        self.assertIn("9999", banner)
+        self.assertNotIn("s3cret", banner)
+        parser = build_parser()
+        parsed = parser.parse_args(["dsar-serve", "--port", "0"])
+        self.assertIs(parsed.func, run_dsar_serve)
 
 
 if __name__ == "__main__":

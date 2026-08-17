@@ -1,12 +1,12 @@
-"""Transport-free core of the DSAR REST gateway.
+"""The DSAR REST gateway: a transport-free core plus a thin HTTP shell.
 
-The gateway is split into a core and a shell. This module is the core:
-routing, authentication, body limits, payload parsing and error mapping
-live in :class:`GatewayCore`, which takes an already-read request as
-plain Python values and returns ``(status, payload)``. The HTTP shell (a
-separate module) only reads the socket, hands the bytes over and writes
-the JSON back, so the whole REST surface is testable, and reusable
-in-process, without ever binding a port.
+The gateway is split into a core and a shell. :class:`GatewayCore` is the
+core: routing, authentication, body limits, payload parsing and error
+mapping live there, and it takes an already-read request as plain Python
+values and returns ``(status, payload)``. :class:`DSARHTTPServer` at the
+bottom of this module is the shell; it only reads the socket, hands the
+bytes over and writes the JSON back, so the whole REST surface is
+testable, and reusable in-process, without ever binding a port.
 
 Trust model: the default bind address is loopback (``127.0.0.1``), which
 is the actual security boundary, and the optional ``X-DSAR-Token`` shared
@@ -28,12 +28,14 @@ from __future__ import annotations
 
 import hmac
 import json
+import threading
 from dataclasses import dataclass, field
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any, Callable, Dict, Optional, Tuple
 from urllib.parse import parse_qs, urlsplit
 
 from .dsar import DSARRequest
-from .mcp_server import ServerConfig
+from .mcp_server import GovernedMemoryService, ServerConfig
 
 # Shared-secret header, looked up case-insensitively (HTTP header names are).
 TOKEN_HEADER = "x-dsar-token"
@@ -344,3 +346,96 @@ class GatewayCore:
             },
             "service": self.service.metrics(),
         }
+
+
+# -- HTTP shell -------------------------------------------------------------
+
+
+class DSARHTTPServer(ThreadingHTTPServer):
+    """The socket half of the gateway: bind, thread, delegate to the core.
+
+    Requests are served on their own threads so a slow erasure cannot block
+    a health probe from being accepted, but the DSAR service underneath is
+    not documented as thread-safe (its replay registry and the audit trail
+    are shared mutable state), so every call into the core is serialized on
+    :attr:`lock`. Concurrency here buys accept-and-respond liveness, not
+    parallel erasure.
+
+    ``service`` is injectable for tests and for an embedder that already
+    holds a service; the default builds the deployment's governed memory
+    service from ``config.server``, which keeps the DSAR signer configured
+    in exactly one place.
+    """
+
+    daemon_threads = True
+
+    def __init__(self, config: GatewayConfig, service: Any = None) -> None:
+        if service is None:
+            service = GovernedMemoryService(config.server)._dsar_service()
+        self.core = GatewayCore(service, config)
+        self.lock = threading.Lock()
+        super().__init__((config.host, config.port), _Handler)
+
+
+class _Handler(BaseHTTPRequestHandler):
+    """Adapter only: read bytes, call the core, write JSON back.
+
+    No routing, no auth and no validation happens here; every such decision
+    belongs to :class:`GatewayCore` so that the transport-free tests remain
+    the behavioural truth of the REST surface.
+    """
+
+    def do_GET(self) -> None:  # noqa: N802 - BaseHTTPRequestHandler protocol
+        self._handle("GET", b"")
+
+    def do_POST(self) -> None:  # noqa: N802 - BaseHTTPRequestHandler protocol
+        length = self._content_length()
+        limit = self.server.core.config.max_body_bytes
+        if length > limit:
+            # Answered from the declared length alone: reading a body we have
+            # already decided to reject is exactly the memory exhaustion the
+            # limit exists to prevent. The connection is closed rather than
+            # kept alive because the unread body would otherwise be parsed as
+            # the next request on it.
+            self.close_connection = True
+            self._respond(413, {"error": "body_too_large"})
+            return
+        self._handle("POST", self.rfile.read(length) if length else b"")
+
+    def _content_length(self) -> int:
+        """Declared body size; an absent or unparsable header reads as zero."""
+
+        try:
+            length = int(self.headers.get("Content-Length"))
+        except (TypeError, ValueError):
+            return 0
+        return length if length > 0 else 0
+
+    def _handle(self, method: str, body: bytes) -> None:
+        with self.server.lock:
+            status, payload = self.server.core.handle_raw(
+                method, self.path, dict(self.headers), body)
+        self._respond(status, payload)
+
+    def _respond(self, status: int, payload: Dict[str, Any]) -> None:
+        body = json.dumps(payload, sort_keys=True).encode("utf-8")
+        self.send_response(status)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def log_message(self, *args: Any) -> None:
+        """Drop the per-request access log.
+
+        Request lines carry the subject term of a DSAR in the query string
+        and would put personal data into an operator's stderr by default.
+        Access logging belongs to the reverse proxy in front of this
+        service, where it can be retained and scrubbed deliberately.
+        """
+
+
+def serve(config: GatewayConfig, service: Any = None) -> None:
+    """Bind and serve until the process is interrupted (blocking)."""
+
+    DSARHTTPServer(config, service).serve_forever()

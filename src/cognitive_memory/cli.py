@@ -248,6 +248,38 @@ def run_mcp_serve(args: argparse.Namespace) -> int:
     return 0
 
 
+def run_dsar_serve(args: argparse.Namespace, serve_fn=None) -> int:
+    from .dsar_gateway import GatewayConfig, serve
+
+    try:
+        if args.config:
+            with open(args.config, "r", encoding="utf-8") as handle:
+                config = GatewayConfig.from_dict(json.load(handle))
+        else:
+            config = GatewayConfig()
+    except Exception as exc:
+        print("DSAR gateway config error: %s" % exc, file=sys.stderr)
+        return 2
+
+    # Flags win over the file so one config can be reused across environments.
+    if args.host:
+        config.host = args.host
+    if args.port is not None:
+        config.port = int(args.port)
+    if args.token:
+        config.token = args.token
+
+    # The banner reports whether the shared secret is active, never its value:
+    # stderr ends up in process managers and log aggregators.
+    print(
+        "provem DSAR gateway ready on http://%s:%d (token auth %s)"
+        % (config.host, config.port, "on" if config.token else "off"),
+        file=sys.stderr,
+    )
+    (serve_fn or serve)(config)
+    return 0
+
+
 def run_demo(args: argparse.Namespace) -> int:
     controller = MemoryController()
     retrieval = RetrievalPlanner(controller.store, controller.policy)
@@ -936,6 +968,24 @@ def build_parser() -> argparse.ArgumentParser:
     mcp_serve.add_argument("--config", default="", help="JSON server config: {default_profile, tenant_profiles}")
     mcp_serve.add_argument("--default-profile", default="default", help="Fallback compliance profile when no --config")
     mcp_serve.set_defaults(func=run_mcp_serve)
+
+    dsar_serve = subparsers.add_parser(
+        "dsar-serve",
+        help="Run the DSAR REST gateway over HTTP (for ticketing and workflow tools)",
+    )
+    dsar_serve.add_argument("--config", default="", help="JSON gateway config: {host, port, token, max_body_bytes, server}")
+    dsar_serve.add_argument("--host", default="", help="Override the bind address (default 127.0.0.1, which is the actual security boundary)")
+    dsar_serve.add_argument("--port", type=int, default=None, help="Override the bind port (default 8321)")
+    dsar_serve.add_argument(
+        "--token",
+        default="",
+        help=(
+            "Shared secret required in the X-DSAR-Token header; defense in depth "
+            "for a shared host, not an authentication system: real authentication "
+            "and TLS belong in a reverse proxy or API gateway in front of this service"
+        ),
+    )
+    dsar_serve.set_defaults(func=run_dsar_serve)
 
     mem0_env_check = subparsers.add_parser("mem0-env-check", help="Check optional Mem0 live-evaluation setup")
     mem0_env_check.add_argument("--json", action="store_true", help="Print machine-readable JSON")
