@@ -10,7 +10,9 @@ many domains with different governance. Each tenant gets its own isolated
 GovernedMemory instance (separate erasure state and backend), which guarantees
 that one tenant's "forget" never over-blocks another tenant's memory.
 
-Tools exposed: remember, recall, forget, list_profiles, audit_export.
+Tools exposed: remember, recall, forget, verify, list_profiles, audit_export,
+cleanup, plus the data subject request surface dsar_plan / dsar_execute /
+dsar_verify (plan the effect, carry it out once per request id, prove it held).
 """
 
 from __future__ import annotations
@@ -21,7 +23,9 @@ from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, List, Optional
 
 from .compliance import CompliancePolicy, available_profiles, resolve_policy
+from .dsar import DSARRequest, DSARService
 from .reliability import Bm25Backend, GovernedMemory, NaiveBackend, Scope
+from .signing import HmacSigner
 
 PROTOCOL_VERSION = "2025-06-18"
 SERVER_NAME = "provem-governed-memory"
@@ -46,6 +50,11 @@ class ServerConfig:
     audit_path: str = ""
     max_text_chars: int = 100_000
     max_line_bytes: int = 1_000_000
+    # Optional detached signing of DSAR certificates. Empty secret = unsigned,
+    # which keeps every response shape byte-identical to a deployment that
+    # never heard of signing.
+    dsar_signing_secret: str = ""
+    dsar_signing_key_id: str = "default"
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "ServerConfig":
@@ -60,6 +69,8 @@ class ServerConfig:
             audit_path=str(data.get("audit_path", "")),
             max_text_chars=int(data.get("max_text_chars", 100_000)),
             max_line_bytes=int(data.get("max_line_bytes", 1_000_000)),
+            dsar_signing_secret=str(data.get("dsar_signing_secret", "")),
+            dsar_signing_key_id=str(data.get("dsar_signing_key_id", "default")),
         )
         config.validate()
         return config
@@ -100,6 +111,8 @@ class GovernedMemoryService:
 
             self._shared_sqlite = SqliteBackend(self.config.sqlite_path or ":memory:")
         self._memories: Dict[str, GovernedMemory] = {}
+        # One DSAR service per deployment, built on first use (see _dsar_service).
+        self._dsar: Optional[DSARService] = None
         import threading
 
         self._lock = threading.Lock()
@@ -261,6 +274,49 @@ class GovernedMemoryService:
         removed = mem.cleanup_expired(tenant=tenant)
         return {"tenant": tenant, "removed": removed}
 
+    # -- data subject requests --------------------------------------------
+
+    def _dsar_service(self) -> DSARService:
+        """Return the deployment's single DSAR service, building it on demand.
+
+        One instance, not one per call: its replay registry is what makes a
+        retried dsar_execute idempotent inside this process, and a fresh
+        instance per call would re-read the audit trail on every request.
+        Built under the same lock as memory_for so two concurrent first calls
+        cannot end up with two registries. Signing is opt-in: without a
+        configured secret the service gets no signer and the responses stay
+        exactly the unsigned shapes.
+        """
+
+        with self._lock:
+            if self._dsar is None:
+                signer = None
+                if self.config.dsar_signing_secret:
+                    signer = HmacSigner(
+                        self.config.dsar_signing_secret,
+                        self.config.dsar_signing_key_id,
+                    )
+                self._dsar = DSARService(self, signer=signer)
+            return self._dsar
+
+    def dsar_plan(self, args: Dict[str, Any]) -> Dict[str, Any]:
+        # DSARRequest.from_dict is the validating boundary for every intake
+        # channel; its ValueError surfaces as JSON-RPC INVALID_PARAMS.
+        return self._dsar_service().plan(DSARRequest.from_dict(args))
+
+    def dsar_execute(self, args: Dict[str, Any]) -> Dict[str, Any]:
+        return self._dsar_service().execute(DSARRequest.from_dict(args))
+
+    def dsar_verify(self, args: Dict[str, Any]) -> Dict[str, Any]:
+        tenant = self._require_tenant(args)
+        request_id = str(args.get("request_id") or "").strip()
+        if not request_id:
+            raise ValueError("dsar_verify requires non-empty 'request_id'")
+        # An unknown id is answered structurally by the service (a polling ITSM
+        # channel asks about ids this tenant may never have seen), so it stays
+        # a successful tool result rather than an RPC error.
+        return self._dsar_service().verify(request_id, tenant)
+
 
 # JSON Schemas for the tools (advertised via tools/list)
 _TOOLS: List[Dict[str, Any]] = [
@@ -352,6 +408,69 @@ _TOOLS: List[Dict[str, Any]] = [
             "required": ["tenant"],
         },
     },
+    {
+        "name": "dsar_plan",
+        "description": "Dry-run a data subject request: report what it would touch (matched records, sources, derivative stores, whether a strict profile would hold it) without changing any state.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "request_id": {"type": "string",
+                               "description": "Stable id for the request; use the ITSM sys_id / ticket number so plan, execute and verify address the same request. Generated when omitted."},
+                "kind": {"type": "string", "enum": ["erasure", "consent_withdrawal", "access"],
+                         "description": "erasure (Art. 17), consent_withdrawal (Art. 7(3)) or access (Art. 15)."},
+                "tenant": {"type": "string"},
+                "requester": {"type": "string",
+                              "description": "Who is acting; mandatory, recorded in the certificate and checked by strict-revocation profiles."},
+                "term": {"type": "string",
+                         "description": "The identifier whose memories are affected; required for erasure and consent_withdrawal."},
+                "subject": {"type": "string",
+                            "description": "Data subject the request is about; required for kind 'access', otherwise scope narrowing."},
+                "purpose": {"type": "string",
+                            "description": "Only for consent_withdrawal: withdraw consent for this purpose instead of all purposes."},
+                "ticket": {"type": "string", "description": "ITSM ticket reference carried into the audit trail."},
+                "source": {"type": "string", "description": "Intake channel; defaults to 'itsm'."},
+            },
+            "required": ["kind", "tenant", "requester"],
+        },
+    },
+    {
+        "name": "dsar_execute",
+        "description": "Carry out a data subject request exactly once per request_id: erasure certificate, consent withdrawal or access export. A retry with the same request_id is replayed, never executed twice.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "request_id": {"type": "string",
+                               "description": "Idempotency key; use the ITSM sys_id / ticket number so a redelivered ticket never erases twice. Generated when omitted."},
+                "kind": {"type": "string", "enum": ["erasure", "consent_withdrawal", "access"],
+                         "description": "erasure (Art. 17), consent_withdrawal (Art. 7(3)) or access (Art. 15)."},
+                "tenant": {"type": "string"},
+                "requester": {"type": "string",
+                              "description": "Who is acting; mandatory, recorded in the certificate and checked by strict-revocation profiles."},
+                "term": {"type": "string",
+                         "description": "The identifier whose memories are affected; required for erasure and consent_withdrawal."},
+                "subject": {"type": "string",
+                            "description": "Data subject the request is about; required for kind 'access', otherwise scope narrowing."},
+                "purpose": {"type": "string",
+                            "description": "Only for consent_withdrawal: withdraw consent for this purpose instead of all purposes."},
+                "ticket": {"type": "string", "description": "ITSM ticket reference carried into the audit trail."},
+                "source": {"type": "string", "description": "Intake channel; defaults to 'itsm'."},
+            },
+            "required": ["kind", "tenant", "requester"],
+        },
+    },
+    {
+        "name": "dsar_verify",
+        "description": "Re-check an executed data subject request against current state: residual scan, governed recall probe, tombstone and audit chain. An unknown request_id is reported as unknown_request_id, not as an error.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "request_id": {"type": "string",
+                               "description": "The id the request was planned and executed under (ITSM sys_id / ticket number)."},
+                "tenant": {"type": "string"},
+            },
+            "required": ["request_id", "tenant"],
+        },
+    },
 ]
 
 
@@ -369,6 +488,9 @@ class MCPServer:
             "list_profiles": self.service.list_profiles,
             "audit_export": self.service.audit_export,
             "cleanup": self.service.cleanup,
+            "dsar_plan": self.service.dsar_plan,
+            "dsar_execute": self.service.dsar_execute,
+            "dsar_verify": self.service.dsar_verify,
         }
 
     def handle(self, request: Dict[str, Any]) -> Optional[Dict[str, Any]]:

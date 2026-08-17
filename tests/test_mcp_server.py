@@ -8,6 +8,7 @@ from cognitive_memory.mcp_server import (
     PROTOCOL_VERSION,
     METHOD_NOT_FOUND,
 )
+from cognitive_memory.signing import canonical_json, verify_signature
 
 
 def _req(method, params=None, req_id=1):
@@ -39,7 +40,8 @@ class HandshakeTests(unittest.TestCase):
         server = MCPServer()
         tools = server.handle(_req("tools/list"))["result"]["tools"]
         names = {t["name"] for t in tools}
-        self.assertEqual(names, {"remember", "recall", "forget", "list_profiles", "audit_export", "cleanup", "verify"})
+        self.assertEqual(names, {"remember", "recall", "forget", "list_profiles", "audit_export", "cleanup", "verify",
+                                 "dsar_plan", "dsar_execute", "dsar_verify"})
         for t in tools:
             self.assertIn("inputSchema", t)
 
@@ -235,6 +237,94 @@ class PerTenantProfileTests(unittest.TestCase):
         resp = server.handle({"jsonrpc": "2.0", "id": 1, "method": "tools/call",
                               "params": {"name": "remember", "arguments": {"text": "x" * 100, "tenant": "t"}}})
         self.assertIn("error", resp)
+
+
+class DSARToolTests(unittest.TestCase):
+    def setUp(self):
+        self.server = MCPServer()
+        _call(self.server, "remember", {
+            "text": "alice likes tea", "subject": "alice", "relation": "likes",
+            "object": "tea", "tenant": "acme", "entity": "alice",
+        })
+
+    def _erasure_args(self, request_id="req-m1", **overrides):
+        args = {
+            "request_id": request_id, "kind": "erasure", "tenant": "acme",
+            "requester": "dpo@acme.example", "term": "alice",
+            "ticket": "RITM0010005",
+        }
+        args.update(overrides)
+        return args
+
+    def test_dsar_plan_tool_reports_matches(self):
+        out = _call(self.server, "dsar_plan", self._erasure_args())
+        self.assertEqual(out["matched_count"], 1)
+        self.assertEqual(out["kind"], "erasure")
+        self.assertEqual(out["would_hold"], "")
+
+    def test_dsar_execute_tool_erases_and_returns_certificate(self):
+        out = _call(self.server, "dsar_execute", self._erasure_args())
+        self.assertEqual(out["status"], "executed")
+        self.assertEqual(out["certificate"]["details"]["targeted_count"], 1)
+        rec = _call(self.server, "recall",
+                    {"query": "alice tea", "tenant": "acme", "entity": "alice"})
+        self.assertTrue(rec["abstained"])
+
+    def test_dsar_execute_with_signing_config_adds_signature(self):
+        config = ServerConfig.from_dict({
+            "dsar_signing_secret": "shared-secret",
+            "dsar_signing_key_id": "sn-key",
+        })
+        server = MCPServer(GovernedMemoryService(config))
+        _call(server, "remember", {
+            "text": "alice likes tea", "subject": "alice", "relation": "likes",
+            "object": "tea", "tenant": "acme", "entity": "alice",
+        })
+        out = _call(server, "dsar_execute", self._erasure_args())
+        signed = out["signed_certificate"]
+        self.assertEqual(signed["signature"]["key_id"], "sn-key")
+        payload = canonical_json(out["certificate"]).encode("utf-8")
+        self.assertTrue(
+            verify_signature(payload, signed["signature"], "shared-secret")
+        )
+
+    def test_dsar_verify_tool_passes_after_execute(self):
+        _call(self.server, "dsar_execute", self._erasure_args())
+        out = _call(self.server, "dsar_verify",
+                    {"request_id": "req-m1", "tenant": "acme"})
+        self.assertTrue(out["passed"])
+        self.assertEqual(out["checks"]["residual_scan"]["residual_count"], 0)
+
+    def test_dsar_verify_unknown_id_is_structured_not_rpc_error(self):
+        resp = self.server.handle(_req("tools/call", {
+            "name": "dsar_verify",
+            "arguments": {"request_id": "no-such-request", "tenant": "acme"},
+        }))
+        self.assertNotIn("error", resp)
+        out = resp["result"]["structuredContent"]
+        self.assertFalse(out["passed"])
+        self.assertTrue(out["unknown_request_id"])
+
+    def test_dsar_invalid_params_map_to_invalid_params_code(self):
+        resp = self.server.handle(_req("tools/call", {
+            "name": "dsar_plan",
+            "arguments": self._erasure_args(requester=""),
+        }))
+        self.assertEqual(resp["error"]["code"], -32602)
+
+    def test_config_defaults_keep_old_configs_valid(self):
+        config = ServerConfig.from_dict({"default_profile": "default"})
+        self.assertEqual(config.dsar_signing_secret, "")
+        self.assertEqual(config.dsar_signing_key_id, "default")
+
+    def test_dsar_execute_is_idempotent_across_tool_calls(self):
+        first = _call(self.server, "dsar_execute", self._erasure_args())
+        self.assertFalse(first["replayed"])
+        replay = _call(self.server, "dsar_execute", self._erasure_args())
+        self.assertTrue(replay["replayed"])
+        self.assertEqual(
+            replay["certificate"]["seq"], first["certificate"]["seq"]
+        )
 
 
 if __name__ == "__main__":
