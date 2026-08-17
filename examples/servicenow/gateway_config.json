@@ -1,0 +1,10 @@
+{
+  "host": "127.0.0.1",
+  "port": 8321,
+  "token": "",
+  "max_body_bytes": 1000000,
+  "server": {
+    "dsar_signing_secret": "change-me-shared-secret",
+    "dsar_signing_key_id": "sn-demo"
+  }
+}

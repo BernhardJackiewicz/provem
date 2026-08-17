@@ -1,0 +1,8 @@
+{
+  "sys_id": "a1b2c3d4e5f60718293a4b5c6d7e8f90",
+  "number": "RITM0010001",
+  "kind": "erasure",
+  "tenant": "acme",
+  "requester": "privacy-team@acme.example",
+  "term": "alice"
+}
