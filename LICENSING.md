@@ -17,6 +17,8 @@ compliance claims rest on stays open, so anyone can reproduce and audit them:
 - the reproducible benchmarks, test harness and limitations documentation
 - the MCP server, generic connector specifications and simple reference
   connectors sufficient to evaluate the system
+- the DSAR REST gateway, the generic listener protocol and the reference
+  connectors for email, Kafka and drop-folder intake
 
 MIT means exactly what it says: use it, fork it, ship it commercially,
 no strings.

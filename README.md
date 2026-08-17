@@ -337,6 +337,32 @@ Sources and the full dispute history (including who retracted what):
   answer is still authorized, per-tenant compliance profiles (recruitment /
   pharma / finance / custom JSON-YAML), all decisions traceable.
 
+## ITSM / ServiceNow integration
+
+The loop an enterprise actually buys: a data subject request arrives as a
+ticket, the action runs against governed memory, and the evidence goes back
+to the ticket. Provem ships that loop end to end, ITSM-agnostic and pure
+stdlib:
+
+- **Plan, execute, verify** as three thin REST endpoints (`/dsar/plan` is
+  the dry-run report an approver reads, `/dsar/execute` runs exactly once
+  per `request_id`, `/dsar/verify` returns evidence, not an
+  acknowledgement), plus `approve`/`reject` for held requests and a status
+  view for polling workflows. Also available as MCP tools
+  (`dsar_plan`/`dsar_execute`/`dsar_verify`) for agent environments.
+- **Push mode:** a ServiceNow Flow Designer flow calls the gateway via
+  Outbound REST steps; the request item's `sys_id` is the idempotency key.
+- **Pull mode, zero ServiceNow-side development:** the native notification
+  email or a Kafka record is picked up by a stdlib listener (drop folder /
+  injected consumer) and driven through the same loop.
+- **Evidence to the ticket:** `ticket_payload` bundles request, status,
+  HMAC-signed erasure certificate, a fresh verify report and the audit head
+  hash into one attachable JSON artifact.
+
+Try it: `PYTHONPATH=src python3 examples/servicenow/demo.py` (add
+`--serve` for a real socket). Full story, trust model and honest limits:
+[`docs/servicenow_integration.md`](docs/servicenow_integration.md).
+
 ## Honest limitations
 
 - **One recall benchmark** (LoCoMo). LongMemEval port is designed, not run.
@@ -392,6 +418,7 @@ GovernedMemory (backend-agnostic wrapper; MemoryBackend protocol)
       |
       v
 MCP server (JSON-RPC/stdio, per-tenant profiles)   or   direct library embedding
+DSAR surface: REST gateway + pull listener (email / Kafka / drop folder) -> signed evidence to the ITSM ticket
 ```
 
 ## Documentation
@@ -403,6 +430,7 @@ MCP server (JSON-RPC/stdio, per-tenant profiles)   or   direct library embedding
 | [`docs/lager_optimization_log.md`](docs/lager_optimization_log.md) | Every optimization iteration incl. failures and the bug post-mortem |
 | [`docs/reliability_results.md`](docs/reliability_results.md) | Governance benchmark, full statistics |
 | [`docs/mcp_server.md`](docs/mcp_server.md) | MCP product guide, profiles, config |
+| [`docs/servicenow_integration.md`](docs/servicenow_integration.md) | ITSM/ServiceNow DSAR loop: push REST, pull listener, signed evidence to the ticket |
 | [`docs/trust_model.md`](docs/trust_model.md) | Security boundaries; what belongs in a gateway |
 | [`docs/claim_register.md`](docs/claim_register.md) | Every claim with evidence level and risk |
 | [`docs/research_journal.md`](docs/research_journal.md) | Complete MVP history, every synthetic suite, every negative result |
@@ -410,7 +438,7 @@ MCP server (JSON-RPC/stdio, per-tenant profiles)   or   direct library embedding
 
 ## Status
 
-Research-grade core with enterprise-ready foundations: 695 tests, deterministic
+Research-grade core with enterprise-ready foundations: 818 tests, deterministic
 quality gates, tamper-evident audit, tenant isolation, configurable compliance
 profiles. **Not** externally security-audited, no managed hosting, no SLA: the
 enterprise wrapper (gateway auth/SSO, hosting, certifications) is deliberately
