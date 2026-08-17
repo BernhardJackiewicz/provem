@@ -15,9 +15,9 @@ channel payloads.
 :class:`DSARService` sits on top of it and plans a validated request against
 a governed memory service: a strictly read-only report of what the request
 would touch, audited by counts only. :meth:`DSARService.execute` is the
-write half: it performs the erasure or the consent withdrawal exactly once
-per ``request_id``, so an ITSM channel that retries a delivery never erases
-twice and never issues a second certificate.
+write half: it performs the erasure, the consent withdrawal or the access
+export exactly once per ``request_id``, so an ITSM channel that retries a
+delivery never erases twice and never issues a second certificate.
 
 Pure stdlib.
 """
@@ -26,9 +26,11 @@ from __future__ import annotations
 
 from dataclasses import dataclass, fields
 from typing import Any, Dict, List, Optional, Set, Tuple
+import hashlib
 import uuid
 
 from .reliability import MemoryRecord, Scope, tokenize
+from .signing import canonical_json
 
 KINDS = ("erasure", "consent_withdrawal", "access")
 
@@ -168,6 +170,11 @@ class DSARService:
         record was deleted. ``held`` means a strict revocation profile queued
         the request for a second operator instead: nothing was erased,
         nothing was revoked, and the caller gets the pending id to approve.
+
+        An access request is read-only against memory but still write-once in
+        the audit: it returns the subject's data package and the hash that
+        pins it, and a retry re-derives the package from the current state
+        instead of serving a stale copy.
         """
 
         mem = self.service.memory_for(request.tenant)
@@ -175,13 +182,15 @@ class DSARService:
 
         recorded = self._registry.get((request.tenant, request.request_id))
         if recorded is not None:
+            if str(recorded.get("kind", "")) == "access":
+                # The package is never stored, so a replay has to re-derive it
+                # from live state; that needs the request, which _replay (fed
+                # from the audit summary alone) does not have.
+                return self._replay_access(mem, request, recorded)
             return self._replay(mem, request.tenant, recorded)
 
         if request.kind == "access":
-            raise NotImplementedError(
-                "DSAR kind 'access' cannot be executed yet; use "
-                "DSARService.plan for the read-only access report"
-            )
+            return self._execute_access(mem, request)
         if request.kind == "erasure":
             return self._execute_erasure(mem, request)
         return self._execute_consent_withdrawal(mem, request)
@@ -296,6 +305,104 @@ class DSARService:
             "replayed": False,
         }
 
+    def _execute_access(self, mem: Any, request: DSARRequest) -> Dict[str, Any]:
+        """Export everything the tenant holds about the subject (Art. 15).
+
+        Nothing in memory changes; what is written once is the audit pair. The
+        ``dsar_execute`` anchor makes the export replayable under the same
+        idempotency key as the write kinds, and ``access_export`` is the
+        disclosure record a regulator asks for. Both carry counts and the
+        package hash only: the package itself is delivered to the caller and
+        never persisted, so the audit trail does not become a second copy of
+        the personal data the request is about.
+        """
+
+        records, withheld = self._access_package(mem, request)
+        package_sha256 = self._package_hash(records, withheld)
+        details: Dict[str, Any] = {
+            "request_id": request.request_id,
+            "kind": request.kind,
+            "status": "executed",
+            "ticket": request.ticket,
+            "record_count": len(records),
+            "withheld_count": len(withheld),
+            "package_sha256": package_sha256,
+        }
+        self._record(mem, request, details)
+        mem.audit.record(
+            "access_export",
+            request_id=request.request_id,
+            subject=request.subject,
+            requester=request.requester,
+            record_count=len(records),
+            withheld_count=len(withheld),
+            package_sha256=package_sha256,
+        )
+        return {
+            "request_id": request.request_id,
+            "kind": request.kind,
+            "tenant": request.tenant,
+            "subject": request.subject,
+            "status": "executed",
+            "replayed": False,
+            "records": records,
+            "withheld": withheld,
+            "record_count": len(records),
+            "withheld_count": len(withheld),
+            "package_sha256": package_sha256,
+        }
+
+    @staticmethod
+    def _access_package(
+        mem: Any, request: DSARRequest
+    ) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
+        """Return (records, withheld) for the subject, both sorted by id.
+
+        Same matching as :meth:`_plan_access`, so the dry-run counts and the
+        exported package can never disagree. Quarantined records are listed
+        by id and reason instead of by content: the subject learns that data
+        is held back and why, without the export handing out a value the
+        governance layer has already flagged as untrusted.
+        """
+
+        matched = DSARService._matches(mem, request.tenant, request.subject)
+        records = [
+            {
+                "id": record.id,
+                "subject": record.subject,
+                "relation": record.relation,
+                "object": record.object,
+                "text": record.text,
+                "source": record.source,
+                "provenance": record.provenance,
+                # Tuples would serialize differently per JSON encoder; lists
+                # keep the hashed package stable across transports.
+                "allowed_purposes": list(record.allowed_purposes),
+                "consented_purposes": list(record.consented_purposes),
+            }
+            for record in sorted(
+                (item for item in matched if not item.quarantined),
+                key=lambda item: item.id,
+            )
+        ]
+        withheld = [
+            {"id": record.id, "reason": record.quarantine_reason}
+            for record in sorted(
+                (item for item in matched if item.quarantined),
+                key=lambda item: item.id,
+            )
+        ]
+        return records, withheld
+
+    @staticmethod
+    def _package_hash(
+        records: List[Dict[str, Any]], withheld: List[Dict[str, Any]]
+    ) -> str:
+        """Pin the delivered package so a dispute can be settled by hash."""
+
+        payload = canonical_json({"records": records, "withheld": withheld})
+        return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+
     def _hold_result(self, mem: Any, request: DSARRequest, held: Any) -> Dict[str, Any]:
         details: Dict[str, Any] = {
             "request_id": request.request_id,
@@ -362,6 +469,37 @@ class DSARService:
             if 0 <= seq < len(entries):
                 result["certificate"] = entries[seq].to_dict()
         return result
+
+    def _replay_access(
+        self, mem: Any, request: DSARRequest, summary: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """Re-derive the access package for an already executed request.
+
+        The first execution stored a hash, not a package, so the replay reads
+        current state and reports the comparison honestly: ``hash_drift`` says
+        whether the subject's data changed since the export was issued, and
+        both hashes are returned so the difference is provable. No second
+        audit entry: the disclosure happened once, this is the same one.
+        """
+
+        records, withheld = self._access_package(mem, request)
+        package_sha256 = self._package_hash(records, withheld)
+        recorded_sha256 = str(summary.get("package_sha256", ""))
+        return {
+            "request_id": request.request_id,
+            "kind": "access",
+            "tenant": request.tenant,
+            "subject": request.subject,
+            "status": summary.get("status", ""),
+            "replayed": True,
+            "records": records,
+            "withheld": withheld,
+            "record_count": len(records),
+            "withheld_count": len(withheld),
+            "package_sha256": package_sha256,
+            "recorded_package_sha256": recorded_sha256,
+            "hash_drift": package_sha256 != recorded_sha256,
+        }
 
     # -- matching -----------------------------------------------------------
 

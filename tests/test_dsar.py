@@ -6,7 +6,11 @@ than GovernedMemory.forget: the ITSM channel always knows an acting
 requester, so requester is mandatory for every kind.
 """
 
+import hashlib
 import json
+import os
+import shutil
+import tempfile
 import unittest
 
 from cognitive_memory.dsar import KINDS, DSARRequest, DSARService
@@ -339,6 +343,108 @@ class DSARExecuteTests(unittest.TestCase):
         self.assertEqual(details["ticket"], "RITM0010001")
         self.assertIsInstance(details["certificate_seq"], int)
         self.assertTrue(mem.verify_audit())
+
+
+class DSARAccessExportTests(unittest.TestCase):
+    def _access_request(self, request_id="req-a1", subject="alice", **overrides):
+        data = {
+            "request_id": request_id, "kind": "access", "tenant": "acme",
+            "requester": "dpo@acme.example", "subject": subject,
+            "ticket": "RITM0010002",
+        }
+        data.update(overrides)
+        return DSARRequest(**data)
+
+    def test_access_export_returns_subject_records_and_pinned_hash(self):
+        svc, mem = _seeded_service()
+        mem.backend.write(MemoryRecord(
+            subject="alice", relation="ssn", object="123-45",
+            scope=Scope(tenant="acme", subject=""), quarantined=True,
+            quarantine_reason="low_trust", id="q1",
+        ))
+        result = DSARService(svc).execute(self._access_request())
+        self.assertEqual(result["status"], "executed")
+        self.assertFalse(result["replayed"])
+        self.assertEqual(result["record_count"], 2)
+        self.assertEqual(result["withheld_count"], 1)
+        self.assertEqual(result["withheld"], [{"id": "q1", "reason": "low_trust"}])
+        ids = [r["id"] for r in result["records"]]
+        self.assertEqual(ids, sorted(ids))
+        texts = {r["text"] for r in result["records"]}
+        self.assertIn("alice likes tea", texts)
+        for record in result["records"]:
+            self.assertEqual(
+                set(record),
+                {"id", "subject", "relation", "object", "text", "source",
+                 "provenance", "allowed_purposes", "consented_purposes"},
+            )
+        expected = hashlib.sha256(canonical_json(
+            {"records": result["records"], "withheld": result["withheld"]}
+        ).encode("utf-8")).hexdigest()
+        self.assertEqual(result["package_sha256"], expected)
+
+    def test_access_export_is_never_persisted_in_audit(self):
+        tmp = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, tmp)
+        config = ServerConfig.from_dict({"audit_path": os.path.join(tmp, "audit")})
+        svc = GovernedMemoryService(config)
+        mem = svc.memory_for("acme")
+        mem.remember("alice likes tea", subject="alice", relation="likes",
+                     object="tea", tenant="acme", source="crm")
+        DSARService(svc).execute(self._access_request())
+        with open(os.path.join(tmp, "audit.acme.jsonl"), encoding="utf-8") as handle:
+            raw = handle.read()
+        actions = [json.loads(line)["action"] for line in raw.splitlines()]
+        self.assertIn("dsar_execute", actions)
+        self.assertIn("access_export", actions)
+        self.assertIn("package_sha256", raw)
+        self.assertNotIn("likes tea", raw)
+        self.assertNotIn("tea", raw)
+
+    def test_access_export_for_unknown_subject_is_valid_and_empty(self):
+        svc, _ = _seeded_service()
+        result = DSARService(svc).execute(self._access_request(subject="nobody"))
+        self.assertEqual(result["status"], "executed")
+        self.assertEqual(result["records"], [])
+        self.assertEqual(result["withheld"], [])
+        self.assertEqual(result["record_count"], 0)
+        self.assertEqual(result["withheld_count"], 0)
+        self.assertTrue(result["package_sha256"])
+
+    def test_access_replay_rederives_without_drift(self):
+        svc, mem = _seeded_service()
+        dsar = DSARService(svc)
+        first = dsar.execute(self._access_request())
+        replay = dsar.execute(self._access_request())
+        self.assertTrue(replay["replayed"])
+        self.assertFalse(replay["hash_drift"])
+        self.assertEqual(replay["package_sha256"], first["package_sha256"])
+        self.assertEqual(len(replay["records"]), 2)
+        self.assertEqual(len(mem.audit.filter("dsar_execute")), 1)
+        self.assertEqual(len(mem.audit.filter("access_export")), 1)
+
+    def test_access_replay_detects_hash_drift(self):
+        svc, mem = _seeded_service()
+        dsar = DSARService(svc)
+        first = dsar.execute(self._access_request())
+        mem.remember("alice hates mondays", subject="alice", relation="hates",
+                     object="mondays", tenant="acme", source="crm")
+        replay = dsar.execute(self._access_request())
+        self.assertTrue(replay["replayed"])
+        self.assertTrue(replay["hash_drift"])
+        self.assertEqual(replay["recorded_package_sha256"], first["package_sha256"])
+        self.assertNotEqual(replay["package_sha256"], first["package_sha256"])
+
+    def test_access_after_erasure_returns_empty_package(self):
+        svc, _ = _seeded_service()
+        dsar = DSARService(svc)
+        dsar.execute(DSARRequest(
+            request_id="req-e9", kind="erasure", tenant="acme",
+            requester="dpo@acme.example", term="alice",
+        ))
+        result = dsar.execute(self._access_request(request_id="req-a9"))
+        self.assertEqual(result["record_count"], 0)
+        self.assertEqual(result["records"], [])
 
 
 if __name__ == "__main__":
