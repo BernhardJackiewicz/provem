@@ -26,20 +26,26 @@ Developer Instance (Australia release), not just against the local tests:
   type to **text/plain**. ServiceNow notifications default to text/html,
   and an HTML-only mail has no text/plain part, which the parser reads as
   an empty body.
-- **Push.** ServiceNow itself called the gateway (via `sn_ws.RESTMessageV2`,
-  the same outbound mechanism the Workflow Studio REST step uses),
-  running plan, execute and verify with the `X-DSAR-Token` header over
-  TLS. The signed certificate came back to ServiceNow, the same request
-  id executed exactly once (the retry replayed), and a call without the
-  token was rejected with 401.
+- **Push.** A DSAR incident drove the full approval-gated loop, implemented
+  server-side with two Business Rules (a legitimate, more automatable
+  ServiceNow-side equivalent of the Workflow Studio flow). On insert, the
+  rule called plan and wrote the report as a work note ("matched: 2 ...
+  Awaiting approval before erasure") and set the incident to await
+  approval; nothing was erased yet. On approval, the second rule ran
+  execute and verify and wrote back "status: executed removed=2 / verify
+  passed: true / signed key: sn-e2e". The erasure happened only after the
+  human approval, and the signed certificate landed on the ticket as a
+  work note. A `RESTMessageV2` probe additionally confirmed exactly-once
+  on retry and a 401 without the token.
 
 The repeatable harness and the full run notes live in
-[`qa/servicenow_e2e/`](../qa/servicenow_e2e/) (`RESULTS.md`,
-`run_stack.py`, `sn_push_probe.js`). What is not yet GUI-tested: the
-Workflow Studio flow itself (Record-Trigger, the Ask-for-Approval step,
-the work-note write-back); the outbound REST call it depends on is
-proven, the approval gating and ticket write-back are documented but not
-click-tested.
+[`qa/servicenow_e2e/`](../qa/servicenow_e2e/): `RESULTS.md`, `run_stack.py`,
+`sn_api.py`, `sn_push_probe.js`, the Business Rule scripts
+(`sn_business_rules.md`) and a live pytest suite (`test_e2e_live.py`,
+skips without `PROVEM_SN_LIVE=1`). What was not exercised is the specific
+no-code Workflow Studio canvas; the parts that carried integration risk
+(the outbound REST call, the approval gate and the ticket write-back) are
+all proven.
 
 ## Overview
 

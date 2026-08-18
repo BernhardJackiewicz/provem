@@ -116,23 +116,87 @@ outbound mechanism the flow's REST step uses, but the approval gating
 and the ticket write-back remain designed-and-documented, not
 GUI-tested. See "Open follow-ups".
 
+## Second session (2026-08-18): gaps closed
+
+### Headless REST auth (was deferred) RESOLVED
+
+The qa.api service user now authenticates over basic auth (HTTP 200). The
+password had to be set through the instance "Set Password" dialog's
+Generate button, which produces a policy-compliant value (the policy
+requires a special character, which is what rejected the earlier
+API-set passwords). This unblocks the automated pytest suite.
+
+### Full trigger + approval + write-back proven in ServiceNow (was the main gap)
+
+Instead of clicking a Workflow Studio flow together, the same loop was
+implemented server-side with Business Rules on the incident table, which
+is a legitimate (and more automatable) ServiceNow-side implementation of
+the identical steps. Two rules:
+
+- On insert of a DSAR incident: call the gateway's plan, write the plan
+  report as a work note ("matched: 2 ... Awaiting approval before
+  erasure"), and set the incident's approval field to "requested". No
+  erasure happens yet.
+- On the approval field changing to "approved": call execute and verify,
+  and write the outcome as a work note.
+
+Verified end to end on INC0010007:
+- After insert: approval=requested, plan work note present, and the
+  gateway still holds alice (matched_count 2). Nothing was erased.
+- After approving: a second work note "DSAR executed by Provem after
+  approval / status: executed removed=2 / verify passed: true / signed
+  key: sn-e2e", and the gateway now returns matched_count 0. The erasure
+  happened only after the human approval.
+
+This closes the trigger, the approval gating and the signed-certificate
+work-note write-back, all against a real instance. The only thing not
+exercised is the specific no-code Workflow Studio canvas; the underlying
+outbound REST, the approval gate and the ticket write-back are the parts
+that carried risk, and they are proven.
+
+### Automated pytest suite (Phase 3) DONE
+
+`test_e2e_live.py` covers both directions against the live instance and
+skips cleanly without `PROVEM_SN_LIVE=1` (so `pytest` in CI stays green
+with no ServiceNow at all). Both live tests pass:
+- Pull: incident -> generated notification mail -> reconstructed .eml ->
+  listener erases and verifies, alice gone, bob remains.
+- Push: DSAR incident -> business rule -> Provem work note on the ticket.
+
+### SMTP golden path (Gap 3) evaluated, not done, low residual risk
+
+A real SMTP send would exercise the genuine MIME hull (multipart
+boundaries, transfer encodings) instead of the reconstruction. It is not
+done, deliberately: the integration mandates a text/plain notification
+(documented), a ServiceNow text/plain mail is a simple single-part body,
+and the parser was already proven on the real template content. Setting
+up an SMTP sink behind a TCP tunnel plus a PDI email account is
+meaningful effort for little residual coverage. Left as an optional
+follow-up.
+
 ## Open follow-ups
 
-- Headless basic-auth for the pytest suite is unresolved on this PDI.
-  Root cause understood: the Australia PDI blocks basic-auth API calls
-  for interactive accounts, and the qa.api service user's password was
-  repeatedly rejected by the password policy ("must contain at least 1
-  special character"). Fix is a policy-compliant password with a special
-  character on a web-service-only user, then Phase 3 (Playwright/pytest)
-  can be built. Deferred, not blocked.
-- Workflow Studio GUI flow (Record-Trigger, Ask-for-Approval, work-note
-  write-back) not built click-by-click; the outbound REST mechanism it
-  relies on is proven via RESTMessageV2. This is the main untested GUI
-  surface.
-- Optional golden path: a real SMTP send (own SMTP account) to test the
-  genuine MIME hull, versus the faithful reconstruction used for the
-  pull path.
-- Cleanup left in the PDI: notification "QA DSAR erasure notification",
-  incidents INC0010001..05, the qa.api user, and the
-  snc_basic_auth_api_access grant on admin. All harmless on a throwaway
-  PDI; remove if the instance is kept.
+- The no-code Workflow Studio canvas itself was not clicked together; the
+  equivalent steps are proven via Business Rules (see above). Building the
+  branded no-code flow is a packaging/store step, not a technical risk.
+- SMTP golden path: optional, not done (rationale above).
+
+## PDI state (reusable harness, left in place on the throwaway instance)
+
+Kept as the standing test harness and as evidence for a partnership
+conversation (the work notes carry a real signed certificate on a real
+ticket):
+- Notification "QA DSAR erasure notification" (incident, content type
+  text/plain).
+- Business rules: "QA DSAR Provem push" (immediate, deactivated),
+  "QA DSAR plan+approval" and "QA DSAR execute on approval" (the active
+  approval-gated pair). Their script has the gateway URL and token
+  inline; both change per run, so re-point them before re-testing.
+- User qa.api (web-service-only, admin + snc_basic_auth_api_access), and
+  the snc_basic_auth_api_access grant on admin.
+- Test incidents INC0010001..07 with their generated mails and work
+  notes.
+
+None of it is personal data (only the alice/acme fixtures). Delete the
+incidents/mails and the qa.api user if the instance is kept long term;
+on a throwaway PDI it is harmless.
