@@ -2,7 +2,7 @@
 
 Provem follows an **open engine, closed operations** model.
 
-## What is MIT (this repository, forever)
+## What is Apache 2.0 (this repository, forever)
 
 The verifiable governance core. Everything the published benchmarks and
 compliance claims rest on stays open, so anyone can reproduce and audit them:
@@ -20,8 +20,9 @@ compliance claims rest on stays open, so anyone can reproduce and audit them:
 - the DSAR REST gateway, the generic listener protocol and the reference
   connectors for email, Kafka and drop-folder intake
 
-MIT means exactly what it says: no additional terms, commercial use
-included.
+Apache 2.0 means exactly what it says: a permissive license with no
+additional terms, commercial use included, plus an explicit patent grant
+so a user of the core cannot be sued over a patent covering it.
 
 ## What a future enterprise layer covers (separate, proprietary)
 
@@ -45,6 +46,6 @@ multi-tenant, provably operated audit archive is the product.
 
 ## Contributions
 
-Contributions to this repository are accepted under the repository's MIT
-license. If a contributor license agreement is introduced later, it will be
+Contributions to this repository are accepted under the repository's
+Apache 2.0 license. If a contributor license agreement is introduced later, it will be
 announced here before it applies to any incoming contribution.

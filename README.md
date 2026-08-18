@@ -2,7 +2,7 @@
 
 [![PyPI](https://img.shields.io/pypi/v/provem.svg)](https://pypi.org/project/provem/)
 [![Python](https://img.shields.io/badge/python-3.9%2B-blue.svg)](https://www.python.org/)
-[![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![License: Apache 2.0](https://img.shields.io/badge/license-Apache%202.0-green.svg)](LICENSE)
 [![Tests](https://img.shields.io/badge/tests-818%20passing-brightgreen.svg)](tests/)
 
 **Governed, GDPR-native memory for AI agents, with ITSM / ServiceNow integration built in.** A governance layer (right-to-erasure, tenant isolation, injection defense, tamper-evident audit) that runs on top of *any* memory store (or as its own). A DSAR ticket drives plan, execute, verify over REST or MCP, and the signed erasure evidence goes back to the ticket ([details](docs/servicenow_integration.md)). On recall it is competitive: a clear win over Zep and roughly a tie with Mem0 on LoCoMo. Its real job is compliance: it drives violations to zero in a reproducible, self-authored closed-loop benchmark. Every number below is replayable from frozen artifacts at zero cost.
@@ -372,8 +372,8 @@ Try it: `PYTHONPATH=src python3 examples/servicenow/demo.py` (add
 [`docs/servicenow_integration.md`](docs/servicenow_integration.md).
 
 The gateway, the generic listener protocol and the reference connectors
-are MIT like the rest of the core; certified and managed connectors are
-enterprise scope, see [LICENSING.md](LICENSING.md).
+are Apache 2.0 like the rest of the core; certified and managed
+connectors are enterprise scope, see [LICENSING.md](LICENSING.md).
 
 ## Honest limitations
 
@@ -467,6 +467,7 @@ pip install "provem[mem0]"    # optional backends: mem0, zep, letta, graphiti, o
 
 ## License
 
-MIT, see [LICENSE](LICENSE), no additional terms; commercial use included.
-The product boundary (what stays MIT here vs. what a future enterprise layer
-covers) is documented in [LICENSING.md](LICENSING.md).
+Apache 2.0, see [LICENSE](LICENSE): permissive, commercial use included,
+with an explicit patent grant.
+The product boundary (what stays Apache 2.0 here vs. what a future
+enterprise layer covers) is documented in [LICENSING.md](LICENSING.md).
