@@ -85,9 +85,9 @@ into the body of an Outbound REST step.
 
 ## Push mode
 
-Push mode is ServiceNow calling Provem. It is built entirely in Flow
-Designer, with no scripting on the platform side and nothing to install on
-the Provem side.
+Push mode is ServiceNow calling Provem. It is built entirely in Workflow
+Studio (called Flow Designer before the Australia release), with no
+scripting on the platform side and nothing to install on the Provem side.
 
 **The flow.** A Record-Trigger on the request item table fires when a DSAR
 ticket reaches its approved state. The flow then runs, in order:
@@ -416,8 +416,8 @@ rather than returned.
 ## Honest limits
 
 * **No certified ServiceNow application.** There is no store entry and
-  nothing to install on the platform side. The integration is Flow Designer
-  plus an Outbound REST step, or the native email and Kafka paths.
+  nothing to install on the platform side. The integration is Workflow
+  Studio plus an Outbound REST step, or the native email and Kafka paths.
   Everything in this document is built from platform features that already
   exist in the target instance.
 * **No OAuth or mTLS in the gateway.** Shared secret and loopback bind

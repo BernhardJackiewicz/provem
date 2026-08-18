@@ -350,8 +350,9 @@ stdlib:
   acknowledgement), plus `approve`/`reject` for held requests and a status
   view for polling workflows. Also available as MCP tools
   (`dsar_plan`/`dsar_execute`/`dsar_verify`) for agent environments.
-- **Push mode:** a ServiceNow Flow Designer flow calls the gateway via
-  Outbound REST steps; the request item's `sys_id` is the idempotency key.
+- **Push mode:** a ServiceNow Workflow Studio flow (Flow Designer before
+  the Australia release) calls the gateway via Outbound REST steps; the
+  request item's `sys_id` is the idempotency key.
 - **Pull mode, zero ServiceNow-side development:** the native notification
   email or a Kafka record is picked up by a stdlib listener (drop folder /
   injected consumer) and driven through the same loop.
