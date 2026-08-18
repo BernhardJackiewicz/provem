@@ -413,6 +413,13 @@ rather than returned.
   hashes. Drift is expected (the subject keeps living) and is not treated
   as a verification failure; what verify asserts for an export is the
   audit trail behind it.
+* **The audit trail carries request identifiers.** `dsar_plan`,
+  `dsar_execute` and `access_export` entries store the subject term or
+  subject identifier, the requester and the ticket, because replay,
+  verify and the ticket artifact are rebuilt from the trail alone. They
+  never store record content or exported values, but these identifiers
+  are personal data in their own right: erasing the audit trail itself
+  is a separate, deliberate operation outside this integration's scope.
 * **Metrics are process-local.** The counters describe what this service
   instance handled since it started, not the tenant's full history. The
   audit trail is the authority for history, and rebuilding a history figure

@@ -88,7 +88,7 @@ class DemoAndDocTests(unittest.TestCase):
         for needle in ("Outbound REST", "Inbound", "Kafka", "/dsar/plan",
                        "/dsar/approve", "at-least-once", "X-DSAR-Token"):
             self.assertIn(needle, text)
-        self.assertIsNone(re.search("[–—]", text))
+        self.assertIsNone(re.search("[\u2013\u2014]", text))
         self.assertNotIn("Claude", text)
         self.assertNotIn("Anthropic", text)
 
