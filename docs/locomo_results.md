@@ -14,7 +14,7 @@ Dataset source:
 https://github.com/snap-research/locomo
 ```
 
-This is an Engram-local text-only evaluation run. It is not an official LoCoMo
+This is a Provem-local text-only evaluation run. It is not an official LoCoMo
 score. The runner does not fetch images and ignores `img_url`, `blip_caption`
 and image query fields.
 

@@ -15,7 +15,7 @@ only.
 ## What This Runner Measures
 
 The local runner evaluates LoCoMo QA annotations against the same local baseline
-style used elsewhere in Engram:
+style used elsewhere in Provem:
 
 - `no_memory`
 - `flat_lexical_rag`
@@ -36,7 +36,7 @@ It reports:
 
 The scoring is deterministic and approximate. It uses answer substring matching
 or token F1, not the original LoCoMo evaluation scripts. Results from this
-runner must be labeled as Engram-local LoCoMo QA readiness results, not as
+runner must be labeled as Provem-local LoCoMo QA readiness results, not as
 official LoCoMo benchmark scores.
 
 ## Dataset Handling
@@ -316,10 +316,10 @@ Example local manifest for a manually downloaded dataset:
 }
 ```
 
-## How LoCoMo Differs From Engram's Governance Benchmark
+## How LoCoMo Differs From Provem's Governance Benchmark
 
 LoCoMo is useful because it tests long-term multi-session conversational memory
-outside Engram's hand-authored governance suites. It can expose extraction and
+outside Provem's hand-authored governance suites. It can expose extraction and
 retrieval failures that synthetic structured/recruiting scenarios hide.
 
 LoCoMo does not directly test:

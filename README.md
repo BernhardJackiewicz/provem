@@ -3,9 +3,9 @@
 [![PyPI](https://img.shields.io/pypi/v/provem.svg)](https://pypi.org/project/provem/)
 [![Python](https://img.shields.io/badge/python-3.9%2B-blue.svg)](https://www.python.org/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-695%20passing-brightgreen.svg)](tests/)
+[![Tests](https://img.shields.io/badge/tests-818%20passing-brightgreen.svg)](tests/)
 
-**Governed, GDPR-native memory for AI agents.** A governance layer (right-to-erasure, tenant isolation, injection defense, tamper-evident audit) that runs on top of *any* memory store (or as its own). On recall it holds its own: a clear win over Zep and roughly a tie with Mem0 on LoCoMo. Its real job is compliance: it drives violations to zero in a reproducible, self-authored closed-loop benchmark. Every number below is replayable from frozen artifacts at zero cost.
+**Governed, GDPR-native memory for AI agents, with ITSM / ServiceNow integration built in.** A governance layer (right-to-erasure, tenant isolation, injection defense, tamper-evident audit) that runs on top of *any* memory store (or as its own). A DSAR ticket drives plan, execute, verify over REST or MCP, and the signed erasure evidence goes back to the ticket ([details](docs/servicenow_integration.md)). On recall it holds its own: a clear win over Zep and roughly a tie with Mem0 on LoCoMo. Its real job is compliance: it drives violations to zero in a reproducible, self-authored closed-loop benchmark. Every number below is replayable from frozen artifacts at zero cost.
 
 ## The problem: recall is solved, governance is the hard part
 
@@ -339,7 +339,7 @@ Sources and the full dispute history (including who retracted what):
 
 ## ITSM / ServiceNow integration
 
-The loop an enterprise actually buys: a data subject request arrives as a
+A data subject request arrives as a
 ticket, the action runs against governed memory, and the evidence goes back
 to the ticket. Provem ships that loop end to end, ITSM-agnostic and pure
 stdlib:

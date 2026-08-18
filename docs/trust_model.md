@@ -4,9 +4,9 @@ The enterprise audit flagged "no auth", "no TLS", "no RBAC", "tenant trusted fro
 the caller", "no horizontal scaling". These are **not bugs in the shipped
 server** — they are consequences of the **stdio transport** and are the host's
 responsibility. This document states the trust boundary explicitly so deployers
-know exactly what Engram enforces and what they must provide.
+know exactly what Provem enforces and what they must provide.
 
-## What Engram is
+## What Provem is
 
 `mcp-serve` is a **local, stdio JSON-RPC MCP server**: the MCP client launches it
 as a **subprocess** and talks to it over stdin/stdout. There is **no network
@@ -27,7 +27,7 @@ Consequences that are **by design**, not defects:
 - **Single process, in-memory by default.** Two independently launched servers
   do not share state.
 
-## What Engram does enforce (inside the trusted boundary)
+## What Provem does enforce (inside the trusted boundary)
 
 - **Tenant isolation:** one tenant never reads or over-erases another
   (separate `GovernedMemory`, tenant-keyed erasure) — tested.
@@ -40,7 +40,7 @@ Consequences that are **by design**, not defects:
 
 ## Deploying beyond a single trusted host
 
-If you expose Engram to **mutually untrusted clients or over a network** (SaaS,
+If you expose Provem to **mutually untrusted clients or over a network** (SaaS,
 multi-org), put a **gateway in front of the stdio server** that provides what the
 transport intentionally does not:
 
@@ -50,7 +50,7 @@ transport intentionally does not:
 | TLS / mTLS | Gateway terminating the network connection |
 | Binding a connection to a tenant (so the caller cannot forge `tenant`) | Gateway injects/validates `tenant` from the authenticated identity |
 | RBAC (e.g. read-only auditor vs writer) | Gateway maps identity → allowed tools |
-| Rate limiting / quotas / DoS | Gateway (Engram adds only per-request input-size caps) |
+| Rate limiting / quotas / DoS | Gateway (Provem adds only per-request input-size caps) |
 | Horizontal scaling | Point every instance at one **shared durable backend** (SQLite on a shared volume, or a real DB adapter via the `MemoryBackend` protocol) and a shared `audit_path` |
 | Encryption at rest, SIEM, backup | Storage/infra layer (SQLite file on an encrypted, backed-up volume; ship `audit_path` JSONL to your SIEM) |
 
