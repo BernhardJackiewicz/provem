@@ -377,6 +377,11 @@ connectors are enterprise scope, see [LICENSING.md](LICENSING.md).
 
 ## Honest limitations
 
+For the full list of what Provem claims and, just as importantly, what it
+deliberately does not claim (no guaranteed legal compliance, no promised
+physical deletion everywhere, tamper-evident not tamper-proof), see
+[`docs/claims.md`](docs/claims.md).
+
 - **One recall benchmark** (LoCoMo). LongMemEval port is designed, not run.
 - **LLM judges only** (two vendors, κ 0.54 on Mem0 to 0.70 on Provem on the final
   artifacts); no human eval yet.
@@ -444,6 +449,7 @@ DSAR surface: REST gateway + pull listener (email / Kafka / drop folder) -> sign
 | [`docs/mcp_server.md`](docs/mcp_server.md) | MCP product guide, profiles, config |
 | [`docs/servicenow_integration.md`](docs/servicenow_integration.md) | ITSM/ServiceNow DSAR loop: push REST, pull listener, signed evidence to the ticket |
 | [`docs/trust_model.md`](docs/trust_model.md) | Security boundaries; what belongs in a gateway |
+| [`docs/claims.md`](docs/claims.md) | One page: what we claim and can back, and what we deliberately do not claim |
 | [`docs/claim_register.md`](docs/claim_register.md) | Every claim with evidence level and risk |
 | [`docs/research_journal.md`](docs/research_journal.md) | Complete MVP history, every synthetic suite, every negative result |
 | [`docs/runs/manifest.json`](docs/runs/manifest.json) + `scripts/replay_report.sh` | Bit-exact €0 reproduction of all benchmark numbers |
