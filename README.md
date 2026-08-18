@@ -363,6 +363,10 @@ Try it: `PYTHONPATH=src python3 examples/servicenow/demo.py` (add
 `--serve` for a real socket). Full story, trust model and honest limits:
 [`docs/servicenow_integration.md`](docs/servicenow_integration.md).
 
+The gateway, the generic listener protocol and the reference connectors
+are MIT like the rest of the core; certified and managed connectors are
+enterprise scope, see [LICENSING.md](LICENSING.md).
+
 ## Honest limitations
 
 - **One recall benchmark** (LoCoMo). LongMemEval port is designed, not run.
