@@ -20,7 +20,7 @@ and image query fields.
 
 The local dataset file is under ignored `data/` and must not be committed.
 
-## Retrieval recall boost (opt-in BM25 + verbatim turns) — 2026-07-29
+## Retrieval recall boost (opt-in BM25 + verbatim turns), 2026-07-29
 
 A new opt-in retrieval path (`--recall-boost`, hybrid only) adds pure-stdlib
 BM25 with light stemming and indexes **verbatim conversation turns** alongside
@@ -40,7 +40,7 @@ Dev split = conv-26,30,41,42,43 (tuning). Test split = conv-44,47,48,49,50
 | retrieval_evidence_recall | `0.116` | **`0.259`** | `0.114` | **`0.228`** |
 | locomo_accuracy | `0.205` | `0.207` | `0.173` | `0.172` |
 | unsafe_answer_rate | `0.073` | `0.073` | `0.097` | `0.081` |
-| correct_abstention_rate | `0.810` | `0.823` | — | — |
+| correct_abstention_rate | `0.810` | `0.823` | n/a | n/a |
 
 **Honest reading.** The boost roughly **doubles retrieval evidence recall**
 (top-k hit +116% dev / +134% test) and it **generalizes** to the held-out test
@@ -51,24 +51,24 @@ synthesis** cannot turn most retrieved evidence into the exact short gold span
 `~0.55-0.66` J only *with* an LLM answerer, and even so cannot clear the
 `no_memory` abstain baseline here on some splits). The value delivered is a
 much stronger *retrieval* layer. We do **not** claim an end-to-end accuracy
-improvement — and note that wiring a real LLM answerer was **measured** (next
+improvement, and note that wiring a real LLM answerer was **measured** (next
 section) and did **not** close the gap either, because the ceiling turned out to
 be retrieval/extraction recall, not the answerer.
 
-## Scoring correctness fix (word-anchored substring) — 2026-07-30
+## Scoring correctness fix (word-anchored substring), 2026-07-30
 
 A bug-hunt found that `_has_answer_substring` used a raw `in` check, so a gold
 answer `2` matched `12 dogs`/`2020` and a system `ABSTAIN` could match a gold like
-`stain` — crediting wrong answers as correct. Fixed: the substring check is now
+`stain`, crediting wrong answers as correct. Fixed: the substring check is now
 word-boundary-anchored, and a system ABSTAIN on an answerable question never
 counts as a hit. **Re-measured after the fix: the aggregate dev and test numbers
 are unchanged to 4 decimals** (no_memory 0.2372 dev / 0.2118 test; CML
 recall-boost 0.2072 dev / 0.1722 test). So the bug was real per-case but the
-affected inputs are effectively absent from the actual LoCoMo split — the
+affected inputs are effectively absent from the actual LoCoMo split: the
 previously reported numbers were **not** inflated in aggregate. Corrected here to
 avoid an over-pessimistic claim.
 
-## LLM answerer measurement (gpt-5-mini) — 2026-07-29
+## LLM answerer measurement (gpt-5-mini), 2026-07-29
 
 Wired the optional key-gated `LLMAnswerer` (`--answer-mode llm`) over the
 recall-boost retrieval and measured it on the **dev split (5 convs, 999 QA)**
@@ -83,14 +83,14 @@ prompts → fire concurrently, 48 workers, ~250-842 calls in 25-85s, 0 errors).
 | CML keyless extractive (min_top 0.35) | `0.0981` |
 | CML + LLM answerer gpt-5-mini (min_top 0.35) | `0.1552` |
 
-**Honest finding — this corrects an earlier hypothesis.** We previously expected
+**Honest finding, this corrects an earlier hypothesis.** We previously expected
 the LLM answerer to be "the one piece that converts the doubled retrieval recall
 into accuracy." Measured, it is **not**: it lifts accuracy only marginally over
 keyless extractive (`0.207 → 0.212`) and still does **not** beat the `no_memory`
 abstain baseline (`0.237`). Lowering the abstention threshold to feed the LLM
 more evidence makes it **worse** (`0.212 → 0.155`), because the extra evidence is
 mostly wrong. The real ceiling is **retrieval + extraction recall**
-(`top_k_evidence_hit 0.30` — for ~70% of answerable QA the evidence is never
+(`top_k_evidence_hit 0.30`: for ~70%% of answerable QA the evidence is never
 surfaced), plus the fact that LoCoMo's `no_memory` floor of `0.237` is earned
 almost entirely by correctly abstaining on the ~24% adversarial questions. An
 LLM cannot answer from evidence that was never retrieved. The next real lever is

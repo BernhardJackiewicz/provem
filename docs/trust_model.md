@@ -1,8 +1,8 @@
-# Provem (formerly Engram) — Trust Model & Deployment Boundaries
+# Provem (formerly Engram): Trust Model & Deployment Boundaries
 
 The enterprise audit flagged "no auth", "no TLS", "no RBAC", "tenant trusted from
 the caller", "no horizontal scaling". These are **not bugs in the shipped
-server** — they are consequences of the **stdio transport** and are the host's
+server**: they are consequences of the **stdio transport** and are the host's
 responsibility. This document states the trust boundary explicitly so deployers
 know exactly what Provem enforces and what they must provide.
 
@@ -30,11 +30,11 @@ Consequences that are **by design**, not defects:
 ## What Provem does enforce (inside the trusted boundary)
 
 - **Tenant isolation:** one tenant never reads or over-erases another
-  (separate `GovernedMemory`, tenant-keyed erasure) — tested.
+  (separate `GovernedMemory`, tenant-keyed erasure), tested.
 - **Injection quarantine, sensitivity + consent, provenance/trust conflict
-  resolution, calibrated abstention** — the governance headline.
+  resolution, calibrated abstention**, the governance headline.
 - **Durable storage + tamper-evident, persistent audit** (SQLite backend +
-  append-only hash-chained audit) — survives restart.
+  append-only hash-chained audit), survives restart.
 - **Retention enforcement, input-size limits, fail-fast config validation,
   ReDoS-screened deny-list regex, thread-safe embedding.**
 
@@ -55,7 +55,7 @@ transport intentionally does not:
 | Encryption at rest, SIEM, backup | Storage/infra layer (SQLite file on an encrypted, backed-up volume; ship `audit_path` JSONL to your SIEM) |
 
 The `MemoryBackend` protocol (`write/delete_ids/all_records/candidates`) is the
-seam for a networked, shared, encrypted store — the governance logic is unchanged
+seam for a networked, shared, encrypted store: the governance logic is unchanged
 above it (proven by the SQLite and live-Mem0 backends).
 
 ## Supply chain
