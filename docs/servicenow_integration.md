@@ -13,6 +13,34 @@ integrate the same way. ServiceNow is the reference because it is the
 platform this integration was designed against, and because it can drive
 both directions (push and pull) without custom scripting.
 
+## Validated against a real instance
+
+Both directions were run end to end against a real ServiceNow Personal
+Developer Instance (Australia release), not just against the local tests:
+
+- **Pull.** A native ServiceNow notification on an incident produced a
+  real DSAR mail; fed to `DSARListener`, it erased the two matched
+  records, passed verification and issued a certificate, and a redelivery
+  of the same mail replayed instead of erasing twice. One configuration
+  point only the real instance surfaces: set the notification's content
+  type to **text/plain**. ServiceNow notifications default to text/html,
+  and an HTML-only mail has no text/plain part, which the parser reads as
+  an empty body.
+- **Push.** ServiceNow itself called the gateway (via `sn_ws.RESTMessageV2`,
+  the same outbound mechanism the Workflow Studio REST step uses),
+  running plan, execute and verify with the `X-DSAR-Token` header over
+  TLS. The signed certificate came back to ServiceNow, the same request
+  id executed exactly once (the retry replayed), and a call without the
+  token was rejected with 401.
+
+The repeatable harness and the full run notes live in
+[`qa/servicenow_e2e/`](../qa/servicenow_e2e/) (`RESULTS.md`,
+`run_stack.py`, `sn_push_probe.js`). What is not yet GUI-tested: the
+Workflow Studio flow itself (Record-Trigger, the Ask-for-Approval step,
+the work-note write-back); the outbound REST call it depends on is
+proven, the approval gating and ticket write-back are documented but not
+click-tested.
+
 ## Overview
 
 The loop, end to end:
@@ -213,6 +241,12 @@ The `From` address stands in as the requester when the body names none, so
 a stock notification template needs no editing. Unknown body lines
 (signatures, disclaimers, vendor boilerplate) are ignored rather than
 carried along.
+
+Set the notification's content type to **text/plain**. ServiceNow
+notifications default to text/html; an HTML-only mail carries no
+text/plain part, and the parser reads that as an empty body. This was
+confirmed against a real instance (see "Validated against a real
+instance" above).
 
 **Intake by topic.** A ServiceNow workflow that already publishes record
 changes to a Kafka topic needs no new integration either: point a consumer

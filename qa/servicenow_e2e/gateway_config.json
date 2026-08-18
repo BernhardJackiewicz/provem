@@ -1,0 +1,10 @@
+{
+  "host": "127.0.0.1",
+  "port": 8321,
+  "token": "",
+  "max_body_bytes": 1000000,
+  "server": {
+    "dsar_signing_secret": "qa-e2e-demo-signing-secret",
+    "dsar_signing_key_id": "sn-e2e"
+  }
+}

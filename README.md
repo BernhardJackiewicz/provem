@@ -359,6 +359,13 @@ stdlib:
   HMAC-signed erasure certificate, a fresh verify report and the audit head
   hash into one attachable JSON artifact.
 
+Both directions were validated end to end against a real ServiceNow
+Personal Developer Instance (Australia release): a native notification
+mail drives the pull path, and ServiceNow's own outbound REST call drives
+the push path (plan, execute, verify, signed certificate returned,
+exactly-once on retry, 401 without the token). Notes and the repeatable
+harness are in [`qa/servicenow_e2e/`](qa/servicenow_e2e/).
+
 Try it: `PYTHONPATH=src python3 examples/servicenow/demo.py` (add
 `--serve` for a real socket). Full story, trust model and honest limits:
 [`docs/servicenow_integration.md`](docs/servicenow_integration.md).
