@@ -20,8 +20,8 @@ compliance claims rest on stays open, so anyone can reproduce and audit them:
 - the DSAR REST gateway, the generic listener protocol and the reference
   connectors for email, Kafka and drop-folder intake
 
-MIT means exactly what it says: use it, fork it, ship it commercially,
-no strings.
+MIT means exactly what it says: no additional terms, commercial use
+included.
 
 ## What a future enterprise layer covers (separate, proprietary)
 

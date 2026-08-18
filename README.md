@@ -5,7 +5,7 @@
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Tests](https://img.shields.io/badge/tests-818%20passing-brightgreen.svg)](tests/)
 
-**Governed, GDPR-native memory for AI agents, with ITSM / ServiceNow integration built in.** A governance layer (right-to-erasure, tenant isolation, injection defense, tamper-evident audit) that runs on top of *any* memory store (or as its own). A DSAR ticket drives plan, execute, verify over REST or MCP, and the signed erasure evidence goes back to the ticket ([details](docs/servicenow_integration.md)). On recall it holds its own: a clear win over Zep and roughly a tie with Mem0 on LoCoMo. Its real job is compliance: it drives violations to zero in a reproducible, self-authored closed-loop benchmark. Every number below is replayable from frozen artifacts at zero cost.
+**Governed, GDPR-native memory for AI agents, with ITSM / ServiceNow integration built in.** A governance layer (right-to-erasure, tenant isolation, injection defense, tamper-evident audit) that runs on top of *any* memory store (or as its own). A DSAR ticket drives plan, execute, verify over REST or MCP, and the signed erasure evidence goes back to the ticket ([details](docs/servicenow_integration.md)). On recall it is competitive: a clear win over Zep and roughly a tie with Mem0 on LoCoMo. Its real job is compliance: it drives violations to zero in a reproducible, self-authored closed-loop benchmark. Every number below is replayable from frozen artifacts at zero cost.
 
 ## The problem: recall is solved, governance is the hard part
 
@@ -459,6 +459,6 @@ pip install "provem[mem0]"    # optional backends: mem0, zep, letta, graphiti, o
 
 ## License
 
-MIT, see [LICENSE](LICENSE). Use it, fork it, ship it commercially, no strings.
+MIT, see [LICENSE](LICENSE), no additional terms; commercial use included.
 The product boundary (what stays MIT here vs. what a future enterprise layer
 covers) is documented in [LICENSING.md](LICENSING.md).

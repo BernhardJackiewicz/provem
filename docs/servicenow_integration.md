@@ -410,7 +410,8 @@ rather than returned.
 * **An access replay re-derives the package from live state.** The first
   execution stores a hash, not a copy of the personal data, so a replayed
   access request returns the current package with `hash_drift` and both
-  hashes. Drift is expected (the subject keeps living) and is not treated
+  hashes. Drift is expected, because the subject's data keeps changing,
+  and is not treated
   as a verification failure; what verify asserts for an export is the
   audit trail behind it.
 * **The audit trail carries request identifiers.** `dsar_plan`,

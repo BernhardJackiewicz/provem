@@ -942,7 +942,7 @@ class DSARService:
 
         if kind == "access":
             checks = self._access_checks(mem, tenant, summary)
-            # Drift is expected (the subject keeps living) and not a failure;
+            # Drift is expected (the subject's data keeps changing), not a failure;
             # what verify asserts for an export is the audit trail behind it.
             report["passed"] = bool(checks["audit_chain"]["passed"])
         else:
