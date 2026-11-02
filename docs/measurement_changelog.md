@@ -148,3 +148,53 @@ arms; Provem's opus verdicts reused from the frozen `ours_opt` set at EUR 0.
 **Publication:** the v2 numbers replace v1 in README and
 `docs/three_system_benchmark.md`; the v1 numbers are retained here as the
 historical record with the bug root-causes above.
+
+## Fresh reproduction run (2026-11-02): Provem arm re-measured live, competitor arms blocked
+
+A genuinely fresh end-to-end run of the LoCoMo three-system harness, not a cache
+replay: fresh answer cache and fresh judge cache, answerer `gpt-5-mini`, strict
+judge `gpt-5`, k=20, ours-features `agg,aggfan,dense,strict5,temporalroute`, all
+10 conversations, 1,540 answerable QA. Purpose: confirm the published Provem
+number reproduces on a clean live run. It does.
+
+**Provem (ours) reproduces and slightly exceeds the published number:**
+
+| | Fresh 2026-11-02 (strict gpt-5) | Published v2 | Delta |
+|---|---|---|---|
+| Provem answerable accuracy | **0.647** (997/1,540) | 0.614 | +0.033 |
+
+Per category (strict, fresh): cat_1 0.401 (113/282), cat_2 0.685 (220/321),
+cat_3 0.375 (36/96), cat_4 0.747 (628/841).
+
+Source rows: `docs/runs/local/fresh_ours_mem0.jsonl` (gitignored raw artifact),
+sha256 `57fb2eecf81c6f362d36529bc19737d1f6234074198393bfca076cd9524a3eb1`,
+3,080 rows (1,540 ours + 1,540 mem0).
+
+**The two competitor arms could NOT be fairly re-measured this run. Both were
+blocked by account or infrastructure limits, not by model quality:**
+
+- **Mem0 invalidated.** The Mem0 free-tier monthly search limit was reached and
+  searches were paused mid-run (confirmed by Mem0's own notification email on
+  2026-11-02). 921 of 1,540 Mem0 answers (59.8%) came back empty because
+  retrieval returned no context (HTTP 429 throughout), which scores as wrong.
+  The raw fresh Mem0 figure is 0.271 (417/1,540) and is an artifact of the
+  paused account, NOT a measurement of Mem0 quality. It is NOT published and
+  must not be cited. Provem's arm retrieves from the local dense store and was
+  unaffected (13.6% empty). SDK note: mem0ai 2.2.1 here versus 2.0.14 for the
+  frozen v2 arm, separate account population.
+- **Zep incomplete.** Fresh Zep account. All 10 conversations ingested, but Zep
+  builds its graph asynchronously and only about 32% of episodes were processed
+  after roughly 55 minutes (conv0 136/419). A probe confirmed the built portion
+  returns good dated facts, so the pipeline is healthy; the graph just needs
+  hours. Evaluating on a partial graph would unfairly depress Zep, so the eval
+  was stopped rather than publish a misleading number.
+
+**Conclusion:** the published Provem LoCoMo result reproduces under a genuinely
+fresh live run (0.647 versus 0.614). The competitor comparison was not
+re-measured this run; the v2 published numbers (and the EUR-0 frozen replay,
+21/21 assertions) remain the reference for Mem0 and Zep. `three_system_report.py`
+was deliberately NOT regenerated, to avoid propagating the invalidated Mem0 arm
+and the incomplete Zep arm into the scoreboard.
+
+**Accounting:** new spend 3.67 EUR (pilot 0.27 plus full 3.40; 3,646 LLM calls),
+within the 40 EUR cap for this run.
