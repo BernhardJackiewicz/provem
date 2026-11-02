@@ -1104,6 +1104,16 @@ class GovernedMemory:
         """Return the tamper-evident governance audit trail."""
         return self.audit.to_json() if as_json else self.audit.to_dict()
 
+    def export_disclosure(self, as_json: bool = False):
+        """Return a PII-free disclosure report of the subject-rights actions
+        (erasure, restriction, consent withdrawal), safe to share with a DPO
+        or a regulator: subject terms and requester identities appear only as
+        SHA-256 digests. The full, PII-bearing audit chain stays internal and
+        is unchanged, so enforcement and semantic erasure are unaffected. See
+        :meth:`cognitive_memory.audit.AuditLog.disclosure_report`.
+        """
+        return self.audit.disclosure_json() if as_json else self.audit.disclosure_report()
+
     def verify_audit(self) -> bool:
         """True if the audit chain is intact (no entry altered/reordered)."""
         return self.audit.verify()

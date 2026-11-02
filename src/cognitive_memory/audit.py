@@ -19,6 +19,22 @@ from typing import Any, Callable, Dict, List, Optional
 
 GENESIS_HASH = "0" * 64
 
+# Actions that reference a data subject and therefore carry personal data in
+# their details. A disclosure artifact handed to a third party must not expose
+# that data in the clear (SDM Baustein 60, M60.S06: no personal data in
+# deletion logs).
+SUBJECT_ACTIONS = ("erasure", "restrict", "consent_revocation")
+
+
+def term_digest(term: str) -> str:
+    """SHA-256 of a subject term exactly as submitted.
+
+    A controller who holds the original request can recompute this digest to
+    prove a disclosure line corresponds to that request; a third party reading
+    the report cannot recover the term from the digest alone.
+    """
+    return hashlib.sha256((term or "").encode("utf-8")).hexdigest()
+
 
 def _canonical(details: Dict[str, Any]) -> str:
     return json.dumps(details, sort_keys=True, ensure_ascii=False, default=str)
@@ -144,6 +160,48 @@ class AuditLog:
         if backend_verification is not None:
             details["backend_verification"] = dict(backend_verification)
         return self.record("erasure", **details)
+
+    def disclosure_report(self) -> Dict[str, Any]:
+        """PII-free view of the subject-rights actions, safe to hand to a DPO
+        or a regulator.
+
+        The subject term and the requester identity are replaced by their
+        SHA-256 digests; counts, purpose, tenant and backend-verification
+        figures are carried through. Raw memory ids and the requester source
+        channel are dropped. This is a disclosure artifact, not the
+        tamper-evident chain: it anchors to the chain head so the full,
+        PII-bearing log can be verified separately without ever being exposed.
+        """
+        carried = (
+            "tenant", "purpose", "targeted_count", "backend_confirmed_deletes",
+            "derivatives", "backend_verification", "note",
+        )
+        lines: List[Dict[str, Any]] = []
+        for entry in self._entries:
+            if entry.action not in SUBJECT_ACTIONS:
+                continue
+            d = entry.details
+            line: Dict[str, Any] = {
+                "seq": entry.seq,
+                "timestamp": entry.timestamp,
+                "action": entry.action,
+                "term_sha256": term_digest(str(d.get("term", ""))),
+            }
+            if "requester" in d and d.get("requester"):
+                line["requester_sha256"] = term_digest(str(d.get("requester", "")))
+            for key in carried:
+                if key in d:
+                    line[key] = d[key]
+            lines.append(line)
+        return {
+            "kind": "disclosure_report",
+            "schema": "provem.disclosure.v1",
+            "anchored_to_chain": {"count": len(self._entries), "head_hash": self.head_hash()},
+            "entries": lines,
+        }
+
+    def disclosure_json(self, indent: int = 2) -> str:
+        return json.dumps(self.disclosure_report(), indent=indent, sort_keys=True, default=str)
 
     def entries(self) -> List[AuditEntry]:
         return list(self._entries)
